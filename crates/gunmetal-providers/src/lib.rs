@@ -9,11 +9,13 @@ use gunmetal_storage::AppPaths;
 
 mod codex;
 mod copilot;
+mod openai;
 mod openrouter;
 mod zen;
 
 pub use codex::{CodexClient, CodexClientOptions};
 pub use copilot::{CopilotClient, CopilotClientOptions, CopilotSession};
+pub use openai::{OpenAiClient, OpenAiClientOptions};
 pub use openrouter::{OpenRouterClient, OpenRouterClientOptions};
 pub use zen::{ZenClient, ZenClientOptions};
 
@@ -32,6 +34,11 @@ type OpenRouterConnector = Arc<
             ProviderProfile,
             AppPaths,
         ) -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>>
+        + Send
+        + Sync,
+>;
+type OpenAiConnector = Arc<
+    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>>
         + Send
         + Sync,
 >;
@@ -61,6 +68,7 @@ pub struct ProviderHub {
     codex_connector: CodexConnector,
     copilot_connector: CopilotConnector,
     openrouter_connector: OpenRouterConnector,
+    openai_connector: OpenAiConnector,
     zen_connector: ZenConnector,
 }
 
@@ -87,6 +95,13 @@ impl ProviderHub {
                     ))
                 })
             }),
+            openai_connector: Arc::new(|profile, _paths| {
+                Box::pin(async move {
+                    Ok(OpenAiClient::with_options(
+                        OpenAiClientOptions::from_profile(&profile),
+                    ))
+                })
+            }),
             zen_connector: Arc::new(|profile, _paths| {
                 Box::pin(async move {
                     Ok(ZenClient::with_options(ZenClientOptions::from_profile(
@@ -102,6 +117,7 @@ impl ProviderHub {
         codex_connector: CodexConnector,
         copilot_connector: CopilotConnector,
         openrouter_connector: OpenRouterConnector,
+        openai_connector: OpenAiConnector,
         zen_connector: ZenConnector,
     ) -> Self {
         Self {
@@ -109,6 +125,7 @@ impl ProviderHub {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         }
     }
@@ -128,6 +145,13 @@ impl ProviderHub {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: AppPaths|
@@ -140,6 +164,7 @@ impl ProviderHub {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         )
     }
@@ -159,6 +184,13 @@ impl ProviderHub {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: AppPaths|
@@ -171,6 +203,7 @@ impl ProviderHub {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         )
     }
@@ -193,6 +226,13 @@ impl ProviderHub {
                 Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: AppPaths|
@@ -205,6 +245,46 @@ impl ProviderHub {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
+            zen_connector,
+        )
+    }
+
+    pub fn with_openai_connector(paths: AppPaths, openai_connector: OpenAiConnector) -> Self {
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
+        Self::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+            openai_connector,
             zen_connector,
         )
     }
@@ -231,11 +311,19 @@ impl ProviderHub {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         Self::with_connectors(
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         )
     }
@@ -253,6 +341,7 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.status)
             }
+            ProviderKind::OpenAi => self.openai(profile).await?.auth_status(profile).await,
             ProviderKind::Zen => {
                 let result = self.zen(profile).await?.auth_status(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
@@ -293,6 +382,12 @@ impl ProviderHub {
                     profile.provider
                 )
             }
+            ProviderKind::OpenAi => {
+                bail!(
+                    "provider '{}' does not support browser login",
+                    profile.provider
+                )
+            }
             ProviderKind::Zen => {
                 bail!(
                     "provider '{}' does not support browser login",
@@ -312,6 +407,11 @@ impl ProviderHub {
             }
             ProviderKind::OpenRouter => {
                 let credentials = self.openrouter(profile).await?.clear_credentials();
+                self.persist_credentials(profile.id, credentials)?;
+                Ok(())
+            }
+            ProviderKind::OpenAi => {
+                let credentials = self.openai(profile).await?.clear_credentials();
                 self.persist_credentials(profile.id, credentials)?;
                 Ok(())
             }
@@ -337,6 +437,7 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.models)
             }
+            ProviderKind::OpenAi => self.openai(profile).await?.list_models(profile).await,
             ProviderKind::Zen => {
                 let result = self.zen(profile).await?.list_models(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
@@ -379,6 +480,12 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.completion)
             }
+            ProviderKind::OpenAi => {
+                self.openai(profile)
+                    .await?
+                    .chat_completion(profile, request)
+                    .await
+            }
             ProviderKind::Zen => {
                 let result = self
                     .zen(profile)
@@ -405,6 +512,10 @@ impl ProviderHub {
 
     async fn openrouter(&self, profile: &ProviderProfile) -> Result<OpenRouterClient> {
         (self.openrouter_connector)(profile.clone(), self.paths.clone()).await
+    }
+
+    async fn openai(&self, profile: &ProviderProfile) -> Result<OpenAiClient> {
+        (self.openai_connector)(profile.clone(), self.paths.clone()).await
     }
 
     async fn zen(&self, profile: &ProviderProfile) -> Result<ZenClient> {
@@ -476,8 +587,8 @@ mod tests {
     use uuid::Uuid;
 
     use super::{
-        CodexClient, CopilotClient, OpenRouterClient, ProviderClass, ProviderHub, ZenClient,
-        builtin_providers,
+        CodexClient, CopilotClient, OpenAiClient, OpenRouterClient, ProviderClass, ProviderHub,
+        ZenClient, builtin_providers,
     };
 
     #[test]
@@ -523,6 +634,13 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: gunmetal_storage::AppPaths|
@@ -535,6 +653,7 @@ mod tests {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         );
         let profile = ProviderProfile {
@@ -597,6 +716,13 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: gunmetal_storage::AppPaths|
@@ -609,6 +735,7 @@ mod tests {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         );
         let storage = paths.storage_handle().unwrap();
@@ -671,6 +798,13 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: gunmetal_storage::AppPaths|
@@ -683,6 +817,7 @@ mod tests {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         );
         let storage = paths.storage_handle().unwrap();
@@ -745,6 +880,13 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
         let zen_connector = Arc::new(
             move |_profile: ProviderProfile,
                   _paths: gunmetal_storage::AppPaths|
@@ -757,6 +899,7 @@ mod tests {
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            openai_connector,
             zen_connector,
         );
         let storage = paths.storage_handle().unwrap();
@@ -794,9 +937,92 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn provider_hub_delegates_to_openai_connector() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let openai_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
+                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
+            },
+        );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
+        let hub = ProviderHub::with_connectors(
+            paths.clone(),
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+            openai_connector,
+            zen_connector,
+        );
+        let storage = paths.storage_handle().unwrap();
+        let profile = storage
+            .create_profile(gunmetal_core::NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "default".to_owned(),
+                base_url: Some("https://api.openai.com/v1".to_owned()),
+                enabled: true,
+                credentials: Some(serde_json::json!({ "api_key": "sk-openai-test" })),
+            })
+            .unwrap();
+
+        let status = hub.auth_status(&profile).await.unwrap();
+        assert_eq!(status.state, ProviderAuthState::Connected);
+
+        let models = hub.sync_models(&profile).await.unwrap();
+        assert_eq!(models[0].id, "openai/gpt-5.1");
+
+        let response = hub
+            .chat_completion(
+                &profile,
+                &ChatCompletionRequest {
+                    model: "openai/gpt-5.1".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.message.content, "hello from openai");
+    }
+
+    #[tokio::test]
     async fn mock_shapes_are_sane() {
         let codex = CodexClient::mock("done");
         let copilot = CopilotClient::mock("done");
+        let openai = OpenAiClient::mock("done");
         let zen = ZenClient::mock("done");
         let _ = ChatCompletionResult {
             model: "codex/gpt-5.4".to_owned(),
@@ -813,6 +1039,30 @@ mod tests {
         };
         assert!(codex.is_mock());
         assert!(copilot.is_mock());
+        let response = openai
+            .chat_completion(
+                &ProviderProfile {
+                    id: Uuid::new_v4(),
+                    provider: ProviderKind::OpenAi,
+                    name: "default".to_owned(),
+                    base_url: None,
+                    enabled: true,
+                    credentials: None,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                },
+                &ChatCompletionRequest {
+                    model: "openai/gpt-5.1".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.message.content, "done");
         let response = zen
             .chat_completion(
                 &ProviderProfile {
