@@ -12,13 +12,13 @@ use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
 
-pub fn run(paths: &AppPaths) -> Result<()> {
-    let snapshot = DashboardSnapshot::load(paths)?;
+pub fn run(paths: &AppPaths, service: ServiceSnapshot) -> Result<()> {
+    let snapshot = DashboardSnapshot::load(paths, service)?;
     let mut stdout = io::stdout();
     enable_raw_mode()?;
     execute!(stdout, EnterAlternateScreen)?;
@@ -52,39 +52,82 @@ fn run_loop(
 }
 
 fn render(frame: &mut Frame, snapshot: &DashboardSnapshot) {
-    let sections = Layout::vertical([
-        Constraint::Length(4),
-        Constraint::Length(7),
-        Constraint::Min(8),
+    let rows = Layout::vertical([
+        Constraint::Length(5),
+        Constraint::Length(5),
+        Constraint::Length(9),
+        Constraint::Min(10),
     ])
     .split(frame.area());
 
-    let hero = Paragraph::new(vec![
+    let overview = Paragraph::new(vec![
         Line::from(Span::styled(
             "Gunmetal",
-            Style::default().add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Rgb(226, 232, 240))
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from("Local-first AI switchboard"),
         Line::from("Press q or Esc to quit"),
     ])
     .block(Block::default().borders(Borders::ALL).title("Overview"));
-    frame.render_widget(hero, sections[0]);
+    frame.render_widget(overview, rows[0]);
 
-    let summary = Paragraph::new(vec![
+    let service_color = if snapshot.service_running {
+        Color::Rgb(134, 239, 172)
+    } else {
+        Color::Rgb(251, 191, 36)
+    };
+    let state = Paragraph::new(vec![
         Line::from(format!("Home: {}", snapshot.root)),
+        Line::from(vec![
+            Span::raw("Service: "),
+            Span::styled(
+                snapshot.service_state.clone(),
+                Style::default().fg(service_color),
+            ),
+            Span::raw(format!("   URL: {}", snapshot.service_url)),
+            Span::raw(match snapshot.service_pid {
+                Some(pid) => format!("   PID: {pid}"),
+                None => String::new(),
+            }),
+        ]),
         Line::from(format!(
             "Keys: {}   Profiles: {}   Models: {}   Logs: {}",
             snapshot.key_count, snapshot.profile_count, snapshot.model_count, snapshot.log_count
         )),
-        Line::from(format!(
-            "Priority: {}",
-            snapshot.provider_priority.join(" -> ")
-        )),
     ])
     .block(Block::default().borders(Borders::ALL).title("State"));
-    frame.render_widget(summary, sections[1]);
+    frame.render_widget(state, rows[1]);
 
-    let details = Paragraph::new(
+    let top =
+        Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)]).split(rows[2]);
+
+    let actions = Paragraph::new(vec![
+        Line::from("gunmetal start"),
+        Line::from("gunmetal stop"),
+        Line::from("gunmetal status"),
+        Line::from("gunmetal logs list --limit 20"),
+        Line::from("gunmetal models sync <profile-id>"),
+    ])
+    .block(Block::default().borders(Borders::ALL).title("Operator"));
+    frame.render_widget(actions, top[0]);
+
+    let recents = Paragraph::new(
+        snapshot
+            .recent_profiles
+            .iter()
+            .chain(snapshot.recent_keys.iter())
+            .map(|line| Line::from(line.clone()))
+            .collect::<Vec<_>>(),
+    )
+    .block(Block::default().borders(Borders::ALL).title("Recent"));
+    frame.render_widget(recents, top[1]);
+
+    let bottom =
+        Layout::horizontal([Constraint::Percentage(48), Constraint::Percentage(52)]).split(rows[3]);
+
+    let providers = Paragraph::new(
         snapshot
             .provider_breakdown
             .iter()
@@ -92,29 +135,61 @@ fn render(frame: &mut Frame, snapshot: &DashboardSnapshot) {
             .collect::<Vec<_>>(),
     )
     .block(Block::default().borders(Borders::ALL).title("Providers"));
-    frame.render_widget(details, sections[2]);
+    frame.render_widget(providers, bottom[0]);
+
+    let logs = Paragraph::new(
+        snapshot
+            .recent_logs
+            .iter()
+            .map(|line| Line::from(line.clone()))
+            .collect::<Vec<_>>(),
+    )
+    .block(Block::default().borders(Borders::ALL).title("Request Logs"));
+    frame.render_widget(logs, bottom[1]);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DashboardSnapshot {
     pub root: String,
+    pub service_state: String,
+    pub service_running: bool,
+    pub service_url: String,
+    pub service_pid: Option<u32>,
     pub key_count: usize,
     pub profile_count: usize,
     pub model_count: usize,
     pub log_count: usize,
     pub provider_priority: Vec<String>,
     pub provider_breakdown: Vec<String>,
+    pub recent_profiles: Vec<String>,
+    pub recent_keys: Vec<String>,
+    pub recent_logs: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceSnapshot {
+    pub state: String,
+    pub running: bool,
+    pub url: String,
+    pub pid: Option<u32>,
 }
 
 impl DashboardSnapshot {
-    pub fn load(paths: &AppPaths) -> Result<Self> {
+    pub fn load(paths: &AppPaths, service: ServiceSnapshot) -> Result<Self> {
         let storage = paths.storage_handle()?;
         let provider_catalog = builtin_providers();
+        let profiles = storage.list_profiles()?;
+        let keys = storage.list_keys()?;
+        let logs = storage.list_request_logs(6)?;
 
         Ok(Self {
             root: paths.root.display().to_string(),
-            key_count: storage.list_keys()?.len(),
-            profile_count: storage.list_profiles()?.len(),
+            service_state: service.state,
+            service_running: service.running,
+            service_url: service.url,
+            service_pid: service.pid,
+            key_count: keys.len(),
+            profile_count: profiles.len(),
             model_count: storage.list_models()?.len(),
             log_count: storage.list_request_logs(250)?.len(),
             provider_priority: provider_catalog
@@ -125,6 +200,37 @@ impl DashboardSnapshot {
                 .iter()
                 .map(|item| format!("{} {:?} priority={}", item.kind, item.class, item.priority))
                 .collect(),
+            recent_profiles: profiles
+                .iter()
+                .take(3)
+                .map(|item| {
+                    format!(
+                        "profile {} {} {}",
+                        item.provider,
+                        item.name,
+                        item.base_url.as_deref().unwrap_or("default")
+                    )
+                })
+                .collect(),
+            recent_keys: keys
+                .iter()
+                .take(3)
+                .map(|item| format!("key {} {} {}", item.prefix, item.name, item.state))
+                .collect(),
+            recent_logs: logs
+                .iter()
+                .take(6)
+                .map(|item| {
+                    format!(
+                        "{} {} {} {} {}",
+                        item.provider,
+                        item.model,
+                        item.endpoint,
+                        item.status_code.unwrap_or_default(),
+                        item.usage.total_tokens.unwrap_or_default()
+                    )
+                })
+                .collect(),
         })
     }
 }
@@ -133,18 +239,28 @@ impl DashboardSnapshot {
 mod tests {
     use tempfile::TempDir;
 
-    use super::DashboardSnapshot;
+    use super::{DashboardSnapshot, ServiceSnapshot};
 
     #[test]
     fn snapshot_reads_counts_from_local_state() {
         let temp = TempDir::new().unwrap();
         let paths =
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let snapshot = DashboardSnapshot::load(&paths).unwrap();
+        let snapshot = DashboardSnapshot::load(
+            &paths,
+            ServiceSnapshot {
+                state: "stopped".to_owned(),
+                running: false,
+                url: "http://127.0.0.1:4684".to_owned(),
+                pid: None,
+            },
+        )
+        .unwrap();
 
         assert_eq!(snapshot.key_count, 0);
         assert_eq!(snapshot.profile_count, 0);
         assert_eq!(snapshot.model_count, 0);
         assert!(!snapshot.provider_priority.is_empty());
+        assert_eq!(snapshot.service_state, "stopped");
     }
 }

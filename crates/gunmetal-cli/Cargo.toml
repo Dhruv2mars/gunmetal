@@ -12,6 +12,7 @@ gunmetal-core = { path = "../gunmetal-core" }
 gunmetal-daemon = { path = "../gunmetal-daemon" }
 gunmetal-providers = { path = "../gunmetal-providers" }
 gunmetal-storage = { path = "../gunmetal-storage" }
+libc.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 uuid.workspace = true

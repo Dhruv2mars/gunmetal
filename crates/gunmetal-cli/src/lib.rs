@@ -1,7 +1,11 @@
 use std::{
+    fs::{self, OpenOptions},
     io::Write,
     net::{IpAddr, SocketAddr},
     path::PathBuf,
+    process::{Command as ProcessCommand, Stdio},
+    thread,
+    time::Duration,
 };
 
 use anyhow::Result;
@@ -12,6 +16,14 @@ use gunmetal_providers::{ProviderHub, builtin_providers};
 use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+const DEFAULT_HOST: &str = "127.0.0.1";
+const DEFAULT_PORT: u16 = 4684;
+
 #[derive(Debug, Parser)]
 #[command(name = "gunmetal")]
 pub struct Cli {
@@ -21,7 +33,9 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    Start(StartArgs),
     Serve(ServeArgs),
+    Stop(StopArgs),
     Status(StatusArgs),
     Keys {
         #[command(subcommand)]
@@ -43,22 +57,42 @@ pub enum Command {
         #[command(subcommand)]
         command: AuthCommand,
     },
+    Logs {
+        #[command(subcommand)]
+        command: LogCommand,
+    },
     Tui,
 }
 
 #[derive(Debug, clap::Args)]
-pub struct ServeArgs {
-    #[arg(long, default_value = "127.0.0.1")]
+pub struct StartArgs {
+    #[arg(long, default_value = DEFAULT_HOST)]
     pub host: IpAddr,
-    #[arg(long, default_value_t = 4684)]
+    #[arg(long, default_value_t = DEFAULT_PORT)]
+    pub port: u16,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct ServeArgs {
+    #[arg(long, default_value = DEFAULT_HOST)]
+    pub host: IpAddr,
+    #[arg(long, default_value_t = DEFAULT_PORT)]
+    pub port: u16,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct StopArgs {
+    #[arg(long, default_value = DEFAULT_HOST)]
+    pub host: IpAddr,
+    #[arg(long, default_value_t = DEFAULT_PORT)]
     pub port: u16,
 }
 
 #[derive(Debug, clap::Args)]
 pub struct StatusArgs {
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = DEFAULT_HOST)]
     pub host: IpAddr,
-    #[arg(long, default_value_t = 4684)]
+    #[arg(long, default_value_t = DEFAULT_PORT)]
     pub port: u16,
 }
 
@@ -133,25 +167,42 @@ pub enum AuthCommand {
     },
 }
 
+#[derive(Debug, Subcommand)]
+pub enum LogCommand {
+    List {
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
+}
+
 pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write) -> Result<()> {
     let providers = ProviderHub::new(paths.clone());
 
     match command {
+        Command::Start(args) => {
+            let status = ensure_daemon_running(paths, args.host, args.port).await?;
+            writeln!(output, "{} {}", status.state, status.url)?;
+            if let Some(pid) = status.pid {
+                writeln!(output, "pid: {pid}")?;
+            }
+        }
         Command::Serve(args) => {
             let address = SocketAddr::new(args.host, args.port);
             writeln!(output, "Serving gunmetal on http://{address}")?;
             gunmetal_daemon::serve(address, DaemonState::new(paths.clone())?).await?;
         }
+        Command::Stop(args) => {
+            let status = stop_daemon(paths, args.host, args.port).await?;
+            writeln!(output, "{} {}", status.state, status.url)?;
+        }
         Command::Status(args) => {
-            let url = format!("http://{}:{}/health", args.host, args.port);
-            match reqwest::get(&url).await {
-                Ok(response) => {
-                    let body = response.text().await?;
-                    writeln!(output, "{body}")?;
-                }
-                Err(error) => {
-                    writeln!(output, "gunmetal not reachable at {url}: {error}")?;
-                }
+            let status = daemon_status(paths, args.host, args.port).await?;
+            writeln!(output, "{} {}", status.state, status.url)?;
+            if let Some(pid) = status.pid {
+                writeln!(output, "pid: {pid}")?;
+            }
+            if let Some(health) = status.health {
+                writeln!(output, "health: {health}")?;
             }
         }
         Command::Keys { command } => {
@@ -284,10 +335,239 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 writeln!(output, "logged out {}", profile_record.name)?;
             }
         },
+        Command::Logs { command } => match command {
+            LogCommand::List { limit } => {
+                for log in paths.storage_handle()?.list_request_logs(limit)? {
+                    writeln!(
+                        output,
+                        "{} {} {} {} {} {}ms tokens={}",
+                        log.started_at,
+                        log.provider,
+                        log.model,
+                        log.endpoint,
+                        log.status_code.unwrap_or_default(),
+                        log.duration_ms,
+                        log.usage.total_tokens.unwrap_or_default()
+                    )?;
+                }
+            }
+        },
         Command::Tui => {}
     }
 
     Ok(())
+}
+
+pub async fn ensure_daemon_running(
+    paths: &AppPaths,
+    host: IpAddr,
+    port: u16,
+) -> Result<ServiceStatus> {
+    let current = daemon_status(paths, host, port).await?;
+    if current.running {
+        return Ok(current);
+    }
+    if current.state == "starting" {
+        return wait_for_health(paths, host, port, 20).await;
+    }
+
+    start_daemon_process(paths, host, port)?;
+    wait_for_health(paths, host, port, 20).await
+}
+
+pub async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus> {
+    ensure_daemon_running(
+        paths,
+        DEFAULT_HOST.parse::<IpAddr>().expect("default host"),
+        DEFAULT_PORT,
+    )
+    .await
+}
+
+async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
+    let pid_file = paths.daemon_pid_file();
+    let Some(pid) = read_pid(&pid_file)? else {
+        let mut status = daemon_status(paths, host, port).await?;
+        status.state = "stopped".to_owned();
+        return Ok(status);
+    };
+
+    terminate_pid(pid)?;
+    for _ in 0..20 {
+        thread::sleep(Duration::from_millis(150));
+        let status = daemon_status(paths, host, port).await?;
+        if !status.running {
+            let _ = fs::remove_file(&pid_file);
+            return Ok(ServiceStatus {
+                state: "stopped".to_owned(),
+                ..status
+            });
+        }
+    }
+
+    let _ = fs::remove_file(&pid_file);
+    Ok(ServiceStatus {
+        state: "stopping".to_owned(),
+        ..daemon_status(paths, host, port).await?
+    })
+}
+
+pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
+    let url = format!("http://{host}:{port}");
+    let health_url = format!("{url}/health");
+    let pid = read_pid(&paths.daemon_pid_file())?;
+    match reqwest::get(&health_url).await {
+        Ok(response) => {
+            let health = response.text().await.ok();
+            Ok(ServiceStatus {
+                state: "running".to_owned(),
+                running: true,
+                pid,
+                url,
+                health,
+            })
+        }
+        Err(_) => {
+            if let Some(pid) = pid {
+                if process_exists(pid) {
+                    return Ok(ServiceStatus {
+                        state: "starting".to_owned(),
+                        running: false,
+                        pid: Some(pid),
+                        url,
+                        health: None,
+                    });
+                }
+                let _ = fs::remove_file(paths.daemon_pid_file());
+            }
+            Ok(ServiceStatus {
+                state: "stopped".to_owned(),
+                running: false,
+                pid: None,
+                url,
+                health: None,
+            })
+        }
+    }
+}
+
+fn start_daemon_process(paths: &AppPaths, host: IpAddr, port: u16) -> Result<()> {
+    let stdout = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(paths.daemon_stdout_log())?;
+    let stderr = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(paths.daemon_stderr_log())?;
+    let mut command = ProcessCommand::new(std::env::current_exe()?);
+    #[cfg(unix)]
+    unsafe {
+        command.pre_exec(|| {
+            if libc::setsid() == -1 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+    #[cfg(windows)]
+    command.creation_flags(0x00000008);
+    command
+        .arg("serve")
+        .arg("--host")
+        .arg(host.to_string())
+        .arg("--port")
+        .arg(port.to_string())
+        .env("GUNMETAL_HOME", &paths.root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(stdout))
+        .stderr(Stdio::from(stderr));
+    let child = command.spawn()?;
+    fs::write(paths.daemon_pid_file(), child.id().to_string())?;
+    Ok(())
+}
+
+async fn wait_for_health(
+    paths: &AppPaths,
+    host: IpAddr,
+    port: u16,
+    attempts: usize,
+) -> Result<ServiceStatus> {
+    for _ in 0..attempts {
+        let status = daemon_status(paths, host, port).await?;
+        if status.running {
+            return Ok(status);
+        }
+        thread::sleep(Duration::from_millis(150));
+    }
+    daemon_status(paths, host, port).await
+}
+
+fn read_pid(path: &std::path::Path) -> Result<Option<u32>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let raw = fs::read_to_string(path)?;
+    Ok(raw.trim().parse::<u32>().ok())
+}
+
+fn process_exists(pid: u32) -> bool {
+    #[cfg(windows)]
+    {
+        return ProcessCommand::new("tasklist")
+            .args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
+            .output()
+            .ok()
+            .map(|output| {
+                let text = String::from_utf8_lossy(&output.stdout);
+                text.contains(&format!(",\"{pid}\"")) || text.starts_with('"')
+            })
+            .unwrap_or(false);
+    }
+
+    #[cfg(unix)]
+    {
+        unsafe {
+            let result = libc::kill(pid as i32, 0);
+            if result == 0 {
+                return true;
+            }
+            std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+        }
+    }
+}
+
+fn terminate_pid(pid: u32) -> Result<()> {
+    #[cfg(windows)]
+    {
+        let status = ProcessCommand::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .status()?;
+        if !status.success() {
+            anyhow::bail!("failed to stop daemon pid {pid}");
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        let status = ProcessCommand::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status()?;
+        if !status.success() {
+            anyhow::bail!("failed to stop daemon pid {pid}");
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceStatus {
+    pub state: String,
+    pub running: bool,
+    pub pid: Option<u32>,
+    pub url: String,
+    pub health: Option<String>,
 }
 
 fn require_profile(
@@ -329,7 +609,7 @@ fn profile_credentials(
 mod tests {
     use clap::Parser;
 
-    use super::{Cli, Command, KeyCommand, ModelCommand, ProfileCommand};
+    use super::{Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand};
 
     #[test]
     fn parses_key_create_command() {
@@ -412,6 +692,30 @@ mod tests {
             Command::Models { command } => match command {
                 ModelCommand::Sync { .. } => {}
                 _ => panic!("unexpected model command"),
+            },
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
+    fn parses_service_commands() {
+        let cli = Cli::parse_from(["gunmetal", "start"]);
+        assert!(matches!(cli.command.unwrap(), Command::Start(_)));
+
+        let cli = Cli::parse_from(["gunmetal", "stop"]);
+        assert!(matches!(cli.command.unwrap(), Command::Stop(_)));
+
+        let cli = Cli::parse_from(["gunmetal", "status"]);
+        assert!(matches!(cli.command.unwrap(), Command::Status(_)));
+    }
+
+    #[test]
+    fn parses_logs_list_command() {
+        let cli = Cli::parse_from(["gunmetal", "logs", "list", "--limit", "12"]);
+
+        match cli.command.unwrap() {
+            Command::Logs { command } => match command {
+                LogCommand::List { limit } => assert_eq!(limit, 12),
             },
             _ => panic!("unexpected command"),
         }

@@ -18,6 +18,7 @@ pub struct AppPaths {
     pub empty_workspace_dir: PathBuf,
     pub helpers_dir: PathBuf,
     pub logs_dir: PathBuf,
+    pub runtime_dir: PathBuf,
 }
 
 impl AppPaths {
@@ -39,6 +40,7 @@ impl AppPaths {
             empty_workspace_dir: root.join("empty-workspace"),
             helpers_dir: root.join("helpers"),
             logs_dir: root.join("logs"),
+            runtime_dir: root.join("runtime"),
             root,
         };
         paths.ensure()?;
@@ -54,6 +56,8 @@ impl AppPaths {
             .with_context(|| format!("failed to create {}", self.helpers_dir.display()))?;
         std::fs::create_dir_all(&self.logs_dir)
             .with_context(|| format!("failed to create {}", self.logs_dir.display()))?;
+        std::fs::create_dir_all(&self.runtime_dir)
+            .with_context(|| format!("failed to create {}", self.runtime_dir.display()))?;
         std::fs::create_dir_all(&self.empty_workspace_dir)
             .with_context(|| format!("failed to create {}", self.empty_workspace_dir.display()))?;
         Ok(())
@@ -61,6 +65,18 @@ impl AppPaths {
 
     pub fn storage_handle(&self) -> Result<StorageHandle> {
         StorageHandle::new(self.database.clone())
+    }
+
+    pub fn daemon_pid_file(&self) -> PathBuf {
+        self.runtime_dir.join("daemon.pid")
+    }
+
+    pub fn daemon_stdout_log(&self) -> PathBuf {
+        self.logs_dir.join("daemon.stdout.log")
+    }
+
+    pub fn daemon_stderr_log(&self) -> PathBuf {
+        self.logs_dir.join("daemon.stderr.log")
     }
 }
 
@@ -946,7 +962,9 @@ mod tests {
         assert!(paths.empty_workspace_dir.exists());
         assert!(paths.helpers_dir.exists());
         assert!(paths.logs_dir.exists());
+        assert!(paths.runtime_dir.exists());
         assert_eq!(paths.database.file_name().unwrap(), "gunmetal.db");
+        assert_eq!(paths.daemon_pid_file().file_name().unwrap(), "daemon.pid");
     }
 
     #[test]

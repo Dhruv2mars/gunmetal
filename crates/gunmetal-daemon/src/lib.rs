@@ -1,11 +1,14 @@
-use std::{net::SocketAddr, time::Instant};
+use std::{convert::Infallible, net::SocketAddr, time::Instant};
 
 use anyhow::Result;
 use axum::{
     Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    response::{
+        IntoResponse, Response,
+        sse::{Event, KeepAlive, Sse},
+    },
     routing::{get, post},
 };
 use gunmetal_core::{
@@ -16,6 +19,7 @@ use gunmetal_providers::ProviderHub;
 use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use tokio_stream::iter;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -106,21 +110,19 @@ async fn chat_completions(
         Err(error) => return error.into_response(),
     };
 
-    if payload.stream {
-        return api_error(
-            StatusCode::NOT_IMPLEMENTED,
-            "streaming_not_implemented",
-            "streaming chat completions are not wired yet".to_owned(),
-        );
-    }
-
-    let (key, profile, request) =
-        match prepare_request(&state, &headers, payload.model, payload.messages, false) {
-            Ok(context) => context,
-            Err(error) => return error.into_response(),
-        };
+    let (key, profile, request) = match prepare_request(
+        &state,
+        &headers,
+        payload.model,
+        payload.messages,
+        payload.stream,
+    ) {
+        Ok(context) => context,
+        Err(error) => return error.into_response(),
+    };
 
     match invoke_provider(&state, key, profile, request, "/v1/chat/completions").await {
+        Ok(result) if payload.stream => streaming_chat_completion(result),
         Ok(result) => Json(outgoing_chat_completion(result)).into_response(),
         Err(response) => response,
     }
@@ -136,21 +138,19 @@ async fn responses(
         Err(error) => return error.into_response(),
     };
 
-    if payload.stream {
-        return api_error(
-            StatusCode::NOT_IMPLEMENTED,
-            "streaming_not_implemented",
-            "streaming responses are not wired yet".to_owned(),
-        );
-    }
-
-    let (key, profile, request) =
-        match prepare_request(&state, &headers, payload.model, payload.messages, false) {
-            Ok(context) => context,
-            Err(error) => return error.into_response(),
-        };
+    let (key, profile, request) = match prepare_request(
+        &state,
+        &headers,
+        payload.model,
+        payload.messages,
+        payload.stream,
+    ) {
+        Ok(context) => context,
+        Err(error) => return error.into_response(),
+    };
 
     match invoke_provider(&state, key, profile, request, "/v1/responses").await {
+        Ok(result) if payload.stream => streaming_response(result),
         Ok(result) => Json(outgoing_response(result)).into_response(),
         Err(response) => response,
     }
@@ -270,6 +270,147 @@ fn outgoing_response(result: ChatCompletionResult) -> OutgoingResponsesResponse 
         }],
         usage: OutgoingResponseUsage::from(result.usage),
     }
+}
+
+fn streaming_chat_completion(result: ChatCompletionResult) -> Response {
+    let id = format!("chatcmpl-{}", Uuid::new_v4().simple());
+    let created = chrono::Utc::now().timestamp();
+    let mut events = Vec::new();
+
+    events.push(Ok::<Event, Infallible>(
+        Event::default().data(
+            json!({
+                "id": id,
+                "object": "chat.completion.chunk",
+                "created": created,
+                "model": result.model,
+                "choices": [{
+                    "index": 0,
+                    "delta": { "role": "assistant" },
+                    "finish_reason": Value::Null
+                }]
+            })
+            .to_string(),
+        ),
+    ));
+
+    for chunk in text_chunks(&result.message.content) {
+        events.push(Ok::<Event, Infallible>(
+            Event::default().data(
+                json!({
+                    "id": id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": result.model,
+                    "choices": [{
+                        "index": 0,
+                        "delta": { "content": chunk },
+                        "finish_reason": Value::Null
+                    }]
+                })
+                .to_string(),
+            ),
+        ));
+    }
+
+    events.push(Ok::<Event, Infallible>(
+        Event::default().data(
+            json!({
+                "id": id,
+                "object": "chat.completion.chunk",
+                "created": created,
+                "model": result.model,
+                "choices": [{
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": result.finish_reason
+                }],
+                "usage": result.usage
+            })
+            .to_string(),
+        ),
+    ));
+    events.push(Ok::<Event, Infallible>(Event::default().data("[DONE]")));
+
+    Sse::new(iter(events))
+        .keep_alive(KeepAlive::default())
+        .into_response()
+}
+
+fn streaming_response(result: ChatCompletionResult) -> Response {
+    let response_id = format!("resp_{}", Uuid::new_v4().simple());
+    let message_id = format!("msg_{}", Uuid::new_v4().simple());
+    let created_at = chrono::Utc::now().timestamp();
+    let mut events = Vec::new();
+
+    events.push(Ok::<Event, Infallible>(
+        Event::default().event("response.created").data(
+            json!({
+                "type": "response.created",
+                "response": {
+                    "id": response_id,
+                    "object": "response",
+                    "created_at": created_at,
+                    "status": "in_progress",
+                    "model": result.model
+                }
+            })
+            .to_string(),
+        ),
+    ));
+
+    for chunk in text_chunks(&result.message.content) {
+        events.push(Ok::<Event, Infallible>(
+            Event::default().event("response.output_text.delta").data(
+                json!({
+                    "type": "response.output_text.delta",
+                    "response_id": response_id,
+                    "item_id": message_id,
+                    "delta": chunk
+                })
+                .to_string(),
+            ),
+        ));
+    }
+
+    events.push(Ok::<Event, Infallible>(
+        Event::default().event("response.completed").data(
+            json!({
+                "type": "response.completed",
+                "response": outgoing_response(result)
+            })
+            .to_string(),
+        ),
+    ));
+    events.push(Ok::<Event, Infallible>(Event::default().data("[DONE]")));
+
+    Sse::new(iter(events))
+        .keep_alive(KeepAlive::default())
+        .into_response()
+}
+
+fn text_chunks(value: &str) -> Vec<String> {
+    if value.is_empty() {
+        return vec![String::new()];
+    }
+
+    let mut chunks = Vec::new();
+    let mut current = String::new();
+    let mut count = 0usize;
+    for ch in value.chars() {
+        current.push(ch);
+        count += 1;
+        if count >= 24 {
+            chunks.push(std::mem::take(&mut current));
+            count = 0;
+        }
+    }
+
+    if !current.is_empty() {
+        chunks.push(current);
+    }
+
+    chunks
 }
 
 #[derive(Debug, Serialize)]
@@ -896,6 +1037,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn chat_completion_streams_sse_chunks() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "messages": [{ "role": "user", "content": "ping" }],
+                            "stream": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_text(response).await;
+        assert!(body.contains("chat.completion.chunk"));
+        assert!(body.contains("\"role\":\"assistant\""));
+        assert!(body.contains("hello from codex"));
+        assert!(body.contains("[DONE]"));
+    }
+
+    #[tokio::test]
     async fn responses_rejects_missing_input() {
         let fixture = Fixture::new();
         fixture.seed_models();
@@ -963,6 +1138,41 @@ mod tests {
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].status_code, Some(200));
         assert_eq!(logs[0].endpoint, "/v1/responses");
+    }
+
+    #[tokio::test]
+    async fn responses_stream_sse_events() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/responses")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "input": "ping",
+                            "stream": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_text(response).await;
+        assert!(body.contains("event: response.created"));
+        assert!(body.contains("event: response.output_text.delta"));
+        assert!(body.contains("event: response.completed"));
+        assert!(body.contains("hello from codex"));
+        assert!(body.contains("[DONE]"));
     }
 
     struct Fixture {
@@ -1042,5 +1252,10 @@ mod tests {
     async fn to_json(response: Response) -> Value {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         serde_json::from_slice(&body).unwrap()
+    }
+
+    async fn to_text(response: Response) -> String {
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        String::from_utf8(body.to_vec()).unwrap()
     }
 }
