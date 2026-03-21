@@ -4,9 +4,15 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to publish, ex: v0.1.0
+        required: true
+        type: string
 
 env:
-  RELEASE_TAG: ${{ github.ref_name }}
+  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency: ${{ github.workflow }}-${{ github.ref_name }}
@@ -27,6 +33,7 @@ jobs:
       - id: meta
         run: |
           set -euo pipefail
+          [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           version="$(node -p "require('./packages/npm/package.json').version")"
           if [ "v${version}" != "${RELEASE_TAG}" ]; then
             echo "tag/version mismatch"
@@ -160,7 +167,12 @@ jobs:
             export NODE_AUTH_TOKEN="${NPM_TOKEN}"
             cd packages/npm && npm publish --access public
           else
+            echo "publish via npm trusted publisher"
             unset NODE_AUTH_TOKEN || true
-            cd packages/npm && npm publish --provenance --access public
+            if cd packages/npm && npm publish --provenance --access public; then
+              exit 0
+            fi
+            echo "trusted publisher not configured and NPM_TOKEN missing"
+            exit 1
           fi
         shell: bash
