@@ -1,0 +1,14 @@
+[package]
+name = "gunmetal-app"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+gunmetal-cli = { path = "../gunmetal-cli" }
+gunmetal-storage = { path = "../gunmetal-storage" }
+gunmetal-tui = { path = "../gunmetal-tui" }
+tokio.workspace = true

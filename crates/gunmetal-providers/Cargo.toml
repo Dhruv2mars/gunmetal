@@ -1,0 +1,9 @@
+[package]
+name = "gunmetal-providers"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+gunmetal-core = { path = "../gunmetal-core" }
