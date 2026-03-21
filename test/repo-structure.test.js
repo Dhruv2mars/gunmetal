@@ -59,6 +59,8 @@ test("release workflow supports manual reruns and npm auth paths", () => {
     /RELEASE_TAG:\s+\$\{\{\s*github\.event\.client_payload/
   );
   assert.match(ciWorkflow, /actionlint/);
+  assert.match(ciWorkflow, /rhysd\/actionlint@v1\.7\.11/);
+  assert.doesNotMatch(ciWorkflow, /rhysd\/actionlint@v1(\s|$)/);
 });
 
 test("install docs point at npm, not source-only fallback", () => {

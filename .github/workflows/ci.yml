@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: rhysd/actionlint@v1
+      - uses: rhysd/actionlint@v1.7.11
 
   rust-target-matrix:
     strategy:
