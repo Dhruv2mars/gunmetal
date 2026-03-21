@@ -1,12 +1,12 @@
 [workspace]
 members = [
-  "crates/gunmetal-app",
-  "crates/gunmetal-cli",
-  "crates/gunmetal-core",
-  "crates/gunmetal-daemon",
-  "crates/gunmetal-providers",
-  "crates/gunmetal-storage",
-  "crates/gunmetal-tui"
+  "apps/cli",
+  "packages/cli",
+  "packages/core",
+  "packages/daemon",
+  "packages/providers",
+  "packages/storage",
+  "packages/tui"
 ]
 resolver = "3"
 

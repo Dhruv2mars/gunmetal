@@ -8,10 +8,10 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-gunmetal-core = { path = "../gunmetal-core" }
-gunmetal-daemon = { path = "../gunmetal-daemon" }
-gunmetal-providers = { path = "../gunmetal-providers" }
-gunmetal-storage = { path = "../gunmetal-storage" }
+gunmetal-core = { path = "../core" }
+gunmetal-daemon = { path = "../daemon" }
+gunmetal-providers = { path = "../providers" }
+gunmetal-storage = { path = "../storage" }
 libc.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
