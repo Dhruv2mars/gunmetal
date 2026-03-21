@@ -120,6 +120,14 @@ impl StorageHandle {
         self.storage()?.get_profile(id)
     }
 
+    pub fn update_profile_credentials(
+        &self,
+        id: Uuid,
+        credentials: Option<serde_json::Value>,
+    ) -> Result<()> {
+        self.storage()?.update_profile_credentials(id, credentials)
+    }
+
     pub fn replace_models_for_profile(
         &self,
         provider: &ProviderKind,
@@ -418,6 +426,27 @@ impl Storage {
         })
         .optional()
         .map_err(Into::into)
+    }
+
+    pub fn update_profile_credentials(
+        &self,
+        id: Uuid,
+        credentials: Option<serde_json::Value>,
+    ) -> Result<()> {
+        let changed = self.conn.execute(
+            "update provider_profiles set credentials_json = ?2, updated_at = ?3 where id = ?1",
+            params![
+                id.to_string(),
+                credentials.map(|value| value.to_string()),
+                to_rfc3339(Utc::now())
+            ],
+        )?;
+
+        if changed == 0 {
+            bail!("profile not found");
+        }
+
+        Ok(())
     }
 
     pub fn replace_models_for_profile(
@@ -990,5 +1019,26 @@ mod tests {
                 .iter()
                 .any(|model| model.id == "openrouter/openai/gpt-5.1")
         );
+    }
+
+    #[test]
+    fn updates_profile_credentials_in_place() {
+        let storage = Storage::open_in_memory().unwrap();
+        let profile = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Copilot,
+                name: "copilot".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+
+        storage
+            .update_profile_credentials(profile.id, Some(json!({ "token": "abc" })))
+            .unwrap();
+
+        let updated = storage.get_profile(profile.id).unwrap().unwrap();
+        assert_eq!(updated.credentials, Some(json!({ "token": "abc" })));
     }
 }

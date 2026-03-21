@@ -272,6 +272,8 @@ pub struct ProviderAuthStatus {
 pub struct ProviderLoginSession {
     pub login_id: String,
     pub auth_url: String,
+    pub user_code: Option<String>,
+    pub interval_seconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

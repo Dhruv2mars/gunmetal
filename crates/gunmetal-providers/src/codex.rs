@@ -200,6 +200,8 @@ impl CodexClient {
             CodexMode::Mock(_) => Ok(ProviderLoginSession {
                 login_id: "mock-login".to_owned(),
                 auth_url: "https://chatgpt.com".to_owned(),
+                user_code: None,
+                interval_seconds: None,
             }),
             CodexMode::Live(_) => {
                 let response: LoginStartResponse = self
@@ -209,6 +211,8 @@ impl CodexClient {
                 Ok(ProviderLoginSession {
                     login_id: response.login_id,
                     auth_url: response.auth_url,
+                    user_code: None,
+                    interval_seconds: None,
                 })
             }
         }
