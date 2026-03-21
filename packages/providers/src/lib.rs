@@ -1,11 +1,16 @@
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
+use async_trait::async_trait;
 use gunmetal_core::{
-    ChatCompletionRequest, ChatCompletionResult, ModelDescriptor, ProviderAuthStatus, ProviderKind,
-    ProviderLoginSession, ProviderProfile,
+    ChatCompletionRequest, ChatCompletionResult, ModelDescriptor, ModelMetadata,
+    ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile,
 };
 use gunmetal_storage::AppPaths;
+use reqwest::Client;
+use serde::Deserialize;
+use serde_json::Value;
+use tokio::sync::Mutex;
 
 mod codex;
 mod copilot;
@@ -18,35 +23,6 @@ pub use copilot::{CopilotClient, CopilotClientOptions, CopilotSession};
 pub use openai::{OpenAiClient, OpenAiClientOptions};
 pub use openrouter::{OpenRouterClient, OpenRouterClientOptions};
 pub use zen::{ZenClient, ZenClientOptions};
-
-type CodexConnector = Arc<
-    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>>
-        + Send
-        + Sync,
->;
-type CopilotConnector = Arc<
-    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>>
-        + Send
-        + Sync,
->;
-type OpenRouterConnector = Arc<
-    dyn Fn(
-            ProviderProfile,
-            AppPaths,
-        ) -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>>
-        + Send
-        + Sync,
->;
-type OpenAiConnector = Arc<
-    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>>
-        + Send
-        + Sync,
->;
-type ZenConnector = Arc<
-    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>>
-        + Send
-        + Sync,
->;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProviderClass {
@@ -62,296 +38,144 @@ pub struct ProviderDefinition {
     pub priority: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct ProviderAuthResult {
+    pub credentials: Option<Value>,
+    pub status: ProviderAuthStatus,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderLoginResult {
+    pub credentials: Option<Value>,
+    pub session: ProviderLoginSession,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderModelSyncResult {
+    pub credentials: Option<Value>,
+    pub models: Vec<ModelDescriptor>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderChatResult {
+    pub completion: ChatCompletionResult,
+    pub credentials: Option<Value>,
+}
+
+#[async_trait]
+pub trait ProviderAdapter: Send + Sync {
+    fn definition(&self) -> ProviderDefinition;
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+    ) -> Result<ProviderAuthResult>;
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        open_browser: bool,
+    ) -> Result<ProviderLoginResult>;
+
+    async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>>;
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult>;
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult>;
+}
+
+#[derive(Clone, Default)]
+pub struct ProviderRegistry {
+    adapters: HashMap<ProviderKind, Arc<dyn ProviderAdapter>>,
+}
+
+impl ProviderRegistry {
+    pub fn with_defaults() -> Self {
+        let mut registry = Self::default();
+        registry.register(CodexAdapter);
+        registry.register(CopilotAdapter);
+        registry.register(OpenRouterAdapter);
+        registry.register(ZenAdapter);
+        registry.register(OpenAiAdapter);
+        registry
+    }
+
+    pub fn register<A>(&mut self, adapter: A)
+    where
+        A: ProviderAdapter + 'static,
+    {
+        let adapter = Arc::new(adapter);
+        self.adapters
+            .insert(adapter.definition().kind.clone(), adapter);
+    }
+
+    pub fn get(&self, kind: &ProviderKind) -> Option<Arc<dyn ProviderAdapter>> {
+        self.adapters.get(kind).cloned()
+    }
+
+    pub fn definitions(&self) -> Vec<ProviderDefinition> {
+        let mut definitions = self
+            .adapters
+            .values()
+            .map(|adapter| adapter.definition())
+            .collect::<Vec<_>>();
+        definitions.sort_by_key(|item| item.priority);
+        definitions
+    }
+}
+
 #[derive(Clone)]
 pub struct ProviderHub {
     paths: AppPaths,
-    codex_connector: CodexConnector,
-    copilot_connector: CopilotConnector,
-    openrouter_connector: OpenRouterConnector,
-    openai_connector: OpenAiConnector,
-    zen_connector: ZenConnector,
+    registry: ProviderRegistry,
+    models_dev: ModelsDevCatalog,
 }
 
 impl ProviderHub {
     pub fn new(paths: AppPaths) -> Self {
         Self {
             paths,
-            codex_connector: Arc::new(|profile, paths| {
-                Box::pin(async move {
-                    CodexClient::spawn(CodexClientOptions::from_profile(&profile, &paths)).await
-                })
-            }),
-            copilot_connector: Arc::new(|profile, _paths| {
-                Box::pin(async move {
-                    Ok(CopilotClient::with_options(
-                        CopilotClientOptions::from_profile(&profile),
-                    ))
-                })
-            }),
-            openrouter_connector: Arc::new(|profile, _paths| {
-                Box::pin(async move {
-                    Ok(OpenRouterClient::with_options(
-                        OpenRouterClientOptions::from_profile(&profile),
-                    ))
-                })
-            }),
-            openai_connector: Arc::new(|profile, _paths| {
-                Box::pin(async move {
-                    Ok(OpenAiClient::with_options(
-                        OpenAiClientOptions::from_profile(&profile),
-                    ))
-                })
-            }),
-            zen_connector: Arc::new(|profile, _paths| {
-                Box::pin(async move {
-                    Ok(ZenClient::with_options(ZenClientOptions::from_profile(
-                        &profile,
-                    )))
-                })
-            }),
+            registry: ProviderRegistry::with_defaults(),
+            models_dev: ModelsDevCatalog::default(),
         }
     }
 
-    pub fn with_connectors(
+    pub fn with_registry(paths: AppPaths, registry: ProviderRegistry) -> Self {
+        Self {
+            paths,
+            registry,
+            models_dev: ModelsDevCatalog::default(),
+        }
+    }
+
+    pub fn with_registry_and_models_dev(
         paths: AppPaths,
-        codex_connector: CodexConnector,
-        copilot_connector: CopilotConnector,
-        openrouter_connector: OpenRouterConnector,
-        openai_connector: OpenAiConnector,
-        zen_connector: ZenConnector,
+        registry: ProviderRegistry,
+        models_dev: ModelsDevCatalog,
     ) -> Self {
         Self {
             paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
+            registry,
+            models_dev,
         }
-    }
-
-    pub fn with_codex_connector(paths: AppPaths, codex_connector: CodexConnector) -> Self {
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        Self::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        )
-    }
-
-    pub fn with_copilot_connector(paths: AppPaths, copilot_connector: CopilotConnector) -> Self {
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        Self::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        )
-    }
-
-    pub fn with_openrouter_connector(
-        paths: AppPaths,
-        openrouter_connector: OpenRouterConnector,
-    ) -> Self {
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        Self::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        )
-    }
-
-    pub fn with_openai_connector(paths: AppPaths, openai_connector: OpenAiConnector) -> Self {
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        Self::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        )
-    }
-
-    pub fn with_zen_connector(paths: AppPaths, zen_connector: ZenConnector) -> Self {
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        Self::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        )
     }
 
     pub async fn auth_status(&self, profile: &ProviderProfile) -> Result<ProviderAuthStatus> {
-        match profile.provider {
-            ProviderKind::Codex => self.codex(profile).await?.auth_status().await,
-            ProviderKind::Copilot => {
-                let result = self.copilot(profile).await?.auth_status(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.status)
-            }
-            ProviderKind::OpenRouter => {
-                let result = self.openrouter(profile).await?.auth_status(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.status)
-            }
-            ProviderKind::OpenAi => self.openai(profile).await?.auth_status(profile).await,
-            ProviderKind::Zen => {
-                let result = self.zen(profile).await?.auth_status(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.status)
-            }
-            _ => bail!(
-                "provider '{}' auth status not implemented yet",
-                profile.provider
-            ),
-        }
+        let adapter = self.adapter(&profile.provider)?;
+        let result = adapter.auth_status(profile, &self.paths).await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        Ok(result.status)
     }
 
     pub async fn login(
@@ -359,95 +183,26 @@ impl ProviderHub {
         profile: &ProviderProfile,
         open_browser: bool,
     ) -> Result<ProviderLoginSession> {
-        match profile.provider {
-            ProviderKind::Codex => {
-                let session = self.codex(profile).await?.login().await?;
-                if open_browser {
-                    let _ = webbrowser::open(&session.auth_url);
-                }
-                Ok(session)
-            }
-            ProviderKind::Copilot => {
-                let result = self
-                    .copilot(profile)
-                    .await?
-                    .login(profile, open_browser)
-                    .await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.session)
-            }
-            ProviderKind::OpenRouter => {
-                bail!(
-                    "provider '{}' does not support browser login",
-                    profile.provider
-                )
-            }
-            ProviderKind::OpenAi => {
-                bail!(
-                    "provider '{}' does not support browser login",
-                    profile.provider
-                )
-            }
-            ProviderKind::Zen => {
-                bail!(
-                    "provider '{}' does not support browser login",
-                    profile.provider
-                )
-            }
-            _ => bail!("provider '{}' login not implemented yet", profile.provider),
-        }
+        let adapter = self.adapter(&profile.provider)?;
+        let result = adapter.login(profile, &self.paths, open_browser).await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        Ok(result.session)
     }
 
     pub async fn logout(&self, profile: &ProviderProfile) -> Result<()> {
-        match profile.provider {
-            ProviderKind::Codex => self.codex(profile).await?.logout().await,
-            ProviderKind::Copilot => {
-                self.persist_credentials(profile.id, None)?;
-                Ok(())
-            }
-            ProviderKind::OpenRouter => {
-                let credentials = self.openrouter(profile).await?.clear_credentials();
-                self.persist_credentials(profile.id, credentials)?;
-                Ok(())
-            }
-            ProviderKind::OpenAi => {
-                let credentials = self.openai(profile).await?.clear_credentials();
-                self.persist_credentials(profile.id, credentials)?;
-                Ok(())
-            }
-            ProviderKind::Zen => {
-                let credentials = self.zen(profile).await?.clear_credentials();
-                self.persist_credentials(profile.id, credentials)?;
-                Ok(())
-            }
-            _ => bail!("provider '{}' logout not implemented yet", profile.provider),
-        }
+        let adapter = self.adapter(&profile.provider)?;
+        let credentials = adapter.logout(profile, &self.paths).await?;
+        self.persist_credentials(profile.id, credentials)
     }
 
     pub async fn sync_models(&self, profile: &ProviderProfile) -> Result<Vec<ModelDescriptor>> {
-        match profile.provider {
-            ProviderKind::Codex => self.codex(profile).await?.list_models(profile.id).await,
-            ProviderKind::Copilot => {
-                let result = self.copilot(profile).await?.list_models(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.models)
-            }
-            ProviderKind::OpenRouter => {
-                let result = self.openrouter(profile).await?.list_models(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.models)
-            }
-            ProviderKind::OpenAi => self.openai(profile).await?.list_models(profile).await,
-            ProviderKind::Zen => {
-                let result = self.zen(profile).await?.list_models(profile).await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.models)
-            }
-            _ => bail!(
-                "provider '{}' model sync not implemented yet",
-                profile.provider
-            ),
+        let adapter = self.adapter(&profile.provider)?;
+        let mut result = adapter.sync_models(profile, &self.paths).await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        if let Err(error) = self.models_dev.enrich(&mut result.models).await {
+            let _ = error;
         }
+        Ok(result.models)
     }
 
     pub async fn chat_completion(
@@ -455,71 +210,18 @@ impl ProviderHub {
         profile: &ProviderProfile,
         request: &ChatCompletionRequest,
     ) -> Result<ChatCompletionResult> {
-        match profile.provider {
-            ProviderKind::Codex => {
-                self.codex(profile)
-                    .await?
-                    .chat_completion(profile.id, request)
-                    .await
-            }
-            ProviderKind::Copilot => {
-                let result = self
-                    .copilot(profile)
-                    .await?
-                    .chat_completion(profile, request)
-                    .await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.completion)
-            }
-            ProviderKind::OpenRouter => {
-                let result = self
-                    .openrouter(profile)
-                    .await?
-                    .chat_completion(profile, request)
-                    .await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.completion)
-            }
-            ProviderKind::OpenAi => {
-                self.openai(profile)
-                    .await?
-                    .chat_completion(profile, request)
-                    .await
-            }
-            ProviderKind::Zen => {
-                let result = self
-                    .zen(profile)
-                    .await?
-                    .chat_completion(profile, request)
-                    .await?;
-                self.persist_credentials(profile.id, result.credentials)?;
-                Ok(result.completion)
-            }
-            _ => bail!(
-                "provider '{}' chat completions not implemented yet",
-                profile.provider
-            ),
-        }
+        let adapter = self.adapter(&profile.provider)?;
+        let result = adapter
+            .chat_completion(profile, &self.paths, request)
+            .await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        Ok(result.completion)
     }
 
-    async fn codex(&self, profile: &ProviderProfile) -> Result<CodexClient> {
-        (self.codex_connector)(profile.clone(), self.paths.clone()).await
-    }
-
-    async fn copilot(&self, profile: &ProviderProfile) -> Result<CopilotClient> {
-        (self.copilot_connector)(profile.clone(), self.paths.clone()).await
-    }
-
-    async fn openrouter(&self, profile: &ProviderProfile) -> Result<OpenRouterClient> {
-        (self.openrouter_connector)(profile.clone(), self.paths.clone()).await
-    }
-
-    async fn openai(&self, profile: &ProviderProfile) -> Result<OpenAiClient> {
-        (self.openai_connector)(profile.clone(), self.paths.clone()).await
-    }
-
-    async fn zen(&self, profile: &ProviderProfile) -> Result<ZenClient> {
-        (self.zen_connector)(profile.clone(), self.paths.clone()).await
+    fn adapter(&self, kind: &ProviderKind) -> Result<Arc<dyn ProviderAdapter>> {
+        self.registry
+            .get(kind)
+            .ok_or_else(|| anyhow!("provider '{}' not implemented yet", kind))
     }
 
     fn persist_credentials(
@@ -534,62 +236,546 @@ impl ProviderHub {
 }
 
 pub fn builtin_providers() -> Vec<ProviderDefinition> {
-    vec![
+    ProviderRegistry::with_defaults().definitions()
+}
+
+#[derive(Clone)]
+pub struct ModelsDevCatalog {
+    catalog_url: String,
+    http: Client,
+    cache: Arc<Mutex<Option<ModelsDevIndex>>>,
+}
+
+impl Default for ModelsDevCatalog {
+    fn default() -> Self {
+        Self::new("https://models.dev/api.json")
+    }
+}
+
+impl ModelsDevCatalog {
+    pub fn new(catalog_url: impl Into<String>) -> Self {
+        Self {
+            catalog_url: catalog_url.into(),
+            http: Client::builder().build().expect("reqwest client"),
+            cache: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    async fn enrich(&self, models: &mut [ModelDescriptor]) -> Result<()> {
+        let index = self.index().await?;
+        for model in models {
+            if model.metadata.is_some() {
+                continue;
+            }
+
+            let aliases = provider_aliases(&model.provider);
+            let metadata = aliases
+                .iter()
+                .find_map(|alias| index.by_provider.get(*alias))
+                .and_then(|models| models.get(&model.upstream_name).cloned())
+                .or_else(|| index.by_model_id.get(&model.upstream_name).cloned());
+            model.metadata = metadata;
+        }
+        Ok(())
+    }
+
+    async fn index(&self) -> Result<ModelsDevIndex> {
+        {
+            let cache = self.cache.lock().await;
+            if let Some(index) = cache.as_ref() {
+                return Ok(index.clone());
+            }
+        }
+
+        let payload = self
+            .http
+            .get(&self.catalog_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<HashMap<String, ModelsDevProvider>>()
+            .await?;
+        let index = ModelsDevIndex::from_payload(payload);
+        let mut cache = self.cache.lock().await;
+        *cache = Some(index.clone());
+        Ok(index)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ModelsDevIndex {
+    by_model_id: HashMap<String, ModelMetadata>,
+    by_provider: HashMap<String, HashMap<String, ModelMetadata>>,
+}
+
+impl ModelsDevIndex {
+    fn from_payload(payload: HashMap<String, ModelsDevProvider>) -> Self {
+        let mut index = Self::default();
+        for (provider, envelope) in payload {
+            let mut provider_models = HashMap::new();
+            for (model_id, model) in envelope.models {
+                let metadata = ModelMetadata {
+                    family: model.family,
+                    release_date: model.release_date,
+                    last_updated: model.last_updated,
+                    input_modalities: model.modalities.input,
+                    output_modalities: model.modalities.output,
+                    context_window: model.limit.context.map(to_u32),
+                    max_output_tokens: model.limit.output.map(to_u32),
+                    supports_attachments: model.attachment,
+                    supports_reasoning: model.reasoning,
+                    supports_tools: model.tool_call,
+                    open_weights: model.open_weights,
+                };
+                provider_models.insert(model_id.clone(), metadata.clone());
+                index.by_model_id.entry(model_id).or_insert(metadata);
+            }
+            index.by_provider.insert(provider, provider_models);
+        }
+        index
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ModelsDevProvider {
+    #[serde(default)]
+    models: HashMap<String, ModelsDevModel>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ModelsDevModel {
+    family: Option<String>,
+    attachment: Option<bool>,
+    reasoning: Option<bool>,
+    tool_call: Option<bool>,
+    open_weights: Option<bool>,
+    release_date: Option<String>,
+    last_updated: Option<String>,
+    #[serde(default)]
+    modalities: ModelsDevModalities,
+    #[serde(default)]
+    limit: ModelsDevLimits,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ModelsDevModalities {
+    #[serde(default)]
+    input: Vec<String>,
+    #[serde(default)]
+    output: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ModelsDevLimits {
+    context: Option<u64>,
+    output: Option<u64>,
+}
+
+fn provider_aliases(provider: &ProviderKind) -> &'static [&'static str] {
+    match provider {
+        ProviderKind::Codex => &["codex", "openai"],
+        ProviderKind::Copilot => &["copilot", "github"],
+        ProviderKind::OpenRouter => &["openrouter"],
+        ProviderKind::Zen => &["zen", "opencode", "zenmux"],
+        ProviderKind::OpenAi => &["openai"],
+        ProviderKind::Azure => &["azure", "azure-cognitive-services"],
+        ProviderKind::Nvidia => &["nvidia"],
+        ProviderKind::Custom(_) => &[],
+    }
+}
+
+fn to_u32(value: u64) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+struct CodexAdapter;
+struct CopilotAdapter;
+struct OpenRouterAdapter;
+struct ZenAdapter;
+struct OpenAiAdapter;
+
+#[async_trait]
+impl ProviderAdapter for CodexAdapter {
+    fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Codex,
             class: ProviderClass::Subscription,
             priority: 1,
-        },
+        }
+    }
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+    ) -> Result<ProviderAuthResult> {
+        Ok(ProviderAuthResult {
+            credentials: None,
+            status: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
+                .await?
+                .auth_status()
+                .await?,
+        })
+    }
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        open_browser: bool,
+    ) -> Result<ProviderLoginResult> {
+        let session = CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
+            .await?
+            .login()
+            .await?;
+        if open_browser {
+            let _ = webbrowser::open(&session.auth_url);
+        }
+        Ok(ProviderLoginResult {
+            credentials: None,
+            session,
+        })
+    }
+
+    async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>> {
+        CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
+            .await?
+            .logout()
+            .await?;
+        Ok(None)
+    }
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult> {
+        Ok(ProviderModelSyncResult {
+            credentials: None,
+            models: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
+                .await?
+                .list_models(profile.id)
+                .await?,
+        })
+    }
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult> {
+        Ok(ProviderChatResult {
+            credentials: None,
+            completion: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
+                .await?
+                .chat_completion(profile.id, request)
+                .await?,
+        })
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for CopilotAdapter {
+    fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Copilot,
             class: ProviderClass::Subscription,
             priority: 2,
-        },
+        }
+    }
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderAuthResult> {
+        let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
+            .auth_status(profile)
+            .await?;
+        Ok(ProviderAuthResult {
+            credentials: result.credentials,
+            status: result.status,
+        })
+    }
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        open_browser: bool,
+    ) -> Result<ProviderLoginResult> {
+        let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
+            .login(profile, open_browser)
+            .await?;
+        Ok(ProviderLoginResult {
+            credentials: result.credentials,
+            session: result.session,
+        })
+    }
+
+    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+        let _ = profile;
+        Ok(None)
+    }
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult> {
+        let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
+            .list_models(profile)
+            .await?;
+        Ok(ProviderModelSyncResult {
+            credentials: result.credentials,
+            models: result.models,
+        })
+    }
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult> {
+        let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
+            .chat_completion(profile, request)
+            .await?;
+        Ok(ProviderChatResult {
+            credentials: result.credentials,
+            completion: result.completion,
+        })
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for OpenRouterAdapter {
+    fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::OpenRouter,
             class: ProviderClass::Gateway,
             priority: 3,
-        },
+        }
+    }
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderAuthResult> {
+        let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
+            .auth_status(profile)
+            .await?;
+        Ok(ProviderAuthResult {
+            credentials: result.credentials,
+            status: result.status,
+        })
+    }
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        _open_browser: bool,
+    ) -> Result<ProviderLoginResult> {
+        bail!(
+            "provider '{}' does not support browser login",
+            profile.provider
+        )
+    }
+
+    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+        Ok(
+            OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
+                .clear_credentials(),
+        )
+    }
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult> {
+        let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
+            .list_models(profile)
+            .await?;
+        Ok(ProviderModelSyncResult {
+            credentials: result.credentials,
+            models: result.models,
+        })
+    }
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult> {
+        let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
+            .chat_completion(profile, request)
+            .await?;
+        Ok(ProviderChatResult {
+            credentials: result.credentials,
+            completion: result.completion,
+        })
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for ZenAdapter {
+    fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Zen,
             class: ProviderClass::Gateway,
             priority: 4,
-        },
+        }
+    }
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderAuthResult> {
+        let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
+            .auth_status(profile)
+            .await?;
+        Ok(ProviderAuthResult {
+            credentials: result.credentials,
+            status: result.status,
+        })
+    }
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        _open_browser: bool,
+    ) -> Result<ProviderLoginResult> {
+        bail!(
+            "provider '{}' does not support browser login",
+            profile.provider
+        )
+    }
+
+    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+        Ok(ZenClient::with_options(ZenClientOptions::from_profile(profile)).clear_credentials())
+    }
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult> {
+        let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
+            .list_models(profile)
+            .await?;
+        Ok(ProviderModelSyncResult {
+            credentials: result.credentials,
+            models: result.models,
+        })
+    }
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult> {
+        let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
+            .chat_completion(profile, request)
+            .await?;
+        Ok(ProviderChatResult {
+            credentials: result.credentials,
+            completion: result.completion,
+        })
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for OpenAiAdapter {
+    fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::OpenAi,
             class: ProviderClass::Direct,
             priority: 5,
-        },
-        ProviderDefinition {
-            kind: ProviderKind::Azure,
-            class: ProviderClass::Direct,
-            priority: 6,
-        },
-        ProviderDefinition {
-            kind: ProviderKind::Nvidia,
-            class: ProviderClass::Direct,
-            priority: 7,
-        },
-    ]
+        }
+    }
+
+    async fn auth_status(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderAuthResult> {
+        Ok(ProviderAuthResult {
+            credentials: profile.credentials.clone(),
+            status: OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
+                .auth_status(profile)
+                .await?,
+        })
+    }
+
+    async fn login(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        _open_browser: bool,
+    ) -> Result<ProviderLoginResult> {
+        bail!(
+            "provider '{}' does not support browser login",
+            profile.provider
+        )
+    }
+
+    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+        Ok(
+            OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
+                .clear_credentials(),
+        )
+    }
+
+    async fn sync_models(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+    ) -> Result<ProviderModelSyncResult> {
+        Ok(ProviderModelSyncResult {
+            credentials: profile.credentials.clone(),
+            models: OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
+                .list_models(profile)
+                .await?,
+        })
+    }
+
+    async fn chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderChatResult> {
+        Ok(ProviderChatResult {
+            credentials: profile.credentials.clone(),
+            completion: OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
+                .chat_completion(profile, request)
+                .await?,
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{future::Future, pin::Pin, sync::Arc};
-
     use anyhow::Result;
-    use chrono::Utc;
     use gunmetal_core::{
-        ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ProviderAuthState,
-        ProviderKind, ProviderProfile, TokenUsage,
+        ChatMessage, ChatRole, NewProviderProfile, ProviderAuthState, RequestOptions,
     };
+    use serde_json::json;
     use tempfile::TempDir;
-    use uuid::Uuid;
-
-    use super::{
-        CodexClient, CopilotClient, OpenAiClient, OpenRouterClient, ProviderClass, ProviderHub,
-        ZenClient, builtin_providers,
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
     };
+
+    use super::*;
 
     #[test]
     fn builtin_provider_order_matches_product_priority() {
@@ -598,494 +784,288 @@ mod tests {
         assert_eq!(providers[1].kind, ProviderKind::Copilot);
         assert_eq!(providers[2].kind, ProviderKind::OpenRouter);
         assert_eq!(providers[3].kind, ProviderKind::Zen);
-    }
-
-    #[test]
-    fn provider_classes_are_partitioned() {
-        let providers = builtin_providers();
-        assert_eq!(providers[0].class, ProviderClass::Subscription);
-        assert_eq!(providers[2].class, ProviderClass::Gateway);
-        assert_eq!(providers[4].class, ProviderClass::Direct);
+        assert_eq!(providers[4].kind, ProviderKind::OpenAi);
     }
 
     #[tokio::test]
-    async fn provider_hub_delegates_to_codex_connector() {
+    async fn provider_hub_uses_registered_adapter_and_persists_credentials() {
         let temp = TempDir::new().unwrap();
-        let paths =
-            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        let hub = ProviderHub::with_connectors(
-            paths,
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        );
-        let profile = ProviderProfile {
-            id: Uuid::new_v4(),
-            provider: ProviderKind::Codex,
-            name: "default".to_owned(),
-            base_url: None,
-            enabled: true,
-            credentials: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-
-        let status = hub.auth_status(&profile).await.unwrap();
-        assert_eq!(status.state, ProviderAuthState::Connected);
-
-        let models = hub.sync_models(&profile).await.unwrap();
-        assert_eq!(models[0].id, "codex/gpt-5.4");
-
-        let response = hub
-            .chat_completion(
-                &profile,
-                &ChatCompletionRequest {
-                    model: "codex/gpt-5.4".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
-                },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.message.content, "hello from codex");
-    }
-
-    #[tokio::test]
-    async fn provider_hub_delegates_to_copilot_connector() {
-        let temp = TempDir::new().unwrap();
-        let paths =
-            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        let hub = ProviderHub::with_connectors(
-            paths.clone(),
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        );
+        let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let storage = paths.storage_handle().unwrap();
         let profile = storage
-            .create_profile(gunmetal_core::NewProviderProfile {
-                provider: ProviderKind::Copilot,
-                name: "default".to_owned(),
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Custom("mock".to_owned()),
+                name: "mock".to_owned(),
                 base_url: None,
                 enabled: true,
                 credentials: None,
             })
             .unwrap();
 
+        let mut registry = ProviderRegistry::default();
+        registry.register(MockAdapter);
+        let hub = ProviderHub::with_registry(paths.clone(), registry);
+
         let status = hub.auth_status(&profile).await.unwrap();
         assert_eq!(status.state, ProviderAuthState::Connected);
 
-        let models = hub.sync_models(&profile).await.unwrap();
-        assert_eq!(models[0].id, "copilot/gpt-5.4");
+        let synced = hub.sync_models(&profile).await.unwrap();
+        assert_eq!(synced[0].id, "mock/model-1");
 
-        let response = hub
+        let completion = hub
             .chat_completion(
                 &profile,
                 &ChatCompletionRequest {
-                    model: "copilot/gpt-5.4".to_owned(),
+                    model: "mock/model-1".to_owned(),
                     messages: vec![ChatMessage {
                         role: ChatRole::User,
                         content: "ping".to_owned(),
                     }],
                     stream: false,
+                    options: RequestOptions::default(),
                 },
             )
             .await
             .unwrap();
-        assert_eq!(response.message.content, "hello from copilot");
+        assert_eq!(completion.message.content, "hello from mock");
+
+        let updated = storage.get_profile(profile.id).unwrap().unwrap();
+        assert_eq!(updated.credentials, Some(json!({ "token": "updated" })));
     }
 
     #[tokio::test]
-    async fn provider_hub_delegates_to_openrouter_connector() {
+    async fn models_dev_enriches_synced_models() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/api.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "openai": {
+                    "models": {
+                        "gpt-5.1": {
+                            "family": "gpt",
+                            "attachment": true,
+                            "reasoning": true,
+                            "tool_call": true,
+                            "open_weights": false,
+                            "release_date": "2025-01-01",
+                            "last_updated": "2025-02-01",
+                            "modalities": { "input": ["text"], "output": ["text"] },
+                            "limit": { "context": 272000, "output": 16384 }
+                        }
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+
         let temp = TempDir::new().unwrap();
-        let paths =
-            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        let hub = ProviderHub::with_connectors(
-            paths.clone(),
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        );
+        let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let storage = paths.storage_handle().unwrap();
         let profile = storage
-            .create_profile(gunmetal_core::NewProviderProfile {
-                provider: ProviderKind::OpenRouter,
-                name: "default".to_owned(),
-                base_url: Some("https://openrouter.ai/api/v1".to_owned()),
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex".to_owned(),
+                base_url: None,
                 enabled: true,
-                credentials: Some(serde_json::json!({ "api_key": "sk-or-test" })),
+                credentials: None,
             })
             .unwrap();
 
-        let status = hub.auth_status(&profile).await.unwrap();
-        assert_eq!(status.state, ProviderAuthState::Connected);
+        let mut registry = ProviderRegistry::default();
+        registry.register(MockCodexAdapter);
+        let hub = ProviderHub::with_registry_and_models_dev(
+            paths,
+            registry,
+            ModelsDevCatalog::new(format!("{}/api.json", server.uri())),
+        );
 
         let models = hub.sync_models(&profile).await.unwrap();
-        assert_eq!(models[0].id, "openrouter/openai/gpt-5.1");
-
-        let response = hub
-            .chat_completion(
-                &profile,
-                &ChatCompletionRequest {
-                    model: "openrouter/openai/gpt-5.1".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
-                },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.message.content, "hello from openrouter");
+        assert_eq!(
+            models[0]
+                .metadata
+                .as_ref()
+                .and_then(|value| value.family.as_deref()),
+            Some("gpt")
+        );
+        assert_eq!(
+            models[0]
+                .metadata
+                .as_ref()
+                .and_then(|value| value.context_window),
+            Some(272_000)
+        );
     }
 
-    #[tokio::test]
-    async fn provider_hub_delegates_to_zen_connector() {
-        let temp = TempDir::new().unwrap();
-        let paths =
-            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        let hub = ProviderHub::with_connectors(
-            paths.clone(),
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        );
-        let storage = paths.storage_handle().unwrap();
-        let profile = storage
-            .create_profile(gunmetal_core::NewProviderProfile {
-                provider: ProviderKind::Zen,
-                name: "default".to_owned(),
-                base_url: Some("https://opencode.ai/zen/v1".to_owned()),
-                enabled: true,
-                credentials: Some(serde_json::json!({ "api_key": "zen_test_key" })),
+    #[derive(Default)]
+    struct MockAdapter;
+
+    #[async_trait]
+    impl ProviderAdapter for MockAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            ProviderDefinition {
+                kind: ProviderKind::Custom("mock".to_owned()),
+                class: ProviderClass::Direct,
+                priority: 99,
+            }
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: Some(json!({ "token": "updated" })),
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "mock".to_owned(),
+                },
             })
-            .unwrap();
+        }
 
-        let status = hub.auth_status(&profile).await.unwrap();
-        assert_eq!(status.state, ProviderAuthState::Connected);
+        async fn login(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> Result<ProviderLoginResult> {
+            bail!("not implemented")
+        }
 
-        let models = hub.sync_models(&profile).await.unwrap();
-        assert_eq!(models[0].id, "zen/gpt-5.4");
+        async fn logout(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<Option<Value>> {
+            Ok(None)
+        }
 
-        let response = hub
-            .chat_completion(
-                &profile,
-                &ChatCompletionRequest {
-                    model: "zen/gpt-5.4".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
-                },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.message.content, "hello from zen");
-    }
-
-    #[tokio::test]
-    async fn provider_hub_delegates_to_openai_connector() {
-        let temp = TempDir::new().unwrap();
-        let paths =
-            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
-        let codex_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
-                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
-            },
-        );
-        let copilot_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
-                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
-            },
-        );
-        let openrouter_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
-                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
-            },
-        );
-        let openai_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<OpenAiClient>> + Send>> {
-                Box::pin(async move { Ok(OpenAiClient::mock("hello from openai")) })
-            },
-        );
-        let zen_connector = Arc::new(
-            move |_profile: ProviderProfile,
-                  _paths: gunmetal_storage::AppPaths|
-                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
-                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
-            },
-        );
-        let hub = ProviderHub::with_connectors(
-            paths.clone(),
-            codex_connector,
-            copilot_connector,
-            openrouter_connector,
-            openai_connector,
-            zen_connector,
-        );
-        let storage = paths.storage_handle().unwrap();
-        let profile = storage
-            .create_profile(gunmetal_core::NewProviderProfile {
-                provider: ProviderKind::OpenAi,
-                name: "default".to_owned(),
-                base_url: Some("https://api.openai.com/v1".to_owned()),
-                enabled: true,
-                credentials: Some(serde_json::json!({ "api_key": "sk-openai-test" })),
+        async fn sync_models(
+            &self,
+            profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: Some(json!({ "token": "updated" })),
+                models: vec![ModelDescriptor {
+                    id: "mock/model-1".to_owned(),
+                    provider: profile.provider.clone(),
+                    profile_id: Some(profile.id),
+                    upstream_name: "model-1".to_owned(),
+                    display_name: "Model 1".to_owned(),
+                    metadata: None,
+                }],
             })
-            .unwrap();
+        }
 
-        let status = hub.auth_status(&profile).await.unwrap();
-        assert_eq!(status.state, ProviderAuthState::Connected);
-
-        let models = hub.sync_models(&profile).await.unwrap();
-        assert_eq!(models[0].id, "openai/gpt-5.1");
-
-        let response = hub
-            .chat_completion(
-                &profile,
-                &ChatCompletionRequest {
-                    model: "openai/gpt-5.1".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
+        async fn chat_completion(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            request: &ChatCompletionRequest,
+        ) -> Result<ProviderChatResult> {
+            Ok(ProviderChatResult {
+                credentials: Some(json!({ "token": "updated" })),
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello from mock".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: gunmetal_core::TokenUsage {
+                        input_tokens: Some(1),
+                        output_tokens: Some(1),
+                        total_tokens: Some(2),
+                    },
                 },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.message.content, "hello from openai");
+            })
+        }
     }
 
-    #[tokio::test]
-    async fn mock_shapes_are_sane() {
-        let codex = CodexClient::mock("done");
-        let copilot = CopilotClient::mock("done");
-        let openai = OpenAiClient::mock("done");
-        let zen = ZenClient::mock("done");
-        let _ = ChatCompletionResult {
-            model: "codex/gpt-5.4".to_owned(),
-            message: ChatMessage {
-                role: ChatRole::Assistant,
-                content: "done".to_owned(),
-            },
-            finish_reason: "stop".to_owned(),
-            usage: TokenUsage {
-                input_tokens: Some(1),
-                output_tokens: Some(1),
-                total_tokens: Some(2),
-            },
-        };
-        assert!(codex.is_mock());
-        assert!(copilot.is_mock());
-        let response = openai
-            .chat_completion(
-                &ProviderProfile {
-                    id: Uuid::new_v4(),
-                    provider: ProviderKind::OpenAi,
-                    name: "default".to_owned(),
-                    base_url: None,
-                    enabled: true,
-                    credentials: None,
-                    created_at: Utc::now(),
-                    updated_at: Utc::now(),
+    struct MockCodexAdapter;
+
+    #[async_trait]
+    impl ProviderAdapter for MockCodexAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            ProviderDefinition {
+                kind: ProviderKind::Codex,
+                class: ProviderClass::Subscription,
+                priority: 1,
+            }
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "codex".to_owned(),
                 },
-                &ChatCompletionRequest {
-                    model: "openai/gpt-5.1".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> Result<ProviderLoginResult> {
+            bail!("not implemented")
+        }
+
+        async fn logout(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<Option<Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: None,
+                models: vec![ModelDescriptor {
+                    id: "codex/gpt-5.1".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.1".to_owned(),
+                    display_name: "GPT-5.1".to_owned(),
+                    metadata: None,
+                }],
+            })
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            request: &ChatCompletionRequest,
+        ) -> Result<ProviderChatResult> {
+            Ok(ProviderChatResult {
+                credentials: None,
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: gunmetal_core::TokenUsage {
+                        input_tokens: Some(1),
+                        output_tokens: Some(1),
+                        total_tokens: Some(2),
+                    },
                 },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.message.content, "done");
-        let response = zen
-            .chat_completion(
-                &ProviderProfile {
-                    id: Uuid::new_v4(),
-                    provider: ProviderKind::Zen,
-                    name: "default".to_owned(),
-                    base_url: None,
-                    enabled: true,
-                    credentials: None,
-                    created_at: Utc::now(),
-                    updated_at: Utc::now(),
-                },
-                &ChatCompletionRequest {
-                    model: "zen/gpt-5.4".to_owned(),
-                    messages: vec![ChatMessage {
-                        role: ChatRole::User,
-                        content: "ping".to_owned(),
-                    }],
-                    stream: false,
-                },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.completion.message.content, "done");
+            })
+        }
     }
 }

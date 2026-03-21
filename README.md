@@ -6,8 +6,13 @@ Connect providers you already use, create local API keys, point your apps at `ht
 
 ## Install
 
+The npm wrapper exists in-repo, but it is not published yet.
+
+For now, run Gunmetal from source:
+
 ```bash
-npm i -g @dhruv2mars/gunmetal
+bun install
+cargo run -p gunmetal --
 ```
 
 ## Quickstart
@@ -42,6 +47,12 @@ POST /v1/responses
 ```
 
 Streaming supported on both POST endpoints.
+
+Gunmetal is a normalized gateway by default.
+
+- normalized mode keeps one clean contract across providers
+- passthrough mode is opt-in through `gunmetal.mode = "passthrough"` plus `provider_options`
+- benchmarks should use normalized mode unless you explicitly want provider-native behavior
 
 ## Commands
 

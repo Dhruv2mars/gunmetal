@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
-    ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile, TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile, RequestMode, TokenUsage,
 };
 use reqwest::{
     Client, Response,
@@ -205,6 +205,7 @@ impl ZenClient {
                     profile_id: Some(profile.id),
                     upstream_name: "gpt-5.4".to_owned(),
                     display_name: "gpt-5.4".to_owned(),
+                    metadata: None,
                 }],
             }),
             ZenMode::Live(options) => {
@@ -230,6 +231,7 @@ impl ZenClient {
                             profile_id: Some(profile.id),
                             display_name: upstream_name.clone(),
                             upstream_name,
+                            metadata: None,
                         }
                     })
                     .collect::<Vec<_>>();
@@ -278,11 +280,7 @@ impl ZenClient {
                     .http
                     .post(format!("{}/chat/completions", options.base_url))
                     .headers(self.headers(api_key)?)
-                    .json(&json!({
-                        "model": model,
-                        "messages": request.messages.iter().map(to_upstream_message).collect::<Vec<_>>(),
-                        "stream": false
-                    }))
+                    .json(&build_zen_request_body(&model, request))
                     .send()
                     .await?;
 
@@ -387,6 +385,41 @@ fn to_upstream_message(message: &ChatMessage) -> Value {
     })
 }
 
+fn build_zen_request_body(model: &str, request: &ChatCompletionRequest) -> Value {
+    let mut body = json!({
+        "model": model,
+        "messages": request.messages.iter().map(to_upstream_message).collect::<Vec<_>>(),
+        "stream": false
+    });
+    let object = body.as_object_mut().expect("zen request object");
+
+    if let Some(value) = request.options.temperature {
+        object.insert("temperature".to_owned(), json!(value));
+    }
+    if let Some(value) = request.options.top_p {
+        object.insert("top_p".to_owned(), json!(value));
+    }
+    if let Some(value) = request.options.max_output_tokens {
+        object.insert("max_tokens".to_owned(), json!(value));
+    }
+    if !request.options.stop.is_empty() {
+        object.insert("stop".to_owned(), json!(request.options.stop));
+    }
+    if !request.options.metadata.is_empty() {
+        object.insert(
+            "metadata".to_owned(),
+            Value::Object(request.options.metadata.clone()),
+        );
+    }
+    if matches!(request.options.mode, RequestMode::Passthrough) {
+        for (key, value) in &request.options.provider_options {
+            object.insert(key.clone(), value.clone());
+        }
+    }
+
+    body
+}
+
 fn to_u32(value: u64) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
 }
@@ -394,7 +427,9 @@ fn to_u32(value: u64) -> u32 {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
-    use gunmetal_core::{ChatRole, ProviderAuthState, ProviderKind, ProviderProfile};
+    use gunmetal_core::{
+        ChatRole, ProviderAuthState, ProviderKind, ProviderProfile, RequestOptions,
+    };
     use serde_json::json;
     use wiremock::{
         Mock, MockServer, ResponseTemplate,
@@ -487,6 +522,7 @@ mod tests {
                         content: "ping".to_owned(),
                     }],
                     stream: false,
+                    options: RequestOptions::default(),
                 },
             )
             .await

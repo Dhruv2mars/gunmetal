@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -190,6 +190,24 @@ pub struct ModelDescriptor {
     pub profile_id: Option<Uuid>,
     pub upstream_name: String,
     pub display_name: String,
+    pub metadata: Option<ModelMetadata>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ModelMetadata {
+    pub family: Option<String>,
+    pub release_date: Option<String>,
+    pub last_updated: Option<String>,
+    #[serde(default)]
+    pub input_modalities: Vec<String>,
+    #[serde(default)]
+    pub output_modalities: Vec<String>,
+    pub context_window: Option<u32>,
+    pub max_output_tokens: Option<u32>,
+    pub supports_attachments: Option<bool>,
+    pub supports_reasoning: Option<bool>,
+    pub supports_tools: Option<bool>,
+    pub open_weights: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -237,14 +255,39 @@ pub struct TokenUsage {
     pub total_tokens: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RequestMode {
+    #[default]
+    Normalized,
+    Passthrough,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct RequestOptions {
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub max_output_tokens: Option<u32>,
+    #[serde(default)]
+    pub stop: Vec<String>,
+    #[serde(default)]
+    pub metadata: Map<String, Value>,
+    #[serde(default)]
+    pub provider_options: Map<String, Value>,
+    #[serde(default)]
+    pub mode: RequestMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChatCompletionRequest {
     pub model: String,
     pub messages: Vec<ChatMessage>,
     pub stream: bool,
+    #[serde(default)]
+    pub options: RequestOptions,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChatCompletionResult {
     pub model: String,
     pub message: ChatMessage,
@@ -348,5 +391,13 @@ mod tests {
     fn chat_role_parses_known_values() {
         assert_eq!("user".parse::<ChatRole>().unwrap(), ChatRole::User);
         assert!("tool".parse::<ChatRole>().is_err());
+    }
+
+    #[test]
+    fn request_options_default_to_normalized_mode() {
+        let options = RequestOptions::default();
+        assert_eq!(options.mode, RequestMode::Normalized);
+        assert!(options.provider_options.is_empty());
+        assert!(options.metadata.is_empty());
     }
 }

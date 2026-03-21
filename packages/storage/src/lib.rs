@@ -489,14 +489,19 @@ impl Storage {
 
         for model in models {
             tx.execute(
-                "insert into models (id, provider, profile_id, upstream_name, display_name)
-                 values (?1, ?2, ?3, ?4, ?5)",
+                "insert into models (id, provider, profile_id, upstream_name, display_name, metadata_json)
+                 values (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     model.id,
                     model.provider.to_string(),
                     model.profile_id.map(|value| value.to_string()),
                     model.upstream_name,
                     model.display_name,
+                    model
+                        .metadata
+                        .as_ref()
+                        .map(serde_json::to_string)
+                        .transpose()?,
                 ],
             )?;
         }
@@ -507,7 +512,7 @@ impl Storage {
 
     pub fn list_models(&self) -> Result<Vec<ModelDescriptor>> {
         let mut stmt = self.conn.prepare(
-            "select id, provider, profile_id, upstream_name, display_name
+            "select id, provider, profile_id, upstream_name, display_name, metadata_json
              from models
              order by provider asc, id asc",
         )?;
@@ -522,6 +527,10 @@ impl Storage {
                     .transpose()?,
                 upstream_name: row.get(3)?,
                 display_name: row.get(4)?,
+                metadata: row
+                    .get::<_, Option<String>>(5)?
+                    .map(|value| serde_json::from_str(&value).map_err(to_from_sql_err))
+                    .transpose()?,
             })
         })?;
 
@@ -665,6 +674,7 @@ impl Storage {
                 profile_id text null,
                 upstream_name text not null,
                 display_name text not null,
+                metadata_json text null,
                 foreign key (profile_id) references provider_profiles(id) on delete set null
             );
 
@@ -688,7 +698,25 @@ impl Storage {
             ",
         )?;
 
+        if !self.column_exists("models", "metadata_json")? {
+            self.conn
+                .execute("alter table models add column metadata_json text null", [])?;
+        }
+
         Ok(())
+    }
+
+    fn column_exists(&self, table: &str, column: &str) -> Result<bool> {
+        let mut stmt = self.conn.prepare(&format!("pragma table_info({table})"))?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+
+        for value in rows {
+            if value? == column {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     fn replace_key_scopes(&self, key_id: Uuid, scopes: &[KeyScope]) -> Result<()> {
@@ -898,6 +926,13 @@ mod tests {
                     profile_id: Some(profile.id),
                     upstream_name: "openai/gpt-5.1".to_owned(),
                     display_name: "GPT-5.1".to_owned(),
+                    metadata: Some(gunmetal_core::ModelMetadata {
+                        family: Some("gpt".to_owned()),
+                        context_window: Some(272_000),
+                        max_output_tokens: Some(16_384),
+                        supports_tools: Some(true),
+                        ..Default::default()
+                    }),
                 }],
             )
             .unwrap();
@@ -905,6 +940,13 @@ mod tests {
         let models = storage.list_models().unwrap();
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].id, "openrouter/openai/gpt-5.1");
+        assert_eq!(
+            models[0]
+                .metadata
+                .as_ref()
+                .and_then(|value| value.family.as_deref()),
+            Some("gpt")
+        );
     }
 
     #[test]
@@ -999,6 +1041,7 @@ mod tests {
                     profile_id: Some(codex.id),
                     upstream_name: "gpt-5.4".to_owned(),
                     display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
                 }],
             )
             .unwrap();
@@ -1012,6 +1055,7 @@ mod tests {
                     profile_id: Some(openrouter.id),
                     upstream_name: "openai/gpt-5.1".to_owned(),
                     display_name: "GPT-5.1".to_owned(),
+                    metadata: None,
                 }],
             )
             .unwrap();
@@ -1025,6 +1069,7 @@ mod tests {
                     profile_id: Some(codex.id),
                     upstream_name: "gpt-5.5".to_owned(),
                     display_name: "GPT-5.5".to_owned(),
+                    metadata: None,
                 }],
             )
             .unwrap();

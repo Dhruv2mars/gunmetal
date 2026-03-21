@@ -6,11 +6,15 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+arboard.workspace = true
 anyhow.workspace = true
 crossterm.workspace = true
+gunmetal-core = { path = "../core" }
 gunmetal-providers = { path = "../providers" }
 gunmetal-storage = { path = "../storage" }
 ratatui.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
