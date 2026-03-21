@@ -33,6 +33,11 @@ export function resolveInstalledBin(env = process.env, platform = process.platfo
   return join(resolveInstallRoot(env, home), "bin", binNameForPlatform(platform));
 }
 
+export function isWorkspaceInstall(binDir) {
+  const repoRoot = join(binDir, "..", "..", "..");
+  return existsSync(join(repoRoot, "Cargo.toml")) && existsSync(join(repoRoot, "packages", "npm", "package.json"));
+}
+
 export function packageManagerHintFromEnv(env = process.env) {
   const execPath = String(env.npm_execpath || "").toLowerCase();
   if (execPath.includes("bun")) return "bun";

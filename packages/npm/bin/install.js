@@ -2,10 +2,14 @@
 import { join } from "node:path";
 
 import { resolvePackageBinDir } from "./gunmetal-lib.js";
-import { installRuntime, resolvePackageVersion } from "./install-lib.js";
+import { installRuntime, isWorkspaceInstall, resolvePackageVersion } from "./install-lib.js";
 
 const here = resolvePackageBinDir(import.meta.url);
 const version = resolvePackageVersion(join(here, "..", "package.json"));
+
+if (isWorkspaceInstall(here)) {
+  process.exit(0);
+}
 
 try {
   await installRuntime({ version });
