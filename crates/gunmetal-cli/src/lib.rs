@@ -1,14 +1,16 @@
 use std::{
     io::Write,
     net::{IpAddr, SocketAddr},
+    path::PathBuf,
 };
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use gunmetal_core::{KeyScope, KeyState, NewGunmetalKey, ProviderKind};
+use gunmetal_core::{KeyScope, KeyState, NewGunmetalKey, NewProviderProfile, ProviderKind};
 use gunmetal_daemon::DaemonState;
-use gunmetal_providers::builtin_providers;
+use gunmetal_providers::{ProviderHub, builtin_providers};
 use gunmetal_storage::AppPaths;
+use serde_json::{Map, Value, json};
 
 #[derive(Debug, Parser)]
 #[command(name = "gunmetal")]
@@ -29,9 +31,17 @@ pub enum Command {
         #[command(subcommand)]
         command: ModelCommand,
     },
+    Profiles {
+        #[command(subcommand)]
+        command: ProfileCommand,
+    },
     Providers {
         #[command(subcommand)]
         command: ProviderCommand,
+    },
+    Auth {
+        #[command(subcommand)]
+        command: AuthCommand,
     },
     Tui,
 }
@@ -77,6 +87,22 @@ pub enum KeyCommand {
 #[derive(Debug, Subcommand)]
 pub enum ModelCommand {
     List,
+    Sync { profile: uuid::Uuid },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ProfileCommand {
+    Create {
+        #[arg(long)]
+        provider: ProviderKind,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        bin_path: Option<PathBuf>,
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+    },
+    List,
 }
 
 #[derive(Debug, Subcommand)]
@@ -84,12 +110,29 @@ pub enum ProviderCommand {
     List,
 }
 
+#[derive(Debug, Subcommand)]
+pub enum AuthCommand {
+    Status {
+        profile: uuid::Uuid,
+    },
+    Login {
+        profile: uuid::Uuid,
+        #[arg(long)]
+        no_open: bool,
+    },
+    Logout {
+        profile: uuid::Uuid,
+    },
+}
+
 pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write) -> Result<()> {
+    let providers = ProviderHub::new(paths.clone());
+
     match command {
         Command::Serve(args) => {
             let address = SocketAddr::new(args.host, args.port);
             writeln!(output, "Serving gunmetal on http://{address}")?;
-            gunmetal_daemon::serve(address, DaemonState::new(paths.storage_handle()?)).await?;
+            gunmetal_daemon::serve(address, DaemonState::new(paths.clone())?).await?;
         }
         Command::Status(args) => {
             let url = format!("http://{}:{}/health", args.host, args.port);
@@ -146,6 +189,49 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     writeln!(output, "{} {}", model.id, model.display_name)?;
                 }
             }
+            ModelCommand::Sync { profile } => {
+                let storage = paths.storage_handle()?;
+                let profile_record = require_profile(&storage, profile)?;
+                let models = providers.sync_models(&profile_record).await?;
+                storage.replace_models_for_profile(
+                    &profile_record.provider,
+                    Some(profile_record.id),
+                    &models,
+                )?;
+                writeln!(
+                    output,
+                    "synced {} models for profile {}",
+                    models.len(),
+                    profile_record.name
+                )?;
+            }
+        },
+        Command::Profiles { command } => match command {
+            ProfileCommand::Create {
+                provider,
+                name,
+                bin_path,
+                cwd,
+            } => {
+                let profile = paths.storage_handle()?.create_profile(NewProviderProfile {
+                    provider,
+                    name,
+                    base_url: None,
+                    enabled: true,
+                    credentials: profile_credentials(bin_path, cwd),
+                })?;
+                writeln!(output, "created profile {}", profile.name)?;
+                writeln!(output, "id: {}", profile.id)?;
+            }
+            ProfileCommand::List => {
+                for profile in paths.storage_handle()?.list_profiles()? {
+                    writeln!(
+                        output,
+                        "{} {} {} enabled={}",
+                        profile.id, profile.provider, profile.name, profile.enabled
+                    )?;
+                }
+            }
         },
         Command::Providers { command } => match command {
             ProviderCommand::List => {
@@ -158,17 +244,62 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 }
             }
         },
+        Command::Auth { command } => match command {
+            AuthCommand::Status { profile } => {
+                let storage = paths.storage_handle()?;
+                let profile_record = require_profile(&storage, profile)?;
+                let status = providers.auth_status(&profile_record).await?;
+                writeln!(output, "{} {}", profile_record.name, status.label)?;
+                writeln!(output, "state: {:?}", status.state)?;
+            }
+            AuthCommand::Login { profile, no_open } => {
+                let storage = paths.storage_handle()?;
+                let profile_record = require_profile(&storage, profile)?;
+                let session = providers.login(&profile_record).await?;
+                writeln!(output, "login url: {}", session.auth_url)?;
+                writeln!(output, "login id: {}", session.login_id)?;
+                if !no_open {
+                    let _ = webbrowser::open(&session.auth_url);
+                }
+            }
+            AuthCommand::Logout { profile } => {
+                let storage = paths.storage_handle()?;
+                let profile_record = require_profile(&storage, profile)?;
+                providers.logout(&profile_record).await?;
+                writeln!(output, "logged out {}", profile_record.name)?;
+            }
+        },
         Command::Tui => {}
     }
 
     Ok(())
 }
 
+fn require_profile(
+    storage: &gunmetal_storage::StorageHandle,
+    profile_id: uuid::Uuid,
+) -> Result<gunmetal_core::ProviderProfile> {
+    storage
+        .get_profile(profile_id)?
+        .ok_or_else(|| anyhow::anyhow!("profile '{}' not found", profile_id))
+}
+
+fn profile_credentials(bin_path: Option<PathBuf>, cwd: Option<PathBuf>) -> Option<Value> {
+    let mut object = Map::new();
+    if let Some(bin_path) = bin_path {
+        object.insert("bin_path".to_owned(), json!(bin_path));
+    }
+    if let Some(cwd) = cwd {
+        object.insert("cwd".to_owned(), json!(cwd));
+    }
+    (!object.is_empty()).then_some(Value::Object(object))
+}
+
 #[cfg(test)]
 mod tests {
     use clap::Parser;
 
-    use super::{Cli, Command, KeyCommand};
+    use super::{Cli, Command, KeyCommand, ModelCommand, ProfileCommand};
 
     #[test]
     fn parses_key_create_command() {
@@ -200,5 +331,45 @@ mod tests {
     fn defaults_to_no_command_for_tui_launch() {
         let cli = Cli::parse_from(["gunmetal"]);
         assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn parses_profile_and_model_sync_commands() {
+        let cli = Cli::parse_from([
+            "gunmetal",
+            "profiles",
+            "create",
+            "--provider",
+            "codex",
+            "--name",
+            "default",
+            "--bin-path",
+            "/usr/local/bin/codex",
+        ]);
+
+        match cli.command.unwrap() {
+            Command::Profiles { command } => match command {
+                ProfileCommand::Create { provider, name, .. } => {
+                    assert_eq!(provider, gunmetal_core::ProviderKind::Codex);
+                    assert_eq!(name, "default");
+                }
+                _ => panic!("unexpected subcommand"),
+            },
+            _ => panic!("unexpected command"),
+        }
+
+        let cli = Cli::parse_from([
+            "gunmetal",
+            "models",
+            "sync",
+            "00000000-0000-0000-0000-000000000000",
+        ]);
+        match cli.command.unwrap() {
+            Command::Models { command } => match command {
+                ModelCommand::Sync { .. } => {}
+                _ => panic!("unexpected model command"),
+            },
+            _ => panic!("unexpected command"),
+        }
     }
 }

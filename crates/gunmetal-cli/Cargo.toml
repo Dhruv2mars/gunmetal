@@ -13,4 +13,6 @@ gunmetal-daemon = { path = "../gunmetal-daemon" }
 gunmetal-providers = { path = "../gunmetal-providers" }
 gunmetal-storage = { path = "../gunmetal-storage" }
 reqwest.workspace = true
+serde_json.workspace = true
 uuid.workspace = true
+webbrowser.workspace = true

@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Instant};
 
 use anyhow::Result;
 use axum::{
@@ -8,23 +8,44 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use gunmetal_core::{KeyScope, ModelDescriptor, NewRequestLogEntry, TokenUsage};
-use gunmetal_storage::StorageHandle;
+use gunmetal_core::{
+    ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, KeyScope,
+    NewRequestLogEntry, TokenUsage,
+};
+use gunmetal_providers::ProviderHub;
+use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct DaemonState {
+    pub paths: AppPaths,
     pub storage: StorageHandle,
+    pub providers: ProviderHub,
     pub version: String,
 }
 
 impl DaemonState {
-    pub fn new(storage: StorageHandle) -> Self {
-        Self {
+    pub fn new(paths: AppPaths) -> Result<Self> {
+        let storage = paths.storage_handle()?;
+        let providers = ProviderHub::new(paths.clone());
+        Ok(Self {
+            paths,
             storage,
+            providers,
             version: env!("CARGO_PKG_VERSION").to_owned(),
-        }
+        })
+    }
+
+    pub fn with_provider_hub(paths: AppPaths, providers: ProviderHub) -> Result<Self> {
+        let storage = paths.storage_handle()?;
+        Ok(Self {
+            paths,
+            storage,
+            providers,
+            version: env!("CARGO_PKG_VERSION").to_owned(),
+        })
     }
 }
 
@@ -72,6 +93,123 @@ async fn list_models(State(state): State<DaemonState>, headers: HeaderMap) -> Re
         data: visible_models,
     })
     .into_response()
+}
+
+async fn chat_completions(
+    State(state): State<DaemonState>,
+    headers: HeaderMap,
+    Json(payload): Json<IncomingChatCompletionsRequest>,
+) -> Response {
+    let payload = match payload.validate() {
+        Ok(payload) => payload,
+        Err(error) => return error.into_response(),
+    };
+
+    if payload.stream {
+        return api_error(
+            StatusCode::NOT_IMPLEMENTED,
+            "streaming_not_implemented",
+            "streaming chat completions are not wired yet".to_owned(),
+        );
+    }
+
+    let key = match authorize(&state, &headers, KeyScope::Inference) {
+        Ok(key) => key,
+        Err(error) => return error.into_response(),
+    };
+
+    let models = match state.storage.list_models() {
+        Ok(models) => models,
+        Err(error) => return internal_error(error),
+    };
+
+    let Some(model) = models.into_iter().find(|item| item.id == payload.model) else {
+        return api_error(
+            StatusCode::NOT_FOUND,
+            "model_not_found",
+            format!("model '{}' is not registered in gunmetal", payload.model),
+        );
+    };
+
+    if !key.can_access_provider(&model.provider) {
+        return api_error(
+            StatusCode::FORBIDDEN,
+            "provider_forbidden",
+            format!(
+                "key '{}' cannot access provider '{}'",
+                key.name, model.provider
+            ),
+        );
+    }
+
+    let Some(profile_id) = model.profile_id else {
+        return api_error(
+            StatusCode::BAD_REQUEST,
+            "profile_missing",
+            format!("model '{}' is not attached to a provider profile", model.id),
+        );
+    };
+
+    let Some(profile) = ({
+        match state.storage.get_profile(profile_id) {
+            Ok(profile) => profile,
+            Err(error) => return internal_error(error),
+        }
+    }) else {
+        return api_error(
+            StatusCode::BAD_REQUEST,
+            "profile_missing",
+            format!("profile '{}' does not exist", profile_id),
+        );
+    };
+
+    let request = ChatCompletionRequest {
+        model: model.id.clone(),
+        messages: payload.messages.clone(),
+        stream: false,
+    };
+
+    let started_at = Instant::now();
+    match state.providers.chat_completion(&profile, &request).await {
+        Ok(result) => {
+            let duration_ms = started_at.elapsed().as_millis() as u64;
+            let _ = state.storage.log_request(NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: profile.provider.clone(),
+                model: request.model.clone(),
+                endpoint: "/v1/chat/completions".to_owned(),
+                status_code: Some(StatusCode::OK.as_u16()),
+                duration_ms,
+                usage: result.usage.clone(),
+                error_message: None,
+            });
+            Json(outgoing_chat_completion(result)).into_response()
+        }
+        Err(error) => {
+            let duration_ms = started_at.elapsed().as_millis() as u64;
+            let _ = state.storage.log_request(NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: profile.provider,
+                model: request.model,
+                endpoint: "/v1/chat/completions".to_owned(),
+                status_code: Some(StatusCode::BAD_GATEWAY.as_u16()),
+                duration_ms,
+                usage: TokenUsage {
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                },
+                error_message: Some(error.to_string()),
+            });
+            api_error(
+                StatusCode::BAD_GATEWAY,
+                "provider_request_failed",
+                format!("provider request failed: {error}"),
+            )
+        }
+    }
 }
 
 fn authorize(
@@ -150,6 +288,21 @@ fn api_error(status: StatusCode, code: &'static str, message: String) -> Respons
     ApiError::new(status, code, message).into_response()
 }
 
+fn outgoing_chat_completion(result: ChatCompletionResult) -> OutgoingChatCompletionResponse {
+    OutgoingChatCompletionResponse {
+        id: format!("chatcmpl-{}", Uuid::new_v4().simple()),
+        object: "chat.completion",
+        created: chrono::Utc::now().timestamp(),
+        model: result.model,
+        choices: vec![OutgoingChoice {
+            index: 0,
+            message: result.message,
+            finish_reason: result.finish_reason,
+        }],
+        usage: result.usage,
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct HealthResponse {
     status: &'static str,
@@ -171,8 +324,8 @@ struct ModelResponse {
     provider: String,
 }
 
-impl From<ModelDescriptor> for ModelResponse {
-    fn from(value: ModelDescriptor) -> Self {
+impl From<gunmetal_core::ModelDescriptor> for ModelResponse {
+    fn from(value: gunmetal_core::ModelDescriptor) -> Self {
         let owned_by = value.provider.to_string();
         Self {
             id: value.id,
@@ -184,20 +337,14 @@ impl From<ModelDescriptor> for ModelResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct ChatCompletionsRequest {
+struct IncomingChatCompletionsRequest {
     model: String,
-    messages: Vec<ChatMessage>,
+    messages: Vec<IncomingChatMessage>,
     stream: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
-struct ChatMessage {
-    role: String,
-    content: String,
-}
-
-impl ChatCompletionsRequest {
-    fn validate(self) -> Result<Self, ApiError> {
+impl IncomingChatCompletionsRequest {
+    fn validate(self) -> Result<ValidatedChatRequest, ApiError> {
         if self.model.trim().is_empty() {
             return Err(ApiError::new(
                 StatusCode::BAD_REQUEST,
@@ -205,7 +352,6 @@ impl ChatCompletionsRequest {
                 "model is required".to_owned(),
             ));
         }
-
         if self.messages.is_empty() {
             return Err(ApiError::new(
                 StatusCode::BAD_REQUEST,
@@ -214,99 +360,60 @@ impl ChatCompletionsRequest {
             ));
         }
 
-        if self
-            .messages
-            .iter()
-            .any(|message| message.role.trim().is_empty())
-        {
-            return Err(ApiError::new(
-                StatusCode::BAD_REQUEST,
-                "invalid_request",
-                "message role cannot be empty".to_owned(),
-            ));
+        let mut messages = Vec::with_capacity(self.messages.len());
+        for message in self.messages {
+            if message.content.trim().is_empty() {
+                return Err(ApiError::new(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_request",
+                    "message content cannot be empty".to_owned(),
+                ));
+            }
+            let role = message.role.parse::<ChatRole>().map_err(|error| {
+                ApiError::new(StatusCode::BAD_REQUEST, "invalid_request", error)
+            })?;
+            messages.push(ChatMessage {
+                role,
+                content: message.content,
+            });
         }
 
-        if self
-            .messages
-            .iter()
-            .any(|message| message.content.trim().is_empty())
-        {
-            return Err(ApiError::new(
-                StatusCode::BAD_REQUEST,
-                "invalid_request",
-                "message content cannot be empty".to_owned(),
-            ));
-        }
-
-        Ok(self)
+        Ok(ValidatedChatRequest {
+            model: self.model,
+            messages,
+            stream: self.stream.unwrap_or(false),
+        })
     }
 }
 
-async fn chat_completions(
-    State(state): State<DaemonState>,
-    headers: HeaderMap,
-    Json(payload): Json<ChatCompletionsRequest>,
-) -> Response {
-    let payload = match payload.validate() {
-        Ok(payload) => payload,
-        Err(error) => return error.into_response(),
-    };
+#[derive(Debug, Deserialize)]
+struct IncomingChatMessage {
+    role: String,
+    content: String,
+}
 
-    let _stream_requested = payload.stream.unwrap_or(false);
+#[derive(Debug, Clone)]
+struct ValidatedChatRequest {
+    model: String,
+    messages: Vec<ChatMessage>,
+    stream: bool,
+}
 
-    let key = match authorize(&state, &headers, KeyScope::Inference) {
-        Ok(key) => key,
-        Err(error) => return error.into_response(),
-    };
+#[derive(Debug, Serialize)]
+struct OutgoingChatCompletionResponse {
+    id: String,
+    object: &'static str,
+    created: i64,
+    model: String,
+    choices: Vec<OutgoingChoice>,
+    usage: TokenUsage,
+}
 
-    let models = match state.storage.list_models() {
-        Ok(models) => models,
-        Err(error) => return internal_error(error),
-    };
-
-    let Some(model) = models.into_iter().find(|item| item.id == payload.model) else {
-        return api_error(
-            StatusCode::NOT_FOUND,
-            "model_not_found",
-            format!("model '{}' is not registered in gunmetal", payload.model),
-        );
-    };
-
-    if !key.can_access_provider(&model.provider) {
-        return api_error(
-            StatusCode::FORBIDDEN,
-            "provider_forbidden",
-            format!(
-                "key '{}' cannot access provider '{}'",
-                key.name, model.provider
-            ),
-        );
-    }
-
-    let _ = state.storage.log_request(NewRequestLogEntry {
-        key_id: Some(key.id),
-        profile_id: model.profile_id,
-        provider: model.provider.clone(),
-        model: model.id.clone(),
-        endpoint: "/v1/chat/completions".to_owned(),
-        status_code: Some(StatusCode::NOT_IMPLEMENTED.as_u16()),
-        duration_ms: 0,
-        usage: TokenUsage {
-            input_tokens: None,
-            output_tokens: None,
-            total_tokens: None,
-        },
-        error_message: Some("provider adapter not wired yet".to_owned()),
-    });
-
-    api_error(
-        StatusCode::NOT_IMPLEMENTED,
-        "provider_not_implemented",
-        format!(
-            "model '{}' is registered, but provider '{}' is not wired yet",
-            model.id, model.provider
-        ),
-    )
+#[derive(Debug, Serialize)]
+struct OutgoingChoice {
+    index: usize,
+    message: ChatMessage,
+    finish_reason: String,
 }
 
 #[derive(Debug, Clone)]
@@ -344,14 +451,18 @@ impl IntoResponse for ApiError {
 
 #[cfg(test)]
 mod tests {
+    use std::{future::Future, pin::Pin};
+
     use axum::{
         body::{Body, to_bytes},
         http::{Request, StatusCode, header},
         response::Response,
     };
-    use gunmetal_core::{KeyScope, ModelDescriptor, NewGunmetalKey, ProviderKind};
-    use gunmetal_storage::StorageHandle;
+    use gunmetal_core::{KeyScope, NewGunmetalKey, NewProviderProfile, ProviderKind};
+    use gunmetal_providers::{CodexClient, ProviderHub};
+    use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
+    use std::sync::Arc;
     use tempfile::TempDir;
     use tower::util::ServiceExt;
 
@@ -460,7 +571,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn chat_completion_logs_attempt_for_registered_model() {
+    async fn chat_completion_calls_provider_and_logs_success() {
         let fixture = Fixture::new();
         fixture.seed_models();
         let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
@@ -485,29 +596,43 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["choices"][0]["message"]["content"], "hello from codex");
+
         let logs = fixture.storage.list_request_logs(10).unwrap();
         assert_eq!(logs.len(), 1);
-        assert_eq!(logs[0].model, "codex/gpt-5.4");
+        assert_eq!(logs[0].status_code, Some(200));
     }
 
     struct Fixture {
         _temp: TempDir,
+        paths: AppPaths,
         storage: StorageHandle,
     }
 
     impl Fixture {
         fn new() -> Self {
             let temp = TempDir::new().unwrap();
-            let storage = StorageHandle::new(temp.path().join("gunmetal.db")).unwrap();
+            let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+            let storage = paths.storage_handle().unwrap();
             Self {
                 _temp: temp,
+                paths,
                 storage,
             }
         }
 
         fn state(&self) -> DaemonState {
-            DaemonState::new(self.storage.clone())
+            let connector = Arc::new(
+                move |_profile: gunmetal_core::ProviderProfile,
+                      _paths: AppPaths|
+                      -> Pin<
+                    Box<dyn Future<Output = anyhow::Result<CodexClient>> + Send>,
+                > { Box::pin(async move { Ok(CodexClient::mock("hello from codex")) }) },
+            );
+            let providers = ProviderHub::with_codex_connector(self.paths.clone(), connector);
+            DaemonState::with_provider_hub(self.paths.clone(), providers).unwrap()
         }
 
         fn create_key(
@@ -527,23 +652,29 @@ mod tests {
         }
 
         fn seed_models(&self) {
+            let profile = self
+                .storage
+                .create_profile(NewProviderProfile {
+                    provider: ProviderKind::Codex,
+                    name: "default".to_owned(),
+                    base_url: None,
+                    enabled: true,
+                    credentials: None,
+                })
+                .unwrap();
+
             self.storage
-                .upsert_model_registry(&[
-                    ModelDescriptor {
+                .replace_models_for_profile(
+                    &ProviderKind::Codex,
+                    Some(profile.id),
+                    &[gunmetal_core::ModelDescriptor {
                         id: "codex/gpt-5.4".to_owned(),
                         provider: ProviderKind::Codex,
-                        profile_id: None,
+                        profile_id: Some(profile.id),
                         upstream_name: "gpt-5.4".to_owned(),
                         display_name: "GPT-5.4".to_owned(),
-                    },
-                    ModelDescriptor {
-                        id: "copilot/claude-sonnet-4.5".to_owned(),
-                        provider: ProviderKind::Copilot,
-                        profile_id: None,
-                        upstream_name: "claude-sonnet-4.5".to_owned(),
-                        display_name: "Claude Sonnet 4.5".to_owned(),
-                    },
-                ])
+                    }],
+                )
                 .unwrap();
         }
     }

@@ -193,10 +193,85 @@ pub struct ModelDescriptor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChatRole {
+    System,
+    User,
+    Assistant,
+}
+
+impl std::fmt::Display for ChatRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            Self::System => "system",
+            Self::User => "user",
+            Self::Assistant => "assistant",
+        };
+        write!(f, "{value}")
+    }
+}
+
+impl std::str::FromStr for ChatRole {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "system" => Ok(Self::System),
+            "user" => Ok(Self::User),
+            "assistant" => Ok(Self::Assistant),
+            _ => Err(format!("unknown chat role: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: ChatRole,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenUsage {
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
     pub total_tokens: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChatCompletionRequest {
+    pub model: String,
+    pub messages: Vec<ChatMessage>,
+    pub stream: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChatCompletionResult {
+    pub model: String,
+    pub message: ChatMessage,
+    pub finish_reason: String,
+    pub usage: TokenUsage,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderAuthState {
+    SignedOut,
+    SigningIn,
+    Connected,
+    Expired,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderAuthStatus {
+    pub state: ProviderAuthState,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderLoginSession {
+    pub login_id: String,
+    pub auth_url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -265,5 +340,11 @@ mod tests {
         assert!(!key.can_access_provider(&ProviderKind::Copilot));
         assert!(key.is_usable_at(now));
         assert!(!key.is_usable_at(now + Duration::hours(2)));
+    }
+
+    #[test]
+    fn chat_role_parses_known_values() {
+        assert_eq!("user".parse::<ChatRole>().unwrap(), ChatRole::User);
+        assert!("tool".parse::<ChatRole>().is_err());
     }
 }

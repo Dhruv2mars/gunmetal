@@ -15,6 +15,7 @@ use uuid::Uuid;
 pub struct AppPaths {
     pub root: PathBuf,
     pub database: PathBuf,
+    pub empty_workspace_dir: PathBuf,
     pub helpers_dir: PathBuf,
     pub logs_dir: PathBuf,
 }
@@ -35,6 +36,7 @@ impl AppPaths {
     pub fn from_root(root: PathBuf) -> Result<Self> {
         let paths = Self {
             database: root.join("state").join("gunmetal.db"),
+            empty_workspace_dir: root.join("empty-workspace"),
             helpers_dir: root.join("helpers"),
             logs_dir: root.join("logs"),
             root,
@@ -52,6 +54,8 @@ impl AppPaths {
             .with_context(|| format!("failed to create {}", self.helpers_dir.display()))?;
         std::fs::create_dir_all(&self.logs_dir)
             .with_context(|| format!("failed to create {}", self.logs_dir.display()))?;
+        std::fs::create_dir_all(&self.empty_workspace_dir)
+            .with_context(|| format!("failed to create {}", self.empty_workspace_dir.display()))?;
         Ok(())
     }
 
@@ -116,8 +120,14 @@ impl StorageHandle {
         self.storage()?.get_profile(id)
     }
 
-    pub fn upsert_model_registry(&self, models: &[ModelDescriptor]) -> Result<()> {
-        self.storage()?.upsert_model_registry(models)
+    pub fn replace_models_for_profile(
+        &self,
+        provider: &ProviderKind,
+        profile_id: Option<Uuid>,
+        models: &[ModelDescriptor],
+    ) -> Result<()> {
+        self.storage()?
+            .replace_models_for_profile(provider, profile_id, models)
     }
 
     pub fn list_models(&self) -> Result<Vec<ModelDescriptor>> {
@@ -410,9 +420,27 @@ impl Storage {
         .map_err(Into::into)
     }
 
-    pub fn upsert_model_registry(&self, models: &[ModelDescriptor]) -> Result<()> {
+    pub fn replace_models_for_profile(
+        &self,
+        provider: &ProviderKind,
+        profile_id: Option<Uuid>,
+        models: &[ModelDescriptor],
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("delete from models", [])?;
+        match profile_id {
+            Some(profile_id) => {
+                tx.execute(
+                    "delete from models where provider = ?1 and profile_id = ?2",
+                    params![provider.to_string(), profile_id.to_string()],
+                )?;
+            }
+            None => {
+                tx.execute(
+                    "delete from models where provider = ?1 and profile_id is null",
+                    params![provider.to_string()],
+                )?;
+            }
+        }
 
         for model in models {
             tx.execute(
@@ -816,13 +844,17 @@ mod tests {
         assert_eq!(profiles[0].id, profile.id);
 
         storage
-            .upsert_model_registry(&[gunmetal_core::ModelDescriptor {
-                id: "openrouter/openai/gpt-5.1".to_owned(),
-                provider: ProviderKind::OpenRouter,
-                profile_id: Some(profile.id),
-                upstream_name: "openai/gpt-5.1".to_owned(),
-                display_name: "GPT-5.1".to_owned(),
-            }])
+            .replace_models_for_profile(
+                &ProviderKind::OpenRouter,
+                Some(profile.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "openrouter/openai/gpt-5.1".to_owned(),
+                    provider: ProviderKind::OpenRouter,
+                    profile_id: Some(profile.id),
+                    upstream_name: "openai/gpt-5.1".to_owned(),
+                    display_name: "GPT-5.1".to_owned(),
+                }],
+            )
             .unwrap();
 
         let models = storage.list_models().unwrap();
@@ -882,8 +914,81 @@ mod tests {
         let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
 
         assert!(paths.root.exists());
+        assert!(paths.empty_workspace_dir.exists());
         assert!(paths.helpers_dir.exists());
         assert!(paths.logs_dir.exists());
         assert_eq!(paths.database.file_name().unwrap(), "gunmetal.db");
+    }
+
+    #[test]
+    fn replacing_models_only_touches_one_profile_slice() {
+        let storage = Storage::open_in_memory().unwrap();
+        let codex = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        let openrouter = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenRouter,
+                name: "openrouter".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::Codex,
+                Some(codex.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(codex.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                }],
+            )
+            .unwrap();
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::OpenRouter,
+                Some(openrouter.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "openrouter/openai/gpt-5.1".to_owned(),
+                    provider: ProviderKind::OpenRouter,
+                    profile_id: Some(openrouter.id),
+                    upstream_name: "openai/gpt-5.1".to_owned(),
+                    display_name: "GPT-5.1".to_owned(),
+                }],
+            )
+            .unwrap();
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::Codex,
+                Some(codex.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.5".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(codex.id),
+                    upstream_name: "gpt-5.5".to_owned(),
+                    display_name: "GPT-5.5".to_owned(),
+                }],
+            )
+            .unwrap();
+
+        let models = storage.list_models().unwrap();
+        assert_eq!(models.len(), 2);
+        assert!(models.iter().any(|model| model.id == "codex/gpt-5.5"));
+        assert!(
+            models
+                .iter()
+                .any(|model| model.id == "openrouter/openai/gpt-5.1")
+        );
     }
 }
