@@ -255,11 +255,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
             AuthCommand::Login { profile, no_open } => {
                 let storage = paths.storage_handle()?;
                 let profile_record = require_profile(&storage, profile)?;
-                let session = providers.login(&profile_record).await?;
+                let session = providers.login(&profile_record, !no_open).await?;
                 writeln!(output, "login url: {}", session.auth_url)?;
                 writeln!(output, "login id: {}", session.login_id)?;
-                if !no_open {
-                    let _ = webbrowser::open(&session.auth_url);
+                if let Some(user_code) = session.user_code {
+                    writeln!(output, "user code: {user_code}")?;
+                }
+                if let Some(interval_seconds) = session.interval_seconds {
+                    writeln!(output, "poll every: {}s", interval_seconds)?;
                 }
             }
             AuthCommand::Logout { profile } => {
