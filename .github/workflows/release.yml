@@ -14,26 +14,48 @@ on:
         required: true
         type: string
 
-env:
-  RELEASE_TAG: ${{ github.event.client_payload.release_tag || github.event.inputs.release_tag || github.ref_name }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency: ${{ github.workflow }}-${{ github.ref_name }}
 
 jobs:
+  resolve_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
+    steps:
+      - id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            repository_dispatch)
+              release_tag="$(jq -r '.client_payload.release_tag // empty' "$GITHUB_EVENT_PATH")"
+              ;;
+            workflow_dispatch)
+              release_tag="$(jq -r '.inputs.release_tag // empty' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              release_tag="${GITHUB_REF_NAME}"
+              ;;
+          esac
+          [[ "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+
   validate:
+    needs: resolve_tag
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve_tag.outputs.release_tag }}
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
       - id: meta
+        env:
+          RELEASE_TAG: ${{ needs.resolve_tag.outputs.release_tag }}
         run: |
           set -euo pipefail
           [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
@@ -45,20 +67,21 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
   create_release:
-    needs: validate
+    needs: [resolve_tag, validate]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve_tag.outputs.release_tag }}
       - env:
+          RELEASE_TAG: ${{ needs.resolve_tag.outputs.release_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release view "${RELEASE_TAG}" >/dev/null 2>&1 || gh release create "${RELEASE_TAG}" --title "${RELEASE_TAG}" --generate-notes
 
   build_upload:
-    needs: create_release
+    needs: [resolve_tag, create_release]
     strategy:
       fail-fast: false
       matrix:
@@ -99,7 +122,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve_tag.outputs.release_tag }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -130,6 +153,7 @@ jobs:
           cd dist
           if command -v shasum >/dev/null 2>&1; then shasum -a 256 * > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt; else sha256sum * > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt; fi
       - env:
+          RELEASE_TAG: ${{ needs.resolve_tag.outputs.release_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
@@ -139,7 +163,7 @@ jobs:
           done
 
   publish_npm:
-    needs: [validate, build_upload]
+    needs: [resolve_tag, validate, build_upload]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -149,7 +173,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve_tag.outputs.release_tag }}
       - uses: actions/setup-node@v5
         with:
           node-version: 24
