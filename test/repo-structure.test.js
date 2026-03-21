@@ -51,6 +51,11 @@ test("release workflow supports manual reruns and npm auth paths", () => {
   assert.match(releaseWorkflow, /release-rerun/);
   assert.match(releaseWorkflow, /release_tag:/);
   assert.match(releaseWorkflow, /id-token: write/);
+  assert.match(releaseWorkflow, /GITHUB_EVENT_PATH/);
+  assert.doesNotMatch(
+    releaseWorkflow,
+    /RELEASE_TAG:\s+\$\{\{\s*github\.event\.client_payload/
+  );
   assert.match(
     releaseWorkflow,
     /trusted publisher not configured and NPM_TOKEN missing/
