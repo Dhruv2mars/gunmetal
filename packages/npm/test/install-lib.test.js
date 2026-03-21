@@ -55,17 +55,6 @@ test("install runtime replaces temp download with final binary", async () => {
   const asset = assetNameFor("darwin", "arm64");
   const body = Buffer.from("#!/bin/sh\necho gunmetal\n");
   const checksumHex = createHash("sha256").update(body).digest("hex");
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = async (url) => {
-    if (String(url).endsWith(`/${checksumsAssetNameFor("darwin", "arm64")}`)) {
-      return new Response(`${checksumHex}  ${asset}\n`);
-    }
-    if (String(url).endsWith(`/${asset}`)) {
-      return new Response(body);
-    }
-    return new Response("missing", { status: 404 });
-  };
 
   try {
     const result = await installRuntime({
@@ -73,7 +62,15 @@ test("install runtime replaces temp download with final binary", async () => {
       env,
       platform: "darwin",
       arch: "arm64",
-      home: installRoot
+      home: installRoot,
+      downloadFn: async (url, outputPath) => {
+        assert.match(String(url), new RegExp(`/${asset}$`));
+        await import("node:fs/promises").then(({ writeFile }) => writeFile(outputPath, body));
+      },
+      requestTextFn: async (url) => {
+        assert.match(String(url), new RegExp(`/${checksumsAssetNameFor("darwin", "arm64")}$`));
+        return `${checksumHex}  ${asset}\n`;
+      }
     });
     const installBin = resolveInstalledBin(env, "darwin", installRoot);
     assert.equal(result.installBin, installBin);
@@ -81,7 +78,6 @@ test("install runtime replaces temp download with final binary", async () => {
     assert.equal(existsSync(`${installBin}.download`), false);
     assert.equal(readFileSync(installBin, "utf8"), body.toString("utf8"));
   } finally {
-    globalThis.fetch = originalFetch;
     await rm(installRoot, { recursive: true, force: true });
   }
 });

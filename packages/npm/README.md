@@ -8,7 +8,7 @@ Install Gunmetal and run the local AI switchboard.
 npm i -g @dhruv2mars/gunmetal
 ```
 
-First run downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
+Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
 
 ## Quickstart
 

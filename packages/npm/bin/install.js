@@ -9,6 +9,7 @@ const version = resolvePackageVersion(join(here, "..", "package.json"));
 
 try {
   await installRuntime({ version });
+  process.exit(0);
 } catch (error) {
   console.error(`gunmetal: install failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

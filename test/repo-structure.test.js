@@ -52,13 +52,10 @@ test("release workflow supports manual reruns and npm auth paths", () => {
   assert.match(releaseWorkflow, /release_tag:/);
   assert.match(releaseWorkflow, /id-token: write/);
   assert.match(releaseWorkflow, /GITHUB_EVENT_PATH/);
+  assert.match(releaseWorkflow, /npm publish --(?:provenance --)?access public/);
   assert.doesNotMatch(
     releaseWorkflow,
     /RELEASE_TAG:\s+\$\{\{\s*github\.event\.client_payload/
-  );
-  assert.match(
-    releaseWorkflow,
-    /trusted publisher not configured and NPM_TOKEN missing/
   );
 });
 
@@ -66,6 +63,7 @@ test("install docs point at npm, not source-only fallback", () => {
   const rootReadme = readFileSync("README.md", "utf8");
   const npmReadme = readFileSync("packages/npm/README.md", "utf8");
   const siteContent = readFileSync("apps/web/src/lib/site-content.ts", "utf8");
+  const installPage = readFileSync("apps/web/src/app/install/page.tsx", "utf8");
 
   assert.doesNotMatch(rootReadme, /not published yet/);
   assert.doesNotMatch(rootReadme, /run Gunmetal from source/i);
@@ -76,4 +74,7 @@ test("install docs point at npm, not source-only fallback", () => {
 
   assert.doesNotMatch(siteContent, /not published yet/);
   assert.match(siteContent, /npm i -g @dhruv2mars\/gunmetal/);
+
+  assert.doesNotMatch(installPage, /npm install -g gunmetal/);
+  assert.match(installPage, /@dhruv2mars\/gunmetal/);
 });

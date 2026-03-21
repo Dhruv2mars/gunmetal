@@ -14,6 +14,7 @@
   },
   "scripts": {
     "gunmetal": "node bin/gunmetal.js",
+    "postinstall": "node bin/install.js",
     "build": "node -e \"process.exit(0)\"",
     "check": "node --check bin/gunmetal.js && node --check bin/gunmetal-lib.js && node --check bin/install.js && node --check bin/install-lib.js && node --test test/*.test.js",
     "test": "node --test test/*.test.js"

@@ -25,6 +25,7 @@ const repoRoot = resolve(here, "..");
 const tempRoot = mkdtempSync(join(tmpdir(), "gunmetal-install-smoke-"));
 const releaseDir = join(tempRoot, "release");
 const packageDir = join(tempRoot, "package");
+const globalPrefix = join(tempRoot, "global");
 const installRoot = join(tempRoot, "install");
 const npmPackageRoot = join(repoRoot, "packages", "npm");
 const builtBinary = join(
@@ -46,6 +47,7 @@ if (!existsSync(builtBinary)) {
 
 mkdirSync(releaseDir, { recursive: true });
 mkdirSync(packageDir, { recursive: true });
+mkdirSync(globalPrefix, { recursive: true });
 copyFileSync(builtBinary, assetPath);
 writeFileSync(
   join(releaseDir, checksumName),
@@ -62,6 +64,7 @@ run("tar", ["-xzf", tarball, "-C", packageDir], { cwd: npmPackageRoot });
 const extractedRoot = join(packageDir, "package");
 const installer = join(extractedRoot, "bin", "install.js");
 const launcher = join(extractedRoot, "bin", "gunmetal.js");
+const tarballPath = join(npmPackageRoot, tarball);
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url || "/", "http://127.0.0.1");
@@ -80,6 +83,15 @@ const { port } = server.address();
 const releaseBaseUrl = `http://127.0.0.1:${port}`;
 
 try {
+  await runAsync(npmCommand, ["install", "-g", "--prefix", globalPrefix, tarballPath], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      GUNMETAL_INSTALL_ROOT: installRoot,
+      GUNMETAL_RELEASE_BASE_URL: releaseBaseUrl,
+    },
+  });
+
   await runAsync(process.execPath, [installer], {
     cwd: repoRoot,
     env: {
@@ -104,6 +116,20 @@ try {
     fail(`expected installed version ${packageVersion}, got ${meta.version}`);
   }
 
+  const globalLauncher = process.platform === "win32"
+    ? join(globalPrefix, "gunmetal.cmd")
+    : join(globalPrefix, "bin", "gunmetal");
+
+  if (!existsSync(globalLauncher)) fail(`missing global launcher at ${globalLauncher}`);
+
+  run(globalLauncher, ["--help"], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      GUNMETAL_INSTALL_ROOT: installRoot,
+    },
+  });
+
   await runAsync(process.execPath, [launcher, "--help"], {
     cwd: repoRoot,
     env: {
@@ -112,7 +138,9 @@ try {
     },
   });
 } finally {
-  server.close();
+  await new Promise((resolvePromise, rejectPromise) =>
+    server.close((error) => (error ? rejectPromise(error) : resolvePromise()))
+  );
 }
 
 console.log(`install smoke ok: ${process.platform}/${process.arch}`);

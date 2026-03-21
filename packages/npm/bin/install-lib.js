@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import http from "node:http";
+import https from "node:https";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { pipeline } from "node:stream/promises";
 
 const REPO = "Dhruv2mars/gunmetal";
 
@@ -76,12 +77,123 @@ export function parseChecksumForAsset(text, asset) {
   return null;
 }
 
+function requestProtocolFor(url) {
+  return new URL(url).protocol;
+}
+
+export function requestText(url, redirects = 0) {
+  if (redirects > 5) {
+    throw new Error("too_many_redirects");
+  }
+  return new Promise((resolve, reject) => {
+    const transport = requestProtocolFor(url) === "http:" ? http : https;
+    const request = transport.get(
+      url,
+      {
+        agent: false,
+        headers: {
+          Connection: "close",
+          "User-Agent": "gunmetal-installer"
+        }
+      },
+      (response) => {
+        if (
+          response.statusCode
+          && response.statusCode >= 300
+          && response.statusCode < 400
+          && response.headers.location
+        ) {
+          response.resume();
+          requestText(response.headers.location, redirects + 1).then(resolve, reject);
+          return;
+        }
+        if (response.statusCode !== 200) {
+          response.resume();
+          reject(new Error(`http ${response.statusCode}`));
+          return;
+        }
+        let data = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+        response.on("end", () => resolve(data));
+      }
+    );
+    request.on("error", reject);
+  });
+}
+
+export function download(url, outputPath, redirects = 0) {
+  if (redirects > 5) {
+    throw new Error("too_many_redirects");
+  }
+  const partPath = `${outputPath}.part`;
+  return new Promise((resolve, reject) => {
+    const transport = requestProtocolFor(url) === "http:" ? http : https;
+    const request = transport.get(
+      url,
+      {
+        agent: false,
+        headers: {
+          Connection: "close",
+          "User-Agent": "gunmetal-installer"
+        }
+      },
+      (response) => {
+        if (
+          response.statusCode
+          && response.statusCode >= 300
+          && response.statusCode < 400
+          && response.headers.location
+        ) {
+          response.resume();
+          download(response.headers.location, outputPath, redirects + 1).then(resolve, reject);
+          return;
+        }
+        if (response.statusCode !== 200) {
+          response.resume();
+          reject(new Error(`http ${response.statusCode}`));
+          return;
+        }
+        const file = createWriteStream(partPath);
+        file.on("error", async (error) => {
+          await rm(partPath, { force: true });
+          reject(error);
+        });
+        response.on("error", async (error) => {
+          await rm(partPath, { force: true });
+          reject(error);
+        });
+        response.pipe(file);
+        file.on("finish", () => {
+          file.close(async () => {
+            try {
+              await rename(partPath, outputPath);
+              resolve();
+            } catch (error) {
+              await rm(partPath, { force: true });
+              reject(error);
+            }
+          });
+        });
+      }
+    );
+    request.on("error", async (error) => {
+      await rm(partPath, { force: true });
+      reject(error);
+    });
+  });
+}
+
 export async function installRuntime({
   version,
   env = process.env,
   platform = process.platform,
   arch = process.arch,
-  home = homedir()
+  home = homedir(),
+  downloadFn = download,
+  requestTextFn = requestText
 }) {
   const installRoot = resolveInstallRoot(env, home);
   const installBin = resolveInstalledBin(env, platform, home);
@@ -93,24 +205,24 @@ export async function installRuntime({
 
   await mkdir(join(installRoot, "bin"), { recursive: true });
 
-  const checksumsResponse = await fetch(`${baseUrl}/${checksumsAsset}`);
-  if (!checksumsResponse.ok) {
+  let checksumsText;
+  try {
+    checksumsText = await requestTextFn(`${baseUrl}/${checksumsAsset}`);
+  } catch {
     throw new Error(`failed_download:${checksumsAsset}`);
   }
-  const checksumsText = await checksumsResponse.text();
   const expectedChecksum = parseChecksumForAsset(checksumsText, asset);
   if (!expectedChecksum) {
     throw new Error(`missing_checksum:${asset}`);
   }
 
-  const assetResponse = await fetch(`${baseUrl}/${asset}`);
-  if (!assetResponse.ok || !assetResponse.body) {
-    throw new Error(`failed_download:${asset}`);
-  }
-
   const tempPath = `${installBin}.download`;
   try {
-    await pipeline(assetResponse.body, createWriteStream(tempPath));
+    try {
+      await downloadFn(`${baseUrl}/${asset}`, tempPath);
+    } catch {
+      throw new Error(`failed_download:${asset}`);
+    }
     const actualChecksum = createHash("sha256").update(readFileSync(tempPath)).digest("hex");
     if (actualChecksum !== expectedChecksum) {
       throw new Error(`checksum_mismatch:${asset}`);
