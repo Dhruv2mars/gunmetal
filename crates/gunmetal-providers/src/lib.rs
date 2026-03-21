@@ -10,10 +10,12 @@ use gunmetal_storage::AppPaths;
 mod codex;
 mod copilot;
 mod openrouter;
+mod zen;
 
 pub use codex::{CodexClient, CodexClientOptions};
 pub use copilot::{CopilotClient, CopilotClientOptions, CopilotSession};
 pub use openrouter::{OpenRouterClient, OpenRouterClientOptions};
+pub use zen::{ZenClient, ZenClientOptions};
 
 type CodexConnector = Arc<
     dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>>
@@ -30,6 +32,11 @@ type OpenRouterConnector = Arc<
             ProviderProfile,
             AppPaths,
         ) -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>>
+        + Send
+        + Sync,
+>;
+type ZenConnector = Arc<
+    dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>>
         + Send
         + Sync,
 >;
@@ -54,6 +61,7 @@ pub struct ProviderHub {
     codex_connector: CodexConnector,
     copilot_connector: CopilotConnector,
     openrouter_connector: OpenRouterConnector,
+    zen_connector: ZenConnector,
 }
 
 impl ProviderHub {
@@ -79,6 +87,13 @@ impl ProviderHub {
                     ))
                 })
             }),
+            zen_connector: Arc::new(|profile, _paths| {
+                Box::pin(async move {
+                    Ok(ZenClient::with_options(ZenClientOptions::from_profile(
+                        &profile,
+                    )))
+                })
+            }),
         }
     }
 
@@ -87,12 +102,14 @@ impl ProviderHub {
         codex_connector: CodexConnector,
         copilot_connector: CopilotConnector,
         openrouter_connector: OpenRouterConnector,
+        zen_connector: ZenConnector,
     ) -> Self {
         Self {
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         }
     }
 
@@ -111,11 +128,19 @@ impl ProviderHub {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         Self::with_connectors(
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         )
     }
 
@@ -134,11 +159,19 @@ impl ProviderHub {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         Self::with_connectors(
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         )
     }
 
@@ -160,11 +193,50 @@ impl ProviderHub {
                 Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         Self::with_connectors(
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
+        )
+    }
+
+    pub fn with_zen_connector(paths: AppPaths, zen_connector: ZenConnector) -> Self {
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        Self::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+            zen_connector,
         )
     }
 
@@ -178,6 +250,11 @@ impl ProviderHub {
             }
             ProviderKind::OpenRouter => {
                 let result = self.openrouter(profile).await?.auth_status(profile).await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.status)
+            }
+            ProviderKind::Zen => {
+                let result = self.zen(profile).await?.auth_status(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.status)
             }
@@ -216,6 +293,12 @@ impl ProviderHub {
                     profile.provider
                 )
             }
+            ProviderKind::Zen => {
+                bail!(
+                    "provider '{}' does not support browser login",
+                    profile.provider
+                )
+            }
             _ => bail!("provider '{}' login not implemented yet", profile.provider),
         }
     }
@@ -229,6 +312,11 @@ impl ProviderHub {
             }
             ProviderKind::OpenRouter => {
                 let credentials = self.openrouter(profile).await?.clear_credentials();
+                self.persist_credentials(profile.id, credentials)?;
+                Ok(())
+            }
+            ProviderKind::Zen => {
+                let credentials = self.zen(profile).await?.clear_credentials();
                 self.persist_credentials(profile.id, credentials)?;
                 Ok(())
             }
@@ -246,6 +334,11 @@ impl ProviderHub {
             }
             ProviderKind::OpenRouter => {
                 let result = self.openrouter(profile).await?.list_models(profile).await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.models)
+            }
+            ProviderKind::Zen => {
+                let result = self.zen(profile).await?.list_models(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.models)
             }
@@ -286,6 +379,15 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.completion)
             }
+            ProviderKind::Zen => {
+                let result = self
+                    .zen(profile)
+                    .await?
+                    .chat_completion(profile, request)
+                    .await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.completion)
+            }
             _ => bail!(
                 "provider '{}' chat completions not implemented yet",
                 profile.provider
@@ -303,6 +405,10 @@ impl ProviderHub {
 
     async fn openrouter(&self, profile: &ProviderProfile) -> Result<OpenRouterClient> {
         (self.openrouter_connector)(profile.clone(), self.paths.clone()).await
+    }
+
+    async fn zen(&self, profile: &ProviderProfile) -> Result<ZenClient> {
+        (self.zen_connector)(profile.clone(), self.paths.clone()).await
     }
 
     fn persist_credentials(
@@ -370,7 +476,8 @@ mod tests {
     use uuid::Uuid;
 
     use super::{
-        CodexClient, CopilotClient, OpenRouterClient, ProviderClass, ProviderHub, builtin_providers,
+        CodexClient, CopilotClient, OpenRouterClient, ProviderClass, ProviderHub, ZenClient,
+        builtin_providers,
     };
 
     #[test]
@@ -416,11 +523,19 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         let hub = ProviderHub::with_connectors(
             paths,
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         );
         let profile = ProviderProfile {
             id: Uuid::new_v4(),
@@ -482,11 +597,19 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         let hub = ProviderHub::with_connectors(
             paths.clone(),
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         );
         let storage = paths.storage_handle().unwrap();
         let profile = storage
@@ -548,11 +671,19 @@ mod tests {
                 Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
             },
         );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
         let hub = ProviderHub::with_connectors(
             paths.clone(),
             codex_connector,
             copilot_connector,
             openrouter_connector,
+            zen_connector,
         );
         let storage = paths.storage_handle().unwrap();
         let profile = storage
@@ -589,9 +720,84 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn provider_hub_delegates_to_zen_connector() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let zen_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<ZenClient>> + Send>> {
+                Box::pin(async move { Ok(ZenClient::mock("hello from zen")) })
+            },
+        );
+        let hub = ProviderHub::with_connectors(
+            paths.clone(),
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+            zen_connector,
+        );
+        let storage = paths.storage_handle().unwrap();
+        let profile = storage
+            .create_profile(gunmetal_core::NewProviderProfile {
+                provider: ProviderKind::Zen,
+                name: "default".to_owned(),
+                base_url: Some("https://opencode.ai/zen/v1".to_owned()),
+                enabled: true,
+                credentials: Some(serde_json::json!({ "api_key": "zen_test_key" })),
+            })
+            .unwrap();
+
+        let status = hub.auth_status(&profile).await.unwrap();
+        assert_eq!(status.state, ProviderAuthState::Connected);
+
+        let models = hub.sync_models(&profile).await.unwrap();
+        assert_eq!(models[0].id, "zen/gpt-5.4");
+
+        let response = hub
+            .chat_completion(
+                &profile,
+                &ChatCompletionRequest {
+                    model: "zen/gpt-5.4".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.message.content, "hello from zen");
+    }
+
+    #[tokio::test]
     async fn mock_shapes_are_sane() {
         let codex = CodexClient::mock("done");
         let copilot = CopilotClient::mock("done");
+        let zen = ZenClient::mock("done");
         let _ = ChatCompletionResult {
             model: "codex/gpt-5.4".to_owned(),
             message: ChatMessage {
@@ -607,5 +813,29 @@ mod tests {
         };
         assert!(codex.is_mock());
         assert!(copilot.is_mock());
+        let response = zen
+            .chat_completion(
+                &ProviderProfile {
+                    id: Uuid::new_v4(),
+                    provider: ProviderKind::Zen,
+                    name: "default".to_owned(),
+                    base_url: None,
+                    enabled: true,
+                    credentials: None,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                },
+                &ChatCompletionRequest {
+                    model: "zen/gpt-5.4".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.completion.message.content, "done");
     }
 }
