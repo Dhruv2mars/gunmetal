@@ -76,7 +76,8 @@ export function parseChecksumForAsset(text, asset) {
   for (const line of text.split(/\r?\n/)) {
     const match = line.trim().match(/^([a-fA-F0-9]{64})\s+\*?(.+)$/);
     if (!match) continue;
-    if (match[2].trim() !== asset) continue;
+    const candidate = match[2].trim().replace(/^[.][/\\]/, "");
+    if (candidate !== asset) continue;
     return match[1].toLowerCase();
   }
   return null;

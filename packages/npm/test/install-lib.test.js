@@ -42,6 +42,14 @@ test("parses checksum lines", () => {
   );
 });
 
+test("parses checksum lines with current-directory prefixes", () => {
+  const text = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  ./gunmetal-darwin-arm64\n";
+  assert.equal(
+    parseChecksumForAsset(text, "gunmetal-darwin-arm64"),
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  );
+});
+
 test("reads package manager hint and install need", () => {
   assert.equal(packageManagerHintFromEnv({ npm_config_user_agent: "bun/1.0" }), "bun");
   assert.equal(shouldInstallBinary({ binExists: false, installedVersion: null, packageVersion: "0.1.0" }), true);
