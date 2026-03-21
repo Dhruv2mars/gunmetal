@@ -59,16 +59,15 @@ gunmetal logs list
 ## Structure
 
 ```
+apps/cli/       # native CLI/TUI entrypoint
 apps/web/       # landing page, docs
-packages/cli/   # npm wrapper
-crates/         # rust workspace
-  gunmetal-app/       # binary entry
-  gunmetal-cli/       # commands
-  gunmetal-core/      # shared types
-  gunmetal-daemon/    # http server
-  gunmetal-providers/ # provider adapters
-  gunmetal-storage/   # sqlite
-  gunmetal-tui/       # terminal ui
+packages/cli/   # CLI command layer
+packages/core/  # shared types + contracts
+packages/daemon/# local OpenAI-compatible API server
+packages/npm/   # npm install wrapper for the native binary
+packages/providers/ # upstream provider adapters
+packages/storage/   # sqlite + local state
+packages/tui/       # terminal UI
 ```
 
 ## Development
@@ -76,9 +75,9 @@ crates/         # rust workspace
 ```bash
 bun install
 bun run dev      # start web dev server
-bun run test     # all tests
+bun run test     # repo structure + all tests
 bun run check    # lint + fmt + clippy
-cargo run -p gunmetal-app -- --help
+cargo run -p gunmetal -- --help
 ```
 
 ## License

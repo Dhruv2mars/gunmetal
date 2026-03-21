@@ -8,8 +8,8 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 crossterm.workspace = true
-gunmetal-providers = { path = "../gunmetal-providers" }
-gunmetal-storage = { path = "../gunmetal-storage" }
+gunmetal-providers = { path = "../providers" }
+gunmetal-storage = { path = "../storage" }
 ratatui.workspace = true
 
 [dev-dependencies]
