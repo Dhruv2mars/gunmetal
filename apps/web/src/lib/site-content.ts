@@ -16,7 +16,7 @@ export const moduleCards = [
   },
   {
     title: "TUI",
-    body: "Shows live service state, provider status, keys, profiles, and recent request activity in one control panel.",
+    body: "Runs as a real operator surface: create profiles, auth providers, sync models, mint or revoke keys, inspect snippets, and drill into request logs.",
   },
   {
     title: "Providers",
@@ -56,6 +56,10 @@ export const docsSections = [
     body: "Gunmetal issues Gunmetal keys. They work only because requests go to Gunmetal. The upstream provider never sees a fake Gunmetal-issued OpenAI or Copilot key.",
   },
   {
+    title: "Gateway semantics",
+    body: "Gunmetal is a normalized gateway by default. Use passthrough only when you explicitly request provider-native behavior through gunmetal.mode and provider_options.",
+  },
+  {
     title: "Model naming",
     body: "Every model is provider-prefixed. Examples: codex/gpt-5.4, copilot/claude-sonnet-4.5, openrouter/openai/gpt-5.1. There are no alias modes and no policy routing.",
   },
@@ -70,7 +74,7 @@ export const docsSections = [
 ];
 
 export const installSteps = [
-  "Install Gunmetal with npm or grab a release binary.",
+  "Today, build Gunmetal locally or use a release binary. The npm wrapper exists in-repo but is not published yet.",
   "Run gunmetal to open the TUI. It auto-starts the local service when needed.",
   "Create provider profiles for codex, copilot, gateways, or direct-key providers.",
   "Create one or more Gunmetal keys for the local apps you want to point at Gunmetal.",
@@ -100,18 +104,18 @@ export const changelogEntries = [
   },
 ];
 
-export const installSnippet = `npm install -g @dhruv2mars/gunmetal
-gunmetal
+export const installSnippet = `bun install
+cargo run -p gunmetal --
 
 # background service
-gunmetal start
-gunmetal status
+cargo run -p gunmetal -- start
+cargo run -p gunmetal -- status
 
 # create provider profile
-gunmetal profiles create --provider codex --name personal
+cargo run -p gunmetal -- profiles create --provider codex --name personal
 
 # create local key
-gunmetal keys create --name apps --scope inference,models_read --provider codex,copilot
+cargo run -p gunmetal -- keys create --name apps --scope inference,models_read --provider codex,copilot
 `;
 
 export const apiSnippet = `export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
@@ -135,6 +139,8 @@ export const responsesSnippet = `curl http://127.0.0.1:4684/v1/responses \\
   -d '{
     "model": "openrouter/openai/gpt-5.1",
     "instructions": "be terse",
-    "input": "summarize the last build"
+    "input": "summarize the last build",
+    "gunmetal": { "mode": "passthrough" },
+    "provider_options": { "reasoning": { "effort": "high" } }
   }'
 `;

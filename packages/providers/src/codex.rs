@@ -237,6 +237,7 @@ impl CodexClient {
                 profile_id: Some(profile_id),
                 upstream_name: "gpt-5.4".to_owned(),
                 display_name: "GPT-5.4".to_owned(),
+                metadata: None,
             }]),
             CodexMode::Live(_) => {
                 let response: ModelListResponse = self
@@ -259,6 +260,7 @@ impl CodexClient {
                             profile_id: Some(profile_id),
                             upstream_name,
                             display_name,
+                            metadata: None,
                         }
                     })
                     .collect())
@@ -686,7 +688,7 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, duplex};
 
     use super::{CodexClient, render_prompt};
-    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole};
+    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole, RequestOptions};
 
     #[test]
     fn prompt_renderer_keeps_role_order() {
@@ -819,6 +821,7 @@ mod tests {
                         content: "ping".to_owned(),
                     }],
                     stream: false,
+                    options: RequestOptions::default(),
                 },
             )
             .await?;

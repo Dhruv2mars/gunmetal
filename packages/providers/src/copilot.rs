@@ -502,6 +502,7 @@ impl CopilotClient {
                     profile_id: Some(profile.id),
                     upstream_name: "gpt-5.4".to_owned(),
                     display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
                 }],
             }),
             CopilotMode::Live(options) => {
@@ -522,6 +523,7 @@ impl CopilotClient {
                         profile_id: Some(profile.id),
                         upstream_name,
                         display_name: model.label.clone(),
+                        metadata: None,
                     };
                     match deduped.get(&descriptor.id) {
                         Some((current_score, _)) if *current_score >= score => {}
@@ -1277,7 +1279,7 @@ fn usage_from_parts(input_tokens: Option<u32>, output_tokens: Option<u32>) -> To
 
 #[cfg(test)]
 mod tests {
-    use gunmetal_core::{ChatRole, ProviderKind};
+    use gunmetal_core::{ChatRole, ProviderKind, RequestOptions};
     use serde_json::json;
     use wiremock::{
         Mock, MockServer, ResponseTemplate,
@@ -1469,6 +1471,7 @@ mod tests {
                         content: "ping".to_owned(),
                     }],
                     stream: false,
+                    options: RequestOptions::default(),
                 },
             )
             .await

@@ -4,6 +4,12 @@ Install Gunmetal and run the local AI switchboard.
 
 ## Install
 
+The package name is reserved here, but not published yet.
+
+Today, use the repo locally or a release asset.
+
+Planned package:
+
 ```bash
 npm i -g @dhruv2mars/gunmetal
 ```

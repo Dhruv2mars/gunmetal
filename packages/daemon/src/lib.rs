@@ -13,7 +13,7 @@ use axum::{
 };
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, GunmetalKey, KeyScope,
-    NewRequestLogEntry, ProviderProfile, TokenUsage,
+    NewRequestLogEntry, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
 };
 use gunmetal_providers::ProviderHub;
 use gunmetal_storage::{AppPaths, StorageHandle};
@@ -116,6 +116,7 @@ async fn chat_completions(
         payload.model,
         payload.messages,
         payload.stream,
+        payload.options,
     ) {
         Ok(context) => context,
         Err(error) => return error.into_response(),
@@ -144,6 +145,7 @@ async fn responses(
         payload.model,
         payload.messages,
         payload.stream,
+        payload.options,
     ) {
         Ok(context) => context,
         Err(error) => return error.into_response(),
@@ -432,16 +434,33 @@ struct ModelResponse {
     object: &'static str,
     owned_by: String,
     provider: String,
+    family: Option<String>,
+    context_window: Option<u32>,
+    max_output_tokens: Option<u32>,
+    input_modalities: Vec<String>,
+    output_modalities: Vec<String>,
+    supports_attachments: Option<bool>,
+    supports_reasoning: Option<bool>,
+    supports_tools: Option<bool>,
 }
 
 impl From<gunmetal_core::ModelDescriptor> for ModelResponse {
     fn from(value: gunmetal_core::ModelDescriptor) -> Self {
         let owned_by = value.provider.to_string();
+        let metadata = value.metadata.unwrap_or_default();
         Self {
             id: value.id,
             object: "model",
             owned_by: owned_by.clone(),
             provider: owned_by,
+            family: metadata.family,
+            context_window: metadata.context_window,
+            max_output_tokens: metadata.max_output_tokens,
+            input_modalities: metadata.input_modalities,
+            output_modalities: metadata.output_modalities,
+            supports_attachments: metadata.supports_attachments,
+            supports_reasoning: metadata.supports_reasoning,
+            supports_tools: metadata.supports_tools,
         }
     }
 }
@@ -451,6 +470,14 @@ struct IncomingChatCompletionsRequest {
     model: String,
     messages: Vec<IncomingChatMessage>,
     stream: Option<bool>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    max_tokens: Option<u32>,
+    max_completion_tokens: Option<u32>,
+    stop: Option<IncomingStop>,
+    metadata: Option<serde_json::Map<String, Value>>,
+    provider_options: Option<serde_json::Map<String, Value>>,
+    gunmetal: Option<IncomingGunmetalOptions>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -459,6 +486,15 @@ struct IncomingResponsesRequest {
     instructions: Option<String>,
     input: Option<IncomingResponsesInput>,
     stream: Option<bool>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    max_output_tokens: Option<u32>,
+    max_tokens: Option<u32>,
+    max_completion_tokens: Option<u32>,
+    stop: Option<IncomingStop>,
+    metadata: Option<serde_json::Map<String, Value>>,
+    provider_options: Option<serde_json::Map<String, Value>>,
+    gunmetal: Option<IncomingGunmetalOptions>,
 }
 
 impl IncomingResponsesRequest {
@@ -530,6 +566,18 @@ impl IncomingResponsesRequest {
             model: self.model,
             messages,
             stream: self.stream.unwrap_or(false),
+            options: RequestOptions {
+                temperature: self.temperature,
+                top_p: self.top_p,
+                max_output_tokens: self
+                    .max_output_tokens
+                    .or(self.max_completion_tokens)
+                    .or(self.max_tokens),
+                stop: self.stop.map(IncomingStop::into_vec).unwrap_or_default(),
+                metadata: self.metadata.unwrap_or_default(),
+                provider_options: self.provider_options.unwrap_or_default(),
+                mode: self.gunmetal.map(|value| value.mode).unwrap_or_default(),
+            },
         })
     }
 }
@@ -573,6 +621,15 @@ impl IncomingChatCompletionsRequest {
             model: self.model,
             messages,
             stream: self.stream.unwrap_or(false),
+            options: RequestOptions {
+                temperature: self.temperature,
+                top_p: self.top_p,
+                max_output_tokens: self.max_completion_tokens.or(self.max_tokens),
+                stop: self.stop.map(IncomingStop::into_vec).unwrap_or_default(),
+                metadata: self.metadata.unwrap_or_default(),
+                provider_options: self.provider_options.unwrap_or_default(),
+                mode: self.gunmetal.map(|value| value.mode).unwrap_or_default(),
+            },
         })
     }
 }
@@ -667,11 +724,34 @@ struct IncomingResponsesContentPart {
     text: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum IncomingStop {
+    Single(String),
+    Many(Vec<String>),
+}
+
+impl IncomingStop {
+    fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::Single(value) => vec![value],
+            Self::Many(values) => values,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct IncomingGunmetalOptions {
+    #[serde(default)]
+    mode: RequestMode,
+}
+
 #[derive(Debug, Clone)]
 struct ValidatedChatRequest {
     model: String,
     messages: Vec<ChatMessage>,
     stream: bool,
+    options: RequestOptions,
 }
 
 #[derive(Debug, Serialize)]
@@ -776,6 +856,7 @@ fn prepare_request(
     model_id: String,
     messages: Vec<ChatMessage>,
     stream: bool,
+    options: RequestOptions,
 ) -> Result<(GunmetalKey, ProviderProfile, ChatCompletionRequest), ApiError> {
     let key = authorize(state, headers, KeyScope::Inference)?;
 
@@ -826,6 +907,7 @@ fn prepare_request(
             model: model.id,
             messages,
             stream,
+            options,
         },
     ))
 }
@@ -882,18 +964,25 @@ async fn invoke_provider(
 
 #[cfg(test)]
 mod tests {
-    use std::{future::Future, pin::Pin};
+    use async_trait::async_trait;
+    use std::sync::{Arc, Mutex};
 
     use axum::{
         body::{Body, to_bytes},
         http::{Request, StatusCode, header},
         response::Response,
     };
-    use gunmetal_core::{KeyScope, NewGunmetalKey, NewProviderProfile, ProviderKind};
-    use gunmetal_providers::{CodexClient, ProviderHub};
+    use gunmetal_core::{
+        ChatCompletionResult, ChatMessage, ChatRole, KeyScope, NewGunmetalKey, NewProviderProfile,
+        ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderLoginSession, RequestMode,
+        TokenUsage,
+    };
+    use gunmetal_providers::{
+        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderDefinition, ProviderHub,
+        ProviderModelSyncResult, ProviderRegistry,
+    };
     use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
-    use std::sync::Arc;
     use tempfile::TempDir;
     use tower::util::ServiceExt;
 
@@ -1071,6 +1160,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn chat_completion_preserves_optional_request_fields() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+        let seen = Arc::new(Mutex::new(None));
+
+        let response = app(fixture.state_with_spy(seen.clone()))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "messages": [{ "role": "user", "content": "ping" }],
+                            "temperature": 0.2,
+                            "top_p": 0.9,
+                            "max_tokens": 128,
+                            "stop": "DONE",
+                            "metadata": { "suite": "daemon" },
+                            "provider_options": { "reasoning": { "effort": "high" } },
+                            "gunmetal": { "mode": "passthrough" }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let request = seen.lock().unwrap().clone().unwrap();
+        assert_eq!(request.options.temperature, Some(0.2));
+        assert_eq!(request.options.top_p, Some(0.9));
+        assert_eq!(request.options.max_output_tokens, Some(128));
+        assert_eq!(request.options.stop, vec!["DONE"]);
+        assert_eq!(request.options.metadata["suite"], "daemon");
+        assert_eq!(
+            request.options.provider_options["reasoning"]["effort"],
+            "high"
+        );
+        assert_eq!(request.options.mode, RequestMode::Passthrough);
+    }
+
+    #[tokio::test]
     async fn responses_rejects_missing_input() {
         let fixture = Fixture::new();
         fixture.seed_models();
@@ -1194,14 +1330,19 @@ mod tests {
         }
 
         fn state(&self) -> DaemonState {
-            let connector = Arc::new(
-                move |_profile: gunmetal_core::ProviderProfile,
-                      _paths: AppPaths|
-                      -> Pin<
-                    Box<dyn Future<Output = anyhow::Result<CodexClient>> + Send>,
-                > { Box::pin(async move { Ok(CodexClient::mock("hello from codex")) }) },
-            );
-            let providers = ProviderHub::with_codex_connector(self.paths.clone(), connector);
+            let mut registry = ProviderRegistry::default();
+            registry.register(MockCodexAdapter);
+            let providers = ProviderHub::with_registry(self.paths.clone(), registry);
+            DaemonState::with_provider_hub(self.paths.clone(), providers).unwrap()
+        }
+
+        fn state_with_spy(
+            &self,
+            seen: Arc<Mutex<Option<gunmetal_core::ChatCompletionRequest>>>,
+        ) -> DaemonState {
+            let mut registry = ProviderRegistry::default();
+            registry.register(SpyCodexAdapter { seen });
+            let providers = ProviderHub::with_registry(self.paths.clone(), registry);
             DaemonState::with_provider_hub(self.paths.clone(), providers).unwrap()
         }
 
@@ -1243,6 +1384,7 @@ mod tests {
                         profile_id: Some(profile.id),
                         upstream_name: "gpt-5.4".to_owned(),
                         display_name: "GPT-5.4".to_owned(),
+                        metadata: None,
                     }],
                 )
                 .unwrap();
@@ -1257,5 +1399,196 @@ mod tests {
     async fn to_text(response: Response) -> String {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         String::from_utf8(body.to_vec()).unwrap()
+    }
+
+    struct MockCodexAdapter;
+
+    #[async_trait]
+    impl ProviderAdapter for MockCodexAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            ProviderDefinition {
+                kind: ProviderKind::Codex,
+                class: gunmetal_providers::ProviderClass::Subscription,
+                priority: 1,
+            }
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "codex".to_owned(),
+                },
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
+            Ok(gunmetal_providers::ProviderLoginResult {
+                credentials: None,
+                session: ProviderLoginSession {
+                    login_id: "mock".to_owned(),
+                    auth_url: "https://example.com".to_owned(),
+                    user_code: None,
+                    interval_seconds: None,
+                },
+            })
+        }
+
+        async fn logout(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<Option<Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: None,
+                models: vec![gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            })
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<ProviderChatResult> {
+            Ok(ProviderChatResult {
+                credentials: None,
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello from codex".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: TokenUsage {
+                        input_tokens: Some(5),
+                        output_tokens: Some(2),
+                        total_tokens: Some(7),
+                    },
+                },
+            })
+        }
+    }
+
+    struct SpyCodexAdapter {
+        seen: Arc<Mutex<Option<gunmetal_core::ChatCompletionRequest>>>,
+    }
+
+    #[async_trait]
+    impl ProviderAdapter for SpyCodexAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            ProviderDefinition {
+                kind: ProviderKind::Codex,
+                class: gunmetal_providers::ProviderClass::Subscription,
+                priority: 1,
+            }
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "codex".to_owned(),
+                },
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
+            Ok(gunmetal_providers::ProviderLoginResult {
+                credentials: None,
+                session: ProviderLoginSession {
+                    login_id: "mock".to_owned(),
+                    auth_url: "https://example.com".to_owned(),
+                    user_code: None,
+                    interval_seconds: None,
+                },
+            })
+        }
+
+        async fn logout(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<Option<Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: None,
+                models: vec![gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            })
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<ProviderChatResult> {
+            *self.seen.lock().unwrap() = Some(request.clone());
+            Ok(ProviderChatResult {
+                credentials: None,
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello from codex".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: TokenUsage {
+                        input_tokens: Some(5),
+                        output_tokens: Some(2),
+                        total_tokens: Some(7),
+                    },
+                },
+            })
+        }
     }
 }
