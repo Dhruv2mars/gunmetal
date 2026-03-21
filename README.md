@@ -10,6 +10,8 @@ Connect providers you already use, create local API keys, point your apps at `ht
 npm i -g @dhruv2mars/gunmetal
 ```
 
+Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
+
 ## Quickstart
 
 ```bash

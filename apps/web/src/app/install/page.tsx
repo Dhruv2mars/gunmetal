@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const releaseItems = [
-  "npm install -g gunmetal",
+  "npm install -g @dhruv2mars/gunmetal",
   "GitHub release binaries for macOS, Linux, and Windows",
   "One binary includes the service, CLI, and TUI",
 ];
