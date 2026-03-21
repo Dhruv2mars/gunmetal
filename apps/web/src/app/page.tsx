@@ -95,9 +95,9 @@ export default function Home() {
           <p className="section-tag">First run</p>
           <h2>Install it. Launch it. Point apps at it.</h2>
           <p>
-            The fastest path is the simplest one: install Gunmetal, create your
-            profiles and keys, then set your app base URL to Gunmetal instead of
-            the upstream provider.
+            The fastest path is `gunmetal setup`, then `gunmetal start`, then
+            one `/v1/models` request with the key setup created. After that,
+            point apps at Gunmetal instead of the upstream provider.
           </p>
         </div>
         <div className="code-stack">

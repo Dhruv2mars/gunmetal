@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 
 import { SiteShell } from "@/components/site-shell";
-import { apiSnippet, docsSections, responsesSnippet } from "@/lib/site-content";
+import {
+  apiSnippet,
+  docsSections,
+  openAiCompatSnippet,
+  responsesSnippet,
+} from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "Docs",
@@ -21,6 +26,24 @@ export default function DocsPage() {
       title="The public contract is small on purpose."
       lede="Gunmetal stays useful by looking standard from the outside while keeping providers explicit on the inside."
     >
+      <section className="section-grid split-code">
+        <div className="section-head">
+          <p className="section-tag">Start here</p>
+          <h2>First prove /v1/models and /v1/chat/completions.</h2>
+          <p>
+            A normal user path is short: `gunmetal setup`, `gunmetal start`,
+            then one models call and one chat call. That proves the key, base
+            URL, and provider/model syntax all line up.
+          </p>
+        </div>
+        <article className="code-panel">
+          <div className="code-head">
+            <span>OpenAI-compatible app</span>
+          </div>
+          <pre>{openAiCompatSnippet}</pre>
+        </article>
+      </section>
+
       <section className="section-grid">
         <div className="card-grid">
           {docsSections.map((section) => (

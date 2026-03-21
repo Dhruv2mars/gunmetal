@@ -24,8 +24,9 @@ use std::os::windows::process::CommandExt;
 const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
-const HELP_FOOTER: &str =
-    "First run:\n  gunmetal setup\n  gunmetal start\n  use base URL http://127.0.0.1:4684/v1";
+const BASE_URL: &str = "http://127.0.0.1:4684/v1";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. create or save one provider profile\n  2. auth that profile\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -106,6 +107,10 @@ pub struct StatusArgs {
 }
 
 #[derive(Debug, clap::Args)]
+#[command(
+    about = "Guided first-run flow. Best default path for new users.",
+    after_help = SETUP_HELP_FOOTER
+)]
 pub struct SetupArgs {
     #[arg(long)]
     pub provider: Option<ProviderKind>,
@@ -115,23 +120,23 @@ pub struct SetupArgs {
     pub base_url: Option<String>,
     #[arg(long)]
     pub api_key: Option<String>,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub bin_path: Option<PathBuf>,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub cwd: Option<PathBuf>,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub http_referer: Option<String>,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub title: Option<String>,
     #[arg(long)]
     pub key_name: Option<String>,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub no_open: bool,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub no_wait: bool,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub no_sync: bool,
-    #[arg(long)]
+    #[arg(long, help_heading = "Advanced")]
     pub no_key: bool,
 }
 
@@ -225,10 +230,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         }
         Command::Start(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
-            writeln!(output, "{} {}", status.state, status.url)?;
-            if let Some(pid) = status.pid {
-                writeln!(output, "pid: {pid}")?;
-            }
+            write_service_report(&mut output, &status, ServiceVerb::Start)?;
         }
         Command::Serve(args) => {
             let address = SocketAddr::new(args.host, args.port);
@@ -237,17 +239,11 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         }
         Command::Stop(args) => {
             let status = stop_daemon(paths, args.host, args.port).await?;
-            writeln!(output, "{} {}", status.state, status.url)?;
+            write_service_report(&mut output, &status, ServiceVerb::Stop)?;
         }
         Command::Status(args) => {
             let status = daemon_status(paths, args.host, args.port).await?;
-            writeln!(output, "{} {}", status.state, status.url)?;
-            if let Some(pid) = status.pid {
-                writeln!(output, "pid: {pid}")?;
-            }
-            if let Some(health) = status.health {
-                writeln!(output, "health: {health}")?;
-            }
+            write_service_report(&mut output, &status, ServiceVerb::Status)?;
         }
         Command::Keys { command } => {
             let storage = paths.storage_handle()?;
@@ -269,7 +265,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     writeln!(output, "base url: http://127.0.0.1:4684/v1")?;
                 }
                 KeyCommand::List => {
-                    for key in storage.list_keys()? {
+                    let keys = storage.list_keys()?;
+                    if keys.is_empty() {
+                        writeln!(
+                            output,
+                            "No keys yet. Run `gunmetal setup`, then `gunmetal keys list` again."
+                        )?;
+                    }
+                    for key in keys {
                         let providers = if key.allowed_providers.is_empty() {
                             "all".to_owned()
                         } else {
@@ -311,7 +314,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         }
         Command::Models { command } => match command {
             ModelCommand::List => {
-                for model in paths.storage_handle()?.list_models()? {
+                let models = paths.storage_handle()?.list_models()?;
+                if models.is_empty() {
+                    writeln!(
+                        output,
+                        "No models synced yet. Run `gunmetal setup` or `gunmetal models sync <profile>`."
+                    )?;
+                }
+                for model in models {
                     writeln!(output, "{} {}", model.id, model.display_name)?;
                 }
             }
@@ -354,7 +364,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 writeln!(output, "id: {}", profile.id)?;
             }
             ProfileCommand::List => {
-                for profile in paths.storage_handle()?.list_profiles()? {
+                let profiles = paths.storage_handle()?.list_profiles()?;
+                if profiles.is_empty() {
+                    writeln!(
+                        output,
+                        "No profiles yet. Run `gunmetal setup` or `gunmetal profiles create ...`."
+                    )?;
+                }
+                for profile in profiles {
                     writeln!(
                         output,
                         "{} {} id={} enabled={}",
@@ -379,8 +396,26 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 let storage = paths.storage_handle()?;
                 let profile_record = require_profile(&storage, &profile)?;
                 let status = providers.auth_status(&profile_record).await?;
-                writeln!(output, "{} {}", profile_record.name, status.label)?;
-                writeln!(output, "state: {:?}", status.state)?;
+                writeln!(
+                    output,
+                    "Profile: {} ({})",
+                    profile_record.name, profile_record.provider
+                )?;
+                writeln!(output, "Auth: {}", status.label)?;
+                writeln!(output, "State: {:?}", status.state)?;
+                if supports_browser_login(&profile_record.provider) {
+                    writeln!(
+                        output,
+                        "Next: run `gunmetal auth login {}` if re-auth is needed.",
+                        profile_record.name
+                    )?;
+                } else {
+                    writeln!(
+                        output,
+                        "Next: update the saved API key if auth fails, then run `gunmetal auth status {}` again.",
+                        profile_record.name
+                    )?;
+                }
             }
             AuthCommand::Login {
                 profile,
@@ -392,13 +427,18 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 let session = providers.login(&profile_record, !no_open).await?;
                 let user_code = session.user_code.clone();
                 let interval_seconds = session.interval_seconds;
-                writeln!(output, "login url: {}", session.auth_url)?;
-                writeln!(output, "login id: {}", session.login_id)?;
+                writeln!(
+                    output,
+                    "Open this URL to finish auth for {} ({}):",
+                    profile_record.name, profile_record.provider
+                )?;
+                writeln!(output, "{}", session.auth_url)?;
+                writeln!(output, "Login id: {}", session.login_id)?;
                 if let Some(user_code) = user_code {
-                    writeln!(output, "user code: {user_code}")?;
+                    writeln!(output, "User code: {user_code}")?;
                 }
                 if let Some(interval_seconds) = interval_seconds {
-                    writeln!(output, "poll every: {}s", interval_seconds)?;
+                    writeln!(output, "Gunmetal will check every {}s.", interval_seconds)?;
                 }
                 if !no_wait && supports_browser_login(&profile_record.provider) {
                     wait_for_provider_auth(
@@ -408,6 +448,12 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                         &mut output,
                     )
                     .await?;
+                } else {
+                    writeln!(
+                        output,
+                        "Next: finish auth, then run `gunmetal auth status {}`.",
+                        profile_record.name
+                    )?;
                 }
             }
             AuthCommand::Logout { profile } => {
@@ -419,7 +465,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         },
         Command::Logs { command } => match command {
             LogCommand::List { limit } => {
-                for log in paths.storage_handle()?.list_request_logs(limit)? {
+                let logs = paths.storage_handle()?.list_request_logs(limit)?;
+                if logs.is_empty() {
+                    writeln!(
+                        output,
+                        "No logs yet. Start Gunmetal with `gunmetal start`, then make one request."
+                    )?;
+                }
+                for log in logs {
                     writeln!(
                         output,
                         "{} {} {} {} {} {}ms tokens={}",
@@ -447,14 +500,25 @@ pub async fn ensure_daemon_running(
 ) -> Result<ServiceStatus> {
     let current = daemon_status(paths, host, port).await?;
     if current.running {
-        return Ok(current);
+        return Ok(ServiceStatus {
+            note: Some("Gunmetal was already running.".to_owned()),
+            ..current
+        });
     }
     if current.state == "starting" {
         return wait_for_health(paths, host, port, 20).await;
     }
 
     start_daemon_process(paths, host, port)?;
-    wait_for_health(paths, host, port, 20).await
+    let status = wait_for_health(paths, host, port, 20).await?;
+    if status.running {
+        return Ok(ServiceStatus {
+            note: Some("Gunmetal started.".to_owned()),
+            ..status
+        });
+    }
+
+    anyhow::bail!("{}", diagnose_start_failure(paths, port))
 }
 
 pub async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus> {
@@ -471,6 +535,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
     let Some(pid) = read_pid(&pid_file)? else {
         let mut status = daemon_status(paths, host, port).await?;
         status.state = "stopped".to_owned();
+        status.note = Some("Gunmetal was already stopped.".to_owned());
         return Ok(status);
     };
 
@@ -482,6 +547,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
             let _ = fs::remove_file(&pid_file);
             return Ok(ServiceStatus {
                 state: "stopped".to_owned(),
+                note: Some("Gunmetal stopped.".to_owned()),
                 ..status
             });
         }
@@ -490,6 +556,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
     let _ = fs::remove_file(&pid_file);
     Ok(ServiceStatus {
         state: "stopping".to_owned(),
+        note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
         ..daemon_status(paths, host, port).await?
     })
 }
@@ -507,6 +574,7 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                 pid,
                 url,
                 health,
+                note: None,
             })
         }
         Err(_) => {
@@ -518,9 +586,18 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                         pid: Some(pid),
                         url,
                         health: None,
+                        note: Some("Gunmetal is still starting.".to_owned()),
                     });
                 }
                 let _ = fs::remove_file(paths.daemon_pid_file());
+                return Ok(ServiceStatus {
+                    state: "stopped".to_owned(),
+                    running: false,
+                    pid: None,
+                    url,
+                    health: None,
+                    note: Some("Removed stale daemon state.".to_owned()),
+                });
             }
             Ok(ServiceStatus {
                 state: "stopped".to_owned(),
@@ -528,6 +605,7 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                 pid: None,
                 url,
                 health: None,
+                note: None,
             })
         }
     }
@@ -650,6 +728,7 @@ pub struct ServiceStatus {
     pub pid: Option<u32>,
     pub url: String,
     pub health: Option<String>,
+    pub note: Option<String>,
 }
 
 async fn setup(
@@ -659,6 +738,12 @@ async fn setup(
     args: SetupArgs,
 ) -> Result<()> {
     let interactive = io::stdin().is_terminal();
+    writeln!(output, "Gunmetal setup")?;
+    writeln!(
+        output,
+        "This creates one provider profile, checks auth, syncs models, and creates one local key."
+    )?;
+    writeln!(output)?;
     let provider = match args.provider {
         Some(provider) => provider,
         None => prompt_provider(output, interactive)?,
@@ -707,13 +792,17 @@ async fn setup(
             args.title,
         ),
     })?;
-    writeln!(output, "created profile {}", profile.name)?;
+    writeln!(
+        output,
+        "Saved profile {} ({})",
+        profile.name, profile.provider
+    )?;
 
     if supports_browser_login(&provider) {
         let session = providers.login(&profile, !args.no_open).await?;
-        writeln!(output, "login url: {}", session.auth_url)?;
+        writeln!(output, "Open this URL to finish auth: {}", session.auth_url)?;
         if let Some(user_code) = session.user_code.clone() {
-            writeln!(output, "user code: {user_code}")?;
+            writeln!(output, "User code: {user_code}")?;
         }
         if !args.no_wait {
             wait_for_provider_auth(
@@ -723,19 +812,26 @@ async fn setup(
                 output,
             )
             .await?;
+        } else {
+            writeln!(
+                output,
+                "Auth still needs to finish. Run `gunmetal auth status {}` when done.",
+                profile.name
+            )?;
         }
     } else {
         let status = providers.auth_status(&profile).await?;
-        writeln!(output, "auth: {:?}", status.state)?;
+        writeln!(output, "Auth: {}", status.label)?;
     }
 
     let mut models = Vec::new();
     if !args.no_sync {
         models = providers.sync_models(&profile).await?;
         storage.replace_models_for_profile(&profile.provider, Some(profile.id), &models)?;
-        writeln!(output, "synced {} models", models.len())?;
+        writeln!(output, "Synced {} models.", models.len())?;
     }
 
+    let mut created_secret = None;
     if !args.no_key {
         let key_name = args
             .key_name
@@ -746,16 +842,45 @@ async fn setup(
             allowed_providers: vec![profile.provider.clone()],
             expires_at: None,
         })?;
-        writeln!(output, "created key {}", created.record.name)?;
-        writeln!(output, "secret: {}", created.secret)?;
-        writeln!(output, "base url: http://127.0.0.1:4684/v1")?;
+        created_secret = Some(created.secret.clone());
+        writeln!(output, "Created key {}.", created.record.name)?;
+        writeln!(output, "API key: {}", created.secret)?;
     }
 
     if let Some(model) = models.first() {
-        writeln!(output, "first model: {}", model.id)?;
+        writeln!(output, "First model: {}", model.id)?;
     }
 
-    writeln!(output, "next: point your app to http://127.0.0.1:4684/v1")?;
+    writeln!(output)?;
+    writeln!(output, "What just happened")?;
+    writeln!(
+        output,
+        "- profile saved: {} ({})",
+        profile.name, profile.provider
+    )?;
+    if !args.no_sync {
+        writeln!(output, "- models synced: {}", models.len())?;
+    }
+    if !args.no_key {
+        writeln!(output, "- local key created")?;
+    }
+    writeln!(output)?;
+    writeln!(output, "What to do next")?;
+    writeln!(output, "1. Start Gunmetal: gunmetal start")?;
+    writeln!(output, "2. Base URL: {BASE_URL}")?;
+    writeln!(output, "3. Model format: provider/model")?;
+    if let (Some(secret), Some(model)) = (created_secret, models.first()) {
+        writeln!(output, "4. First test:")?;
+        writeln!(
+            output,
+            "   curl {BASE_URL}/models -H 'Authorization: Bearer {secret}'"
+        )?;
+        writeln!(
+            output,
+            "   curl {BASE_URL}/chat/completions -H 'Authorization: Bearer {secret}' -H 'Content-Type: application/json' -d '{{\"model\":\"{}\",\"messages\":[{{\"role\":\"user\",\"content\":\"say ok\"}}]}}'",
+            model.id
+        )?;
+    }
     Ok(())
 }
 
@@ -776,7 +901,9 @@ async fn wait_for_provider_auth(
     }
 
     anyhow::bail!(
-        "authentication did not finish in time; rerun `gunmetal auth status {}` after finishing in the browser",
+        "authentication did not finish in time for profile '{}'. finish in the browser, then run `gunmetal auth status {}` or `gunmetal auth login {}` again",
+        profile.name,
+        profile.name,
         profile.name
     )
 }
@@ -802,8 +929,14 @@ fn require_profile(
 
     match matches.len() {
         1 => Ok(matches.into_iter().next().expect("single match")),
-        0 => anyhow::bail!("profile '{}' not found", selector),
-        _ => anyhow::bail!("profile '{}' is ambiguous; use the id", selector),
+        0 => anyhow::bail!(
+            "profile '{}' not found. run `gunmetal profiles list` or `gunmetal setup`.",
+            selector
+        ),
+        _ => anyhow::bail!(
+            "profile '{}' is ambiguous. use the id from `gunmetal profiles list`.",
+            selector
+        ),
     }
 }
 
@@ -827,8 +960,14 @@ fn require_key(
 
     match matches.len() {
         1 => Ok(matches.into_iter().next().expect("single match")),
-        0 => anyhow::bail!("key '{}' not found", selector),
-        _ => anyhow::bail!("key '{}' is ambiguous; use the prefix", selector),
+        0 => anyhow::bail!(
+            "key '{}' not found. run `gunmetal keys list` or create one in `gunmetal setup`.",
+            selector
+        ),
+        _ => anyhow::bail!(
+            "key '{}' is ambiguous. use the prefix from `gunmetal keys list`.",
+            selector
+        ),
     }
 }
 
@@ -903,10 +1042,63 @@ fn prompt_or_value(
         Some(value) if !value.trim().is_empty() => Ok(value),
         _ if interactive => prompt_line(output, label, default),
         _ => anyhow::bail!(
-            "missing {}. rerun with --help or use `gunmetal setup` interactively",
+            "missing {}. rerun `gunmetal setup` interactively or read `gunmetal setup --help`.",
             label.to_lowercase()
         ),
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ServiceVerb {
+    Start,
+    Stop,
+    Status,
+}
+
+fn write_service_report(
+    output: &mut impl Write,
+    status: &ServiceStatus,
+    verb: ServiceVerb,
+) -> Result<()> {
+    match verb {
+        ServiceVerb::Start if status.running => writeln!(output, "Gunmetal is running.")?,
+        ServiceVerb::Stop if status.running => writeln!(output, "Gunmetal is still stopping.")?,
+        ServiceVerb::Stop => writeln!(output, "Gunmetal is stopped.")?,
+        ServiceVerb::Status if status.running => writeln!(output, "Gunmetal is running.")?,
+        ServiceVerb::Status => writeln!(output, "Gunmetal is not running.")?,
+        ServiceVerb::Start => writeln!(output, "Gunmetal is not running.")?,
+    }
+
+    if let Some(note) = &status.note {
+        writeln!(output, "{note}")?;
+    }
+    writeln!(output, "Base URL: {}/v1", status.url)?;
+    if let Some(pid) = status.pid {
+        writeln!(output, "PID: {pid}")?;
+    }
+    if let Some(health) = &status.health {
+        writeln!(output, "Health: {health}")?;
+    }
+    if !status.running {
+        writeln!(output, "Run `gunmetal start` or open `gunmetal`.")?;
+    }
+    Ok(())
+}
+
+fn diagnose_start_failure(paths: &AppPaths, port: u16) -> String {
+    let stderr = fs::read_to_string(paths.daemon_stderr_log()).unwrap_or_default();
+    if stderr.contains("Address already in use")
+        || stderr.contains("os error 48")
+        || stderr.contains("os error 98")
+        || stderr.contains("os error 10013")
+    {
+        return format!(
+            "Gunmetal could not start because port {} is already in use. Stop the other process or rerun `gunmetal start --port <port>`.",
+            port
+        );
+    }
+
+    "Gunmetal did not become healthy. Run `gunmetal status` and inspect ~/.gunmetal/daemon.stderr.log.".to_owned()
 }
 
 fn prompt_optional(
@@ -983,9 +1175,13 @@ fn profile_credentials(
 
 #[cfg(test)]
 mod tests {
-    use clap::Parser;
+    use clap::{CommandFactory, Parser};
+    use tempfile::TempDir;
 
-    use super::{AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand};
+    use super::{
+        AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand,
+        StatusArgs, execute,
+    };
 
     #[test]
     fn parses_key_create_command() {
@@ -1123,5 +1319,108 @@ mod tests {
             },
             _ => panic!("unexpected command"),
         }
+    }
+
+    #[test]
+    fn root_help_points_at_golden_path() {
+        let help = Cli::command().render_help().to_string();
+
+        assert!(help.contains("gunmetal setup"));
+        assert!(help.contains("gunmetal start"));
+        assert!(help.contains("gunmetal status"));
+        assert!(help.contains("http://127.0.0.1:4684/v1"));
+        assert!(help.contains("provider/model"));
+        assert!(help.contains("/v1/models"));
+    }
+
+    #[test]
+    fn setup_help_keeps_happy_path_and_advanced_flags_separate() {
+        let mut command = Cli::command();
+        let setup = command
+            .find_subcommand_mut("setup")
+            .expect("setup subcommand");
+        let help = setup.render_help().to_string();
+
+        assert!(help.contains("Guided first-run flow"));
+        assert!(help.contains("gunmetal setup"));
+        assert!(help.contains("Advanced"));
+        assert!(help.contains("--no-open"));
+        assert!(help.contains("--no-sync"));
+    }
+
+    #[tokio::test]
+    async fn status_output_tells_user_how_to_recover_when_daemon_is_stopped() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let mut output = Vec::new();
+
+        execute(
+            Command::Status(StatusArgs {
+                host: "127.0.0.1".parse().unwrap(),
+                port: 4684,
+            }),
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("Gunmetal is not running."));
+        assert!(text.contains("Run `gunmetal start` or open `gunmetal`."));
+        assert!(text.contains("http://127.0.0.1:4684/v1"));
+    }
+
+    #[tokio::test]
+    async fn empty_lists_are_explicit_and_point_at_next_action() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+
+        for command in [
+            Command::Profiles {
+                command: ProfileCommand::List,
+            },
+            Command::Keys {
+                command: KeyCommand::List,
+            },
+            Command::Models {
+                command: ModelCommand::List,
+            },
+            Command::Logs {
+                command: LogCommand::List { limit: 20 },
+            },
+        ] {
+            let mut output = Vec::new();
+            execute(command, &paths, &mut output).await.unwrap();
+            let text = String::from_utf8(output).unwrap();
+            assert!(text.contains("gunmetal setup") || text.contains("gunmetal start"));
+        }
+    }
+
+    #[tokio::test]
+    async fn missing_profile_errors_tell_user_how_to_recover() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let mut output = Vec::new();
+
+        let error = execute(
+            Command::Auth {
+                command: AuthCommand::Status {
+                    profile: "missing".to_owned(),
+                },
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap_err();
+
+        let message = error.to_string();
+        assert!(message.contains("profile 'missing' not found"));
+        assert!(message.contains("gunmetal setup"));
+        assert!(message.contains("gunmetal profiles list"));
     }
 }

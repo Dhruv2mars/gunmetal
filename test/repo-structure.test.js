@@ -45,6 +45,7 @@ test("workspace manifests point at the new layout", () => {
 
 test("release workflow supports manual reruns and npm auth paths", () => {
   const releaseWorkflow = readFileSync(".github/workflows/release.yml", "utf8");
+  const ciWorkflow = readFileSync(".github/workflows/ci.yml", "utf8");
 
   assert.match(releaseWorkflow, /workflow_dispatch:/);
   assert.match(releaseWorkflow, /repository_dispatch:/);
@@ -57,6 +58,7 @@ test("release workflow supports manual reruns and npm auth paths", () => {
     releaseWorkflow,
     /RELEASE_TAG:\s+\$\{\{\s*github\.event\.client_payload/
   );
+  assert.match(ciWorkflow, /actionlint/);
 });
 
 test("install docs point at npm, not source-only fallback", () => {
@@ -64,17 +66,29 @@ test("install docs point at npm, not source-only fallback", () => {
   const npmReadme = readFileSync("packages/npm/README.md", "utf8");
   const siteContent = readFileSync("apps/web/src/lib/site-content.ts", "utf8");
   const installPage = readFileSync("apps/web/src/app/install/page.tsx", "utf8");
+  const docsPage = readFileSync("apps/web/src/app/docs/page.tsx", "utf8");
+  const startHerePage = readFileSync("apps/web/src/app/start-here/page.tsx", "utf8");
 
   assert.doesNotMatch(rootReadme, /not published yet/);
   assert.doesNotMatch(rootReadme, /run Gunmetal from source/i);
   assert.match(rootReadme, /npm i -g @dhruv2mars\/gunmetal/);
+  assert.match(rootReadme, /gunmetal setup/);
+  assert.match(rootReadme, /curl .*\/v1\/models/s);
 
   assert.doesNotMatch(npmReadme, /not published yet/);
   assert.match(npmReadme, /npm i -g @dhruv2mars\/gunmetal/);
+  assert.match(npmReadme, /gunmetal setup/);
+  assert.match(npmReadme, /Gunmetal works when the app talks to Gunmetal/i);
 
   assert.doesNotMatch(siteContent, /not published yet/);
   assert.match(siteContent, /npm i -g @dhruv2mars\/gunmetal/);
+  assert.match(siteContent, /gunmetal setup/);
+  assert.match(siteContent, /OpenAI-compatible/);
 
   assert.doesNotMatch(installPage, /npm install -g gunmetal/);
   assert.match(installPage, /@dhruv2mars\/gunmetal/);
+  assert.match(docsPage, /compatibility/i);
+  assert.match(startHerePage, /Start here/i);
+  assert.match(startHerePage, /\/v1\/models/);
+  assert.match(startHerePage, /\/v1\/chat\/completions/);
 });

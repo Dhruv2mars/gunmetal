@@ -1,5 +1,6 @@
 export const primaryNav = [
   { href: "/", label: "Overview" },
+  { href: "/start-here", label: "Start Here" },
   { href: "/docs", label: "Docs" },
   { href: "/install", label: "Install" },
   { href: "/changelog", label: "Changelog" },
@@ -75,10 +76,10 @@ export const docsSections = [
 
 export const installSteps = [
   "Install Gunmetal with npm: npm i -g @dhruv2mars/gunmetal.",
-  "Run gunmetal to open the TUI. It auto-starts the local service when needed.",
-  "Create provider profiles for codex, copilot, gateways, or direct-key providers.",
-  "Create one or more Gunmetal keys for the local apps you want to point at Gunmetal.",
-  "Set your app base URL to http://127.0.0.1:4684/v1 and use a Gunmetal model id.",
+  "Run gunmetal setup. That is the golden path: save one profile, auth it, sync models, create one key.",
+  "Run gunmetal start or open gunmetal. The TUI can drive the same flow if you prefer.",
+  "Call GET /v1/models with your Gunmetal key to confirm the local gateway works.",
+  "Point your app at http://127.0.0.1:4684/v1 and use a provider/model id like codex/gpt-5.4.",
 ];
 
 export const changelogEntries = [
@@ -106,21 +107,18 @@ export const changelogEntries = [
 
 export const installSnippet = `npm i -g @dhruv2mars/gunmetal
 
-gunmetal
-
-# background service
+gunmetal setup
 gunmetal start
 gunmetal status
 
-# create provider profile
-gunmetal profiles create --provider codex --name personal
-
-# create local key
-gunmetal keys create --name apps --scope inference,models_read --provider codex,copilot
+# inspect what setup created
+gunmetal profiles list
+gunmetal keys list
 `;
 
 export const apiSnippet = `export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
 export OPENAI_API_KEY=gm_your_local_key
+export MODEL=codex/gpt-5.4
 
 curl $OPENAI_BASE_URL/models \\
   -H "Authorization: Bearer $OPENAI_API_KEY"
@@ -129,7 +127,7 @@ curl $OPENAI_BASE_URL/chat/completions \\
   -H "Authorization: Bearer $OPENAI_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "codex/gpt-5.4",
+    "model": "'$MODEL'",
     "messages": [{"role":"user","content":"say ok"}]
   }'
 `;
@@ -144,4 +142,12 @@ export const responsesSnippet = `curl http://127.0.0.1:4684/v1/responses \\
     "gunmetal": { "mode": "passthrough" },
     "provider_options": { "reasoning": { "effort": "high" } }
   }'
+`;
+
+export const openAiCompatSnippet = `OPENAI_BASE_URL=http://127.0.0.1:4684/v1
+OPENAI_API_KEY=gm_your_local_key
+MODEL=openai/gpt-5.1
+
+# use these three values in any OpenAI-compatible app
+# Gunmetal works when the app talks to Gunmetal
 `;
