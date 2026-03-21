@@ -47,6 +47,8 @@ test("release workflow supports manual reruns and npm auth paths", () => {
   const releaseWorkflow = readFileSync(".github/workflows/release.yml", "utf8");
 
   assert.match(releaseWorkflow, /workflow_dispatch:/);
+  assert.match(releaseWorkflow, /repository_dispatch:/);
+  assert.match(releaseWorkflow, /release-rerun/);
   assert.match(releaseWorkflow, /release_tag:/);
   assert.match(releaseWorkflow, /id-token: write/);
   assert.match(

@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  repository_dispatch:
+    types:
+      - release-rerun
   workflow_dispatch:
     inputs:
       release_tag:
@@ -12,7 +15,7 @@ on:
         type: string
 
 env:
-  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+  RELEASE_TAG: ${{ github.event.client_payload.release_tag || github.event.inputs.release_tag || github.ref_name }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency: ${{ github.workflow }}-${{ github.ref_name }}
