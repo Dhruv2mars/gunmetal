@@ -15,8 +15,35 @@ Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
 ## Quickstart
 
 ```bash
-gunmetal setup   # connect provider, sync models, create key
-gunmetal start   # start daemon
+gunmetal setup
+gunmetal start
+gunmetal status
+```
+
+`gunmetal setup` is the golden path. It saves one profile, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
+
+## Start Here
+
+1. Install: `npm i -g @dhruv2mars/gunmetal`
+2. Run `gunmetal setup`
+3. Run `gunmetal start`
+4. Call `GET /v1/models`
+5. Call `POST /v1/chat/completions`
+
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
+export OPENAI_API_KEY=gm_your_local_key
+
+curl $OPENAI_BASE_URL/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+
+curl $OPENAI_BASE_URL/chat/completions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "codex/gpt-5.4",
+    "messages": [{"role":"user","content":"say ok"}]
+  }'
 ```
 
 Then configure any OpenAI-compatible app:
@@ -50,6 +77,13 @@ Gunmetal is a normalized gateway by default.
 - normalized mode keeps one clean contract across providers
 - passthrough mode is opt-in through `gunmetal.mode = "passthrough"` plus `provider_options`
 - benchmarks should use normalized mode unless you explicitly want provider-native behavior
+
+Gunmetal works when the app talks to Gunmetal:
+
+- app must let you set a custom base URL
+- app must let you send a custom API key
+- app must accept arbitrary model ids like `provider/model`
+- if it hardcodes the upstream endpoint, Gunmetal cannot help there
 
 ## Commands
 

@@ -172,7 +172,7 @@ fn authorize(
             ApiError::new(
                 StatusCode::UNAUTHORIZED,
                 "invalid_api_key",
-                "invalid or expired gunmetal key".to_owned(),
+                "Invalid or expired Gunmetal key. Create a new key in `gunmetal setup` or `gunmetal keys create`.".to_owned(),
             )
         })?;
 
@@ -181,7 +181,7 @@ fn authorize(
             StatusCode::FORBIDDEN,
             "insufficient_scope",
             format!(
-                "key '{}' does not include scope '{}'",
+                "Key '{}' is missing scope '{}'. Create a broader key with `gunmetal keys create`.",
                 key.name, required_scope
             ),
         ));
@@ -195,7 +195,7 @@ fn bearer_token(headers: &HeaderMap) -> Result<String, ApiError> {
         return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
             "missing_api_key",
-            "missing Authorization header".to_owned(),
+            "Missing Authorization header. Send `Authorization: Bearer gm_...`.".to_owned(),
         ));
     };
 
@@ -203,7 +203,7 @@ fn bearer_token(headers: &HeaderMap) -> Result<String, ApiError> {
         ApiError::new(
             StatusCode::UNAUTHORIZED,
             "invalid_api_key",
-            "authorization header must be valid utf-8".to_owned(),
+            "Authorization header must be valid utf-8.".to_owned(),
         )
     })?;
 
@@ -211,7 +211,8 @@ fn bearer_token(headers: &HeaderMap) -> Result<String, ApiError> {
         return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
             "invalid_api_key",
-            "authorization header must use Bearer auth".to_owned(),
+            "Authorization header must use Bearer auth. Send `Authorization: Bearer gm_...`."
+                .to_owned(),
         ));
     };
 
@@ -865,7 +866,10 @@ fn prepare_request(
         return Err(ApiError::new(
             StatusCode::NOT_FOUND,
             "model_not_found",
-            format!("model '{}' is not registered in gunmetal", model_id),
+            format!(
+                "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <profile>` or call `/v1/models`.",
+                model_id
+            ),
         ));
     };
 
@@ -874,7 +878,7 @@ fn prepare_request(
             StatusCode::FORBIDDEN,
             "provider_forbidden",
             format!(
-                "key '{}' cannot access provider '{}'",
+                "Key '{}' cannot access provider '{}'. Use a key scoped to that provider or create a new key.",
                 key.name, model.provider
             ),
         ));
@@ -884,7 +888,10 @@ fn prepare_request(
         return Err(ApiError::new(
             StatusCode::BAD_REQUEST,
             "profile_missing",
-            format!("model '{}' is not attached to a provider profile", model.id),
+            format!(
+                "Model '{}' is not attached to a provider profile. Run `gunmetal models sync <profile>` again.",
+                model.id
+            ),
         ));
     };
 
@@ -896,7 +903,10 @@ fn prepare_request(
         return Err(ApiError::new(
             StatusCode::BAD_REQUEST,
             "profile_missing",
-            format!("profile '{}' does not exist", profile_id),
+            format!(
+                "Profile '{}' does not exist anymore. Recreate it, then run `gunmetal models sync <profile>`.",
+                profile_id
+            ),
         ));
     };
 
@@ -956,7 +966,10 @@ async fn invoke_provider(
             Err(api_error(
                 StatusCode::BAD_GATEWAY,
                 "provider_request_failed",
-                format!("provider request failed: {error}"),
+                format!(
+                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    profile.name, profile.name, error
+                ),
             ))
         }
     }
@@ -1022,6 +1035,32 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let body = to_json(response).await;
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("Authorization")
+        );
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .header(header::AUTHORIZATION, "Bearer gm_bad_key")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let body = to_json(response).await;
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("gunmetal setup")
+        );
 
         let limited = fixture.create_key(vec![KeyScope::Inference], vec![]);
         let response = app(fixture.state())
@@ -1035,6 +1074,13 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = to_json(response).await;
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("gunmetal keys create")
+        );
     }
 
     #[tokio::test]
@@ -1088,6 +1134,12 @@ mod tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         let body = to_json(response).await;
         assert_eq!(body["error"]["code"], "model_not_found");
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("gunmetal models sync")
+        );
     }
 
     #[tokio::test]
@@ -1123,6 +1175,41 @@ mod tests {
         let logs = fixture.storage.list_request_logs(10).unwrap();
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].status_code, Some(200));
+    }
+
+    #[tokio::test]
+    async fn chat_completion_rejects_provider_mismatch_with_recovery_text() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::OpenAi]);
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "messages": [{ "role": "user", "content": "ping" }]
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = to_json(response).await;
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("create a new key")
+        );
     }
 
     #[tokio::test]

@@ -256,7 +256,11 @@ impl ModelsDevCatalog {
     pub fn new(catalog_url: impl Into<String>) -> Self {
         Self {
             catalog_url: catalog_url.into(),
-            http: Client::builder().build().expect("reqwest client"),
+            http: Client::builder()
+                .connect_timeout(std::time::Duration::from_secs(2))
+                .timeout(std::time::Duration::from_secs(4))
+                .build()
+                .expect("reqwest client"),
             cache: Arc::new(Mutex::new(None)),
         }
     }

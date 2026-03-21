@@ -164,7 +164,9 @@ fn render(frame: &mut Frame, app: &DashboardApp) {
 
 fn render_profiles_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let items = if app.snapshot.profiles.is_empty() {
-        vec![ListItem::new("No profiles. Press n to create one.")]
+        vec![ListItem::new(
+            "No profiles yet. Press n here or run `gunmetal setup`.",
+        )]
     } else {
         app.snapshot
             .profiles
@@ -188,7 +190,7 @@ fn render_profiles_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
 fn render_keys_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let items = if app.snapshot.keys.is_empty() {
         vec![ListItem::new(
-            "No keys. Press k on a profile to create one.",
+            "No keys yet. Press k on a profile to create one.",
         )]
     } else {
         app.snapshot
@@ -208,16 +210,19 @@ fn render_keys_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
 fn render_logs_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let items = if app.snapshot.logs.is_empty() {
         vec![ListItem::new(
-            "No logs yet. Make an API call to populate this view.",
+            "No logs yet. Start Gunmetal, then make one API call.",
         )]
     } else {
         app.snapshot
             .logs
             .iter()
             .map(|item| {
+                let profile_name = app
+                    .profile_name(item.profile_id)
+                    .unwrap_or_else(|| item.provider.to_string());
                 ListItem::new(format!(
                     "{}  {}  {}",
-                    item.provider,
+                    profile_name,
                     item.endpoint,
                     item.status_code.unwrap_or_default()
                 ))
@@ -499,7 +504,7 @@ impl DashboardApp {
     fn hints(&self) -> String {
         match self.tab {
             Tab::Profiles => {
-                "Tab switch  n new profile  a auth/status  s sync  o logout  k create key  q quit"
+                "Tab switch  n new profile  a auth/status  s sync  k create key  o logout  q quit"
                     .to_owned()
             }
             Tab::Keys => "Tab switch  d disable  r revoke  x delete  q quit".to_owned(),
@@ -537,6 +542,10 @@ impl DashboardApp {
         vec![
             Line::from(format!("Provider: {}", item.profile.provider)),
             Line::from(format!("Name: {}", item.profile.name)),
+            Line::from(format!(
+                "Selector: {}:{}",
+                item.profile.provider, item.profile.name
+            )),
             Line::from(format!(
                 "Base URL: {}",
                 item.profile.base_url.as_deref().unwrap_or("default")
@@ -592,6 +601,7 @@ impl DashboardApp {
             Line::from(""),
             Line::from("Config"),
             Line::from("Base URL: http://127.0.0.1:4684/v1"),
+            Line::from("Model format: provider/model"),
             Line::from(format!("API Key: {secret}")),
         ]
     }
@@ -602,8 +612,16 @@ impl DashboardApp {
                 "Request drill-down appears here after the first API call.",
             )];
         };
+        let profile_name = self
+            .profile_name(log.profile_id)
+            .unwrap_or_else(|| "<missing profile>".to_owned());
+        let key_name = self
+            .key_name(log.key_id)
+            .unwrap_or_else(|| "<missing key>".to_owned());
         vec![
             Line::from(format!("When: {}", log.started_at.to_rfc3339())),
+            Line::from(format!("Profile: {profile_name}")),
+            Line::from(format!("Key: {key_name}")),
             Line::from(format!("Provider: {}", log.provider)),
             Line::from(format!("Model: {}", log.model)),
             Line::from(format!("Endpoint: {}", log.endpoint)),
@@ -633,6 +651,7 @@ impl DashboardApp {
         vec![
             "API Key".to_owned(),
             "Base URL".to_owned(),
+            "OpenAI-compatible app".to_owned(),
             "cURL models".to_owned(),
             "cURL chat".to_owned(),
             "cURL responses".to_owned(),
@@ -651,22 +670,16 @@ impl DashboardApp {
             .last_secret
             .clone()
             .unwrap_or_else(|| "<GUNMETAL_API_KEY>".to_owned());
-        let model = self
-            .selected_profile_row()
-            .and_then(|item| {
-                self.snapshot
-                    .models
-                    .iter()
-                    .find(|model| model.profile_id == Some(item.profile.id))
-                    .map(|model| model.id.clone())
-            })
-            .unwrap_or_else(|| "<provider/model>".to_owned());
+        let model = self.selected_model_id();
 
         match self.snippet_index {
             0 => key,
             1 => "http://127.0.0.1:4684/v1".to_owned(),
-            2 => format!("curl -H 'Authorization: Bearer {key}' http://127.0.0.1:4684/v1/models"),
-            3 => format!(
+            2 => format!(
+                "OPENAI_BASE_URL=http://127.0.0.1:4684/v1\nOPENAI_API_KEY={key}\nMODEL={model}"
+            ),
+            3 => format!("curl -H 'Authorization: Bearer {key}' http://127.0.0.1:4684/v1/models"),
+            4 => format!(
                 "curl -H 'Authorization: Bearer {key}' -H 'Content-Type: application/json' \\\n  http://127.0.0.1:4684/v1/chat/completions \\\n  -d '{{\"model\":\"{model}\",\"messages\":[{{\"role\":\"user\",\"content\":\"hello\"}}]}}'"
             ),
             _ => format!(
@@ -697,6 +710,36 @@ impl DashboardApp {
 
     fn selected_log_row(&self) -> Option<&gunmetal_core::RequestLogEntry> {
         self.snapshot.logs.get(self.log_index)
+    }
+
+    fn selected_model_id(&self) -> String {
+        self.selected_profile_row()
+            .and_then(|item| {
+                self.snapshot
+                    .models
+                    .iter()
+                    .find(|model| model.profile_id == Some(item.profile.id))
+                    .map(|model| model.id.clone())
+            })
+            .unwrap_or_else(|| "<provider/model>".to_owned())
+    }
+
+    fn profile_name(&self, id: Option<uuid::Uuid>) -> Option<String> {
+        let id = id?;
+        self.snapshot
+            .profiles
+            .iter()
+            .find(|row| row.profile.id == id)
+            .map(|row| row.profile.name.clone())
+    }
+
+    fn key_name(&self, id: Option<uuid::Uuid>) -> Option<String> {
+        let id = id?;
+        self.snapshot
+            .keys
+            .iter()
+            .find(|key| key.id == id)
+            .map(|key| key.name.clone())
     }
 
     fn select_previous(&mut self) {
@@ -1060,7 +1103,7 @@ mod tests {
         )
         .unwrap();
         app.last_secret = Some("gm_test_secret".to_owned());
-        app.snippet_index = 3;
+        app.snippet_index = 4;
         let detail = app.snippet_detail_lines();
         let rendered = detail
             .into_iter()
@@ -1070,6 +1113,136 @@ mod tests {
 
         assert!(rendered.contains("gm_test_secret"));
         assert!(rendered.contains("openai/gpt-5.1"));
+    }
+
+    #[test]
+    fn snippets_include_openai_compatible_example() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let storage = paths.storage_handle().unwrap();
+        let profile = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "openai".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::OpenAi,
+                Some(profile.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "openai/gpt-5.1".to_owned(),
+                    provider: ProviderKind::OpenAi,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.1".to_owned(),
+                    display_name: "GPT-5.1".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        let mut app = DashboardApp::load(
+            &paths,
+            ServiceSnapshot {
+                state: "running".to_owned(),
+                running: true,
+                url: "http://127.0.0.1:4684".to_owned(),
+                pid: Some(1),
+            },
+        )
+        .unwrap();
+        app.last_secret = Some("gm_test_secret".to_owned());
+
+        let titles = app.snippet_titles();
+        assert!(
+            titles
+                .iter()
+                .any(|item| item.contains("OpenAI-compatible app"))
+        );
+
+        let text = (0..titles.len())
+            .map(|index| {
+                app.snippet_index = index;
+                app.selected_snippet_text()
+            })
+            .collect::<Vec<_>>()
+            .join("\n---\n");
+
+        assert!(text.contains("OPENAI_BASE_URL"));
+        assert!(text.contains("OPENAI_API_KEY"));
+        assert!(text.contains("openai/gpt-5.1"));
+    }
+
+    #[test]
+    fn request_drill_down_shows_profile_and_key_names() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let storage = paths.storage_handle().unwrap();
+        let profile = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "dad-openai".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        let key = storage
+            .create_key(gunmetal_core::NewGunmetalKey {
+                name: "apps".to_owned(),
+                scopes: vec![
+                    gunmetal_core::KeyScope::Inference,
+                    gunmetal_core::KeyScope::ModelsRead,
+                ],
+                allowed_providers: vec![ProviderKind::OpenAi],
+                expires_at: None,
+            })
+            .unwrap();
+        storage
+            .log_request(gunmetal_core::NewRequestLogEntry {
+                key_id: Some(key.record.id),
+                profile_id: Some(profile.id),
+                provider: ProviderKind::OpenAi,
+                model: "openai/gpt-5.1".to_owned(),
+                endpoint: "/v1/chat/completions".to_owned(),
+                status_code: Some(200),
+                duration_ms: 42,
+                usage: gunmetal_core::TokenUsage {
+                    input_tokens: Some(3),
+                    output_tokens: Some(4),
+                    total_tokens: Some(7),
+                },
+                error_message: None,
+            })
+            .unwrap();
+
+        let mut app = DashboardApp::load(
+            &paths,
+            ServiceSnapshot {
+                state: "running".to_owned(),
+                running: true,
+                url: "http://127.0.0.1:4684".to_owned(),
+                pid: Some(1),
+            },
+        )
+        .unwrap();
+        app.tab = super::Tab::Logs;
+
+        let rendered = app
+            .log_detail_lines()
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        assert!(rendered.contains("Profile: dad-openai"));
+        assert!(rendered.contains("Key: apps"));
+        assert!(rendered.contains("Status: 200"));
     }
 
     #[test]

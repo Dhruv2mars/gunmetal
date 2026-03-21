@@ -902,6 +902,8 @@ dependencies = [
  "libc",
  "reqwest",
  "serde_json",
+ "tempfile",
+ "tokio",
  "uuid",
  "webbrowser",
 ]
@@ -986,6 +988,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

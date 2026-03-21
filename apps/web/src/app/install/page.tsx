@@ -49,6 +49,10 @@ export default function InstallPage() {
         <div className="section-head">
           <p className="section-tag">Quickstart</p>
           <h2>Five moves to a working local gateway.</h2>
+          <p>
+            The default path is `gunmetal setup`, then `gunmetal start`, then
+            one `/v1/models` request with the key setup created.
+          </p>
           <ol className="step-list">
             {installSteps.map((step) => (
               <li key={step}>{step}</li>

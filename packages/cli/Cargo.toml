@@ -17,3 +17,7 @@ reqwest.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 webbrowser.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
