@@ -6,13 +6,8 @@ Connect providers you already use, create local API keys, point your apps at `ht
 
 ## Install
 
-The npm wrapper exists in-repo, but it is not published yet.
-
-For now, run Gunmetal from source:
-
 ```bash
-bun install
-cargo run -p gunmetal --
+npm i -g @dhruv2mars/gunmetal
 ```
 
 ## Quickstart

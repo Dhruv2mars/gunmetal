@@ -74,7 +74,7 @@ export const docsSections = [
 ];
 
 export const installSteps = [
-  "Today, build Gunmetal locally or use a release binary. The npm wrapper exists in-repo but is not published yet.",
+  "Install Gunmetal with npm: npm i -g @dhruv2mars/gunmetal.",
   "Run gunmetal to open the TUI. It auto-starts the local service when needed.",
   "Create provider profiles for codex, copilot, gateways, or direct-key providers.",
   "Create one or more Gunmetal keys for the local apps you want to point at Gunmetal.",
@@ -104,18 +104,19 @@ export const changelogEntries = [
   },
 ];
 
-export const installSnippet = `bun install
-cargo run -p gunmetal --
+export const installSnippet = `npm i -g @dhruv2mars/gunmetal
+
+gunmetal
 
 # background service
-cargo run -p gunmetal -- start
-cargo run -p gunmetal -- status
+gunmetal start
+gunmetal status
 
 # create provider profile
-cargo run -p gunmetal -- profiles create --provider codex --name personal
+gunmetal profiles create --provider codex --name personal
 
 # create local key
-cargo run -p gunmetal -- keys create --name apps --scope inference,models_read --provider codex,copilot
+gunmetal keys create --name apps --scope inference,models_read --provider codex,copilot
 `;
 
 export const apiSnippet = `export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
