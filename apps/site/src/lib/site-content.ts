@@ -100,7 +100,7 @@ export const changelogEntries = [
   },
 ];
 
-export const installSnippet = `npm install -g gunmetal
+export const installSnippet = `npm install -g @dhruv2mars/gunmetal
 gunmetal
 
 # background service
