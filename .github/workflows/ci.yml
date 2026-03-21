@@ -1,0 +1,100 @@
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  rust-target-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: ""
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: windows-latest
+            target: ""
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+          - os: macos-14
+            target: ""
+          - os: macos-14
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Setup Linux arm64 cross linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Build gunmetal
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          if [ -n "${{ matrix.target }}" ]; then
+            rustup target add "${{ matrix.target }}"
+            cargo build --release -p gunmetal --target "${{ matrix.target }}"
+          else
+            cargo build --release -p gunmetal
+          fi
+
+  rust-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      - name: Smoke help
+        run: cargo run -p gunmetal -- --help
+
+  js-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bun install --frozen-lockfile
+      - run: cargo build -p gunmetal
+      - run: bun run --filter @dhruv2mars/gunmetal test
+      - run: bun run --filter @dhruv2mars/gunmetal check
+      - run: bun run --filter @dhruv2mars/gunmetal build
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Build cli binary
+        run: cargo build -p gunmetal
+      - name: CLI js tests
+        run: bun run --cwd packages/npm test
+      - name: Pack npm package
+        run: npm pack ./packages/npm
+      - name: Launcher smoke
+        run: GUNMETAL_BIN=target/debug/gunmetal node packages/npm/bin/gunmetal.js --help
+      - name: Install smoke
+        run: node scripts/smoke-install.mjs
