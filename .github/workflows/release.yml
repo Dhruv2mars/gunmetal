@@ -154,7 +154,20 @@ jobs:
       - shell: bash
         run: |
           cd dist
-          if command -v shasum >/dev/null 2>&1; then shasum -a 256 * > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt; else sha256sum * > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt; fi
+          checksum_file="checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt"
+          tmp_file="${checksum_file}.tmp"
+          if command -v shasum >/dev/null 2>&1; then
+            for f in ./gunmetal-*; do
+              [ -f "$f" ] || continue
+              shasum -a 256 -- "$f"
+            done | sed 's# \./# #' > "$tmp_file"
+          else
+            for f in ./gunmetal-*; do
+              [ -f "$f" ] || continue
+              sha256sum -- "$f"
+            done | sed 's# \./# #' > "$tmp_file"
+          fi
+          mv "$tmp_file" "$checksum_file"
       - env:
           RELEASE_TAG: ${{ needs.resolve_tag.outputs.release_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
