@@ -1,0 +1,16 @@
+[package]
+name = "gunmetal-tui"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+crossterm.workspace = true
+gunmetal-providers = { path = "../gunmetal-providers" }
+gunmetal-storage = { path = "../gunmetal-storage" }
+ratatui.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

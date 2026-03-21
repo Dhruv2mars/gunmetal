@@ -1,0 +1,16 @@
+[package]
+name = "gunmetal-cli"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+gunmetal-core = { path = "../gunmetal-core" }
+gunmetal-daemon = { path = "../gunmetal-daemon" }
+gunmetal-providers = { path = "../gunmetal-providers" }
+gunmetal-storage = { path = "../gunmetal-storage" }
+reqwest.workspace = true
+uuid.workspace = true
