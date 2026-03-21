@@ -104,11 +104,15 @@ fn render(frame: &mut Frame, snapshot: &DashboardSnapshot) {
         Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)]).split(rows[2]);
 
     let actions = Paragraph::new(vec![
-        Line::from("gunmetal start"),
+        Line::from(if snapshot.profile_count == 0 {
+            "gunmetal setup"
+        } else {
+            "gunmetal start"
+        }),
         Line::from("gunmetal stop"),
         Line::from("gunmetal status"),
         Line::from("gunmetal logs list --limit 20"),
-        Line::from("gunmetal models sync <profile-id>"),
+        Line::from("gunmetal models sync <profile-name>"),
     ])
     .block(Block::default().borders(Borders::ALL).title("Operator"));
     frame.render_widget(actions, top[0]);
@@ -211,11 +215,20 @@ impl DashboardSnapshot {
                         item.base_url.as_deref().unwrap_or("default")
                     )
                 })
+                .chain(
+                    profiles
+                        .is_empty()
+                        .then(|| "run `gunmetal setup` to connect your first provider".to_owned()),
+                )
                 .collect(),
             recent_keys: keys
                 .iter()
                 .take(3)
                 .map(|item| format!("key {} {} {}", item.prefix, item.name, item.state))
+                .chain(
+                    keys.is_empty()
+                        .then(|| "create a key in setup so apps can call Gunmetal".to_owned()),
+                )
                 .collect(),
             recent_logs: logs
                 .iter()
@@ -230,6 +243,11 @@ impl DashboardSnapshot {
                         item.usage.total_tokens.unwrap_or_default()
                     )
                 })
+                .chain(
+                    logs.is_empty().then(|| {
+                        "request history shows up here after the first API call".to_owned()
+                    }),
+                )
                 .collect(),
         })
     }

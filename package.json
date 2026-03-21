@@ -7,10 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run --filter @gunmetal/site build && cargo build --workspace",
-    "check": "bun run --filter @gunmetal/site lint && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "build": "bun run --filter @gunmetal/site build && bun run --filter @dhruv2mars/gunmetal build && cargo build --workspace",
+    "check": "bun run --filter @gunmetal/site lint && bun run --filter @dhruv2mars/gunmetal check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
     "dev:site": "bun run --filter @gunmetal/site dev",
-    "test": "bun run test:web && cargo test --workspace",
+    "test": "bun run test:web && bun run --filter @dhruv2mars/gunmetal test && cargo test --workspace",
     "test:web": "bun run --filter @gunmetal/site test",
     "fmt:web": "bun run --filter @gunmetal/site format"
   },

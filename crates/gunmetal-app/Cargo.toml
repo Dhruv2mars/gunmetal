@@ -5,6 +5,10 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[[bin]]
+name = "gunmetal"
+path = "src/main.rs"
+
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true

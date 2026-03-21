@@ -97,13 +97,16 @@ struct JsonRpcClient {
 
 impl CodexClient {
     pub async fn spawn(options: CodexClientOptions) -> Result<Self> {
-        let mut child = Command::new(&options.codex_bin)
-            .arg("app-server")
-            .arg("--listen")
-            .arg("stdio://")
+        let supports_listen = codex_supports_listen(&options.codex_bin).await;
+        let mut command = Command::new(&options.codex_bin);
+        command.arg("app-server");
+        if supports_listen {
+            command.arg("--listen").arg("stdio://");
+        }
+        let mut child = command
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::null())
             .spawn()
             .with_context(|| format!("spawn {}", options.codex_bin.display()))?;
 
@@ -418,6 +421,24 @@ impl CodexClient {
             }
         }
     }
+}
+
+async fn codex_supports_listen(bin: &Path) -> bool {
+    let output = Command::new(bin)
+        .arg("app-server")
+        .arg("--help")
+        .output()
+        .await;
+    let Ok(output) = output else {
+        return true;
+    };
+
+    let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
+    if !output.stderr.is_empty() {
+        text.push_str(&String::from_utf8_lossy(&output.stderr));
+    }
+
+    text.contains("--listen")
 }
 
 fn render_prompt(messages: &[ChatMessage]) -> String {

@@ -1,6 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
-    io::Write,
+    io::{self, IsTerminal, Write},
     net::{IpAddr, SocketAddr},
     path::PathBuf,
     process::{Command as ProcessCommand, Stdio},
@@ -23,9 +23,17 @@ use std::os::windows::process::CommandExt;
 
 const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
+const SETUP_WAIT_ATTEMPTS: usize = 90;
+const HELP_FOOTER: &str =
+    "First run:\n  gunmetal setup\n  gunmetal start\n  use base URL http://127.0.0.1:4684/v1";
 
 #[derive(Debug, Parser)]
-#[command(name = "gunmetal")]
+#[command(
+    name = "gunmetal",
+    about = "Local-first AI switchboard.",
+    long_about = None,
+    after_help = HELP_FOOTER
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -33,6 +41,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    Setup(SetupArgs),
     Start(StartArgs),
     Serve(ServeArgs),
     Stop(StopArgs),
@@ -96,6 +105,36 @@ pub struct StatusArgs {
     pub port: u16,
 }
 
+#[derive(Debug, clap::Args)]
+pub struct SetupArgs {
+    #[arg(long)]
+    pub provider: Option<ProviderKind>,
+    #[arg(long)]
+    pub name: Option<String>,
+    #[arg(long)]
+    pub base_url: Option<String>,
+    #[arg(long)]
+    pub api_key: Option<String>,
+    #[arg(long)]
+    pub bin_path: Option<PathBuf>,
+    #[arg(long)]
+    pub cwd: Option<PathBuf>,
+    #[arg(long)]
+    pub http_referer: Option<String>,
+    #[arg(long)]
+    pub title: Option<String>,
+    #[arg(long)]
+    pub key_name: Option<String>,
+    #[arg(long)]
+    pub no_open: bool,
+    #[arg(long)]
+    pub no_wait: bool,
+    #[arg(long)]
+    pub no_sync: bool,
+    #[arg(long)]
+    pub no_key: bool,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum KeyCommand {
     Create {
@@ -108,20 +147,20 @@ pub enum KeyCommand {
     },
     List,
     Disable {
-        id: uuid::Uuid,
+        key: String,
     },
     Revoke {
-        id: uuid::Uuid,
+        key: String,
     },
     Delete {
-        id: uuid::Uuid,
+        key: String,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ModelCommand {
     List,
-    Sync { profile: uuid::Uuid },
+    Sync { profile: String },
 }
 
 #[derive(Debug, Subcommand)]
@@ -155,15 +194,17 @@ pub enum ProviderCommand {
 #[derive(Debug, Subcommand)]
 pub enum AuthCommand {
     Status {
-        profile: uuid::Uuid,
+        profile: String,
     },
     Login {
-        profile: uuid::Uuid,
+        profile: String,
         #[arg(long)]
         no_open: bool,
+        #[arg(long)]
+        no_wait: bool,
     },
     Logout {
-        profile: uuid::Uuid,
+        profile: String,
     },
 }
 
@@ -179,6 +220,9 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
     let providers = ProviderHub::new(paths.clone());
 
     match command {
+        Command::Setup(args) => {
+            setup(paths, &providers, &mut output, args).await?;
+        }
         Command::Start(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
             writeln!(output, "{} {}", status.state, status.url)?;
@@ -215,30 +259,53 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 } => {
                     let created = storage.create_key(NewGunmetalKey {
                         name,
-                        scopes,
+                        scopes: normalize_scopes(scopes),
                         allowed_providers: providers,
                         expires_at: None,
                     })?;
                     writeln!(output, "created key {}", created.record.name)?;
                     writeln!(output, "id: {}", created.record.id)?;
                     writeln!(output, "secret: {}", created.secret)?;
+                    writeln!(output, "base url: http://127.0.0.1:4684/v1")?;
                 }
                 KeyCommand::List => {
                     for key in storage.list_keys()? {
-                        writeln!(output, "{} {} {}", key.id, key.name, key.state)?;
+                        let providers = if key.allowed_providers.is_empty() {
+                            "all".to_owned()
+                        } else {
+                            key.allowed_providers
+                                .iter()
+                                .map(ToString::to_string)
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        };
+                        let scopes = key
+                            .scopes
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        writeln!(
+                            output,
+                            "{} {} {} scopes={} providers={}",
+                            key.prefix, key.name, key.state, scopes, providers
+                        )?;
                     }
                 }
-                KeyCommand::Disable { id } => {
-                    storage.set_key_state(id, KeyState::Disabled)?;
-                    writeln!(output, "disabled key {id}")?;
+                KeyCommand::Disable { key } => {
+                    let key_record = require_key(&storage, &key)?;
+                    storage.set_key_state(key_record.id, KeyState::Disabled)?;
+                    writeln!(output, "disabled key {}", key_record.name)?;
                 }
-                KeyCommand::Revoke { id } => {
-                    storage.set_key_state(id, KeyState::Revoked)?;
-                    writeln!(output, "revoked key {id}")?;
+                KeyCommand::Revoke { key } => {
+                    let key_record = require_key(&storage, &key)?;
+                    storage.set_key_state(key_record.id, KeyState::Revoked)?;
+                    writeln!(output, "revoked key {}", key_record.name)?;
                 }
-                KeyCommand::Delete { id } => {
-                    storage.delete_key(id)?;
-                    writeln!(output, "deleted key {id}")?;
+                KeyCommand::Delete { key } => {
+                    let key_record = require_key(&storage, &key)?;
+                    storage.delete_key(key_record.id)?;
+                    writeln!(output, "deleted key {}", key_record.name)?;
                 }
             }
         }
@@ -250,7 +317,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
             }
             ModelCommand::Sync { profile } => {
                 let storage = paths.storage_handle()?;
-                let profile_record = require_profile(&storage, profile)?;
+                let profile_record = require_profile(&storage, &profile)?;
                 let models = providers.sync_models(&profile_record).await?;
                 storage.replace_models_for_profile(
                     &profile_record.provider,
@@ -290,8 +357,8 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 for profile in paths.storage_handle()?.list_profiles()? {
                     writeln!(
                         output,
-                        "{} {} {} enabled={}",
-                        profile.id, profile.provider, profile.name, profile.enabled
+                        "{} {} id={} enabled={}",
+                        profile.provider, profile.name, profile.id, profile.enabled
                     )?;
                 }
             }
@@ -310,27 +377,42 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         Command::Auth { command } => match command {
             AuthCommand::Status { profile } => {
                 let storage = paths.storage_handle()?;
-                let profile_record = require_profile(&storage, profile)?;
+                let profile_record = require_profile(&storage, &profile)?;
                 let status = providers.auth_status(&profile_record).await?;
                 writeln!(output, "{} {}", profile_record.name, status.label)?;
                 writeln!(output, "state: {:?}", status.state)?;
             }
-            AuthCommand::Login { profile, no_open } => {
+            AuthCommand::Login {
+                profile,
+                no_open,
+                no_wait,
+            } => {
                 let storage = paths.storage_handle()?;
-                let profile_record = require_profile(&storage, profile)?;
+                let profile_record = require_profile(&storage, &profile)?;
                 let session = providers.login(&profile_record, !no_open).await?;
+                let user_code = session.user_code.clone();
+                let interval_seconds = session.interval_seconds;
                 writeln!(output, "login url: {}", session.auth_url)?;
                 writeln!(output, "login id: {}", session.login_id)?;
-                if let Some(user_code) = session.user_code {
+                if let Some(user_code) = user_code {
                     writeln!(output, "user code: {user_code}")?;
                 }
-                if let Some(interval_seconds) = session.interval_seconds {
+                if let Some(interval_seconds) = interval_seconds {
                     writeln!(output, "poll every: {}s", interval_seconds)?;
+                }
+                if !no_wait && supports_browser_login(&profile_record.provider) {
+                    wait_for_provider_auth(
+                        &providers,
+                        &profile_record,
+                        interval_seconds.unwrap_or(5).max(2),
+                        &mut output,
+                    )
+                    .await?;
                 }
             }
             AuthCommand::Logout { profile } => {
                 let storage = paths.storage_handle()?;
-                let profile_record = require_profile(&storage, profile)?;
+                let profile_record = require_profile(&storage, &profile)?;
                 providers.logout(&profile_record).await?;
                 writeln!(output, "logged out {}", profile_record.name)?;
             }
@@ -570,13 +652,307 @@ pub struct ServiceStatus {
     pub health: Option<String>,
 }
 
+async fn setup(
+    paths: &AppPaths,
+    providers: &ProviderHub,
+    output: &mut impl Write,
+    args: SetupArgs,
+) -> Result<()> {
+    let interactive = io::stdin().is_terminal();
+    let provider = match args.provider {
+        Some(provider) => provider,
+        None => prompt_provider(output, interactive)?,
+    };
+    let name = prompt_or_value(
+        output,
+        interactive,
+        "Profile name",
+        args.name,
+        Some(provider.to_string()),
+    )?;
+    let base_url = if supports_base_url(&provider) {
+        prompt_optional(
+            output,
+            interactive,
+            "Base URL",
+            args.base_url,
+            default_base_url(&provider).map(str::to_owned),
+        )?
+    } else {
+        args.base_url
+    };
+    let api_key = if needs_api_key(&provider) {
+        Some(prompt_or_value(
+            output,
+            interactive,
+            "API key",
+            args.api_key,
+            None,
+        )?)
+    } else {
+        args.api_key
+    };
+
+    let storage = paths.storage_handle()?;
+    let profile = storage.create_profile(NewProviderProfile {
+        provider: provider.clone(),
+        name,
+        base_url,
+        enabled: true,
+        credentials: profile_credentials(
+            api_key,
+            args.bin_path,
+            args.cwd,
+            args.http_referer,
+            args.title,
+        ),
+    })?;
+    writeln!(output, "created profile {}", profile.name)?;
+
+    if supports_browser_login(&provider) {
+        let session = providers.login(&profile, !args.no_open).await?;
+        writeln!(output, "login url: {}", session.auth_url)?;
+        if let Some(user_code) = session.user_code.clone() {
+            writeln!(output, "user code: {user_code}")?;
+        }
+        if !args.no_wait {
+            wait_for_provider_auth(
+                providers,
+                &profile,
+                session.interval_seconds.unwrap_or(5).max(2),
+                output,
+            )
+            .await?;
+        }
+    } else {
+        let status = providers.auth_status(&profile).await?;
+        writeln!(output, "auth: {:?}", status.state)?;
+    }
+
+    let mut models = Vec::new();
+    if !args.no_sync {
+        models = providers.sync_models(&profile).await?;
+        storage.replace_models_for_profile(&profile.provider, Some(profile.id), &models)?;
+        writeln!(output, "synced {} models", models.len())?;
+    }
+
+    if !args.no_key {
+        let key_name = args
+            .key_name
+            .unwrap_or_else(|| format!("{}-key", profile.name));
+        let created = storage.create_key(NewGunmetalKey {
+            name: key_name,
+            scopes: default_scopes(),
+            allowed_providers: vec![profile.provider.clone()],
+            expires_at: None,
+        })?;
+        writeln!(output, "created key {}", created.record.name)?;
+        writeln!(output, "secret: {}", created.secret)?;
+        writeln!(output, "base url: http://127.0.0.1:4684/v1")?;
+    }
+
+    if let Some(model) = models.first() {
+        writeln!(output, "first model: {}", model.id)?;
+    }
+
+    writeln!(output, "next: point your app to http://127.0.0.1:4684/v1")?;
+    Ok(())
+}
+
+async fn wait_for_provider_auth(
+    providers: &ProviderHub,
+    profile: &gunmetal_core::ProviderProfile,
+    interval_seconds: u64,
+    output: &mut impl Write,
+) -> Result<()> {
+    for _ in 0..SETUP_WAIT_ATTEMPTS {
+        let status = providers.auth_status(profile).await?;
+        if format!("{:?}", status.state) == "Connected" {
+            writeln!(output, "auth complete: {}", status.label)?;
+            return Ok(());
+        }
+        writeln!(output, "waiting for auth... {:?}", status.state)?;
+        thread::sleep(Duration::from_secs(interval_seconds));
+    }
+
+    anyhow::bail!(
+        "authentication did not finish in time; rerun `gunmetal auth status {}` after finishing in the browser",
+        profile.name
+    )
+}
+
 fn require_profile(
     storage: &gunmetal_storage::StorageHandle,
-    profile_id: uuid::Uuid,
+    selector: &str,
 ) -> Result<gunmetal_core::ProviderProfile> {
-    storage
-        .get_profile(profile_id)?
-        .ok_or_else(|| anyhow::anyhow!("profile '{}' not found", profile_id))
+    if let Ok(id) = uuid::Uuid::parse_str(selector)
+        && let Some(profile) = storage.get_profile(id)?
+    {
+        return Ok(profile);
+    }
+
+    let matches = storage
+        .list_profiles()?
+        .into_iter()
+        .filter(|profile| {
+            profile.name.eq_ignore_ascii_case(selector)
+                || format!("{}:{}", profile.provider, profile.name).eq_ignore_ascii_case(selector)
+        })
+        .collect::<Vec<_>>();
+
+    match matches.len() {
+        1 => Ok(matches.into_iter().next().expect("single match")),
+        0 => anyhow::bail!("profile '{}' not found", selector),
+        _ => anyhow::bail!("profile '{}' is ambiguous; use the id", selector),
+    }
+}
+
+fn require_key(
+    storage: &gunmetal_storage::StorageHandle,
+    selector: &str,
+) -> Result<gunmetal_core::GunmetalKey> {
+    if let Ok(id) = uuid::Uuid::parse_str(selector)
+        && let Some(key) = storage.get_key(id)?
+    {
+        return Ok(key);
+    }
+
+    let matches = storage
+        .list_keys()?
+        .into_iter()
+        .filter(|key| {
+            key.name.eq_ignore_ascii_case(selector) || key.prefix.eq_ignore_ascii_case(selector)
+        })
+        .collect::<Vec<_>>();
+
+    match matches.len() {
+        1 => Ok(matches.into_iter().next().expect("single match")),
+        0 => anyhow::bail!("key '{}' not found", selector),
+        _ => anyhow::bail!("key '{}' is ambiguous; use the prefix", selector),
+    }
+}
+
+fn normalize_scopes(scopes: Vec<KeyScope>) -> Vec<KeyScope> {
+    if scopes.is_empty() {
+        default_scopes()
+    } else {
+        scopes
+    }
+}
+
+fn default_scopes() -> Vec<KeyScope> {
+    vec![KeyScope::Inference, KeyScope::ModelsRead]
+}
+
+fn supports_browser_login(provider: &ProviderKind) -> bool {
+    matches!(provider, ProviderKind::Codex | ProviderKind::Copilot)
+}
+
+fn needs_api_key(provider: &ProviderKind) -> bool {
+    matches!(
+        provider,
+        ProviderKind::OpenRouter
+            | ProviderKind::Zen
+            | ProviderKind::OpenAi
+            | ProviderKind::Azure
+            | ProviderKind::Nvidia
+    )
+}
+
+fn supports_base_url(provider: &ProviderKind) -> bool {
+    matches!(
+        provider,
+        ProviderKind::OpenRouter
+            | ProviderKind::Zen
+            | ProviderKind::OpenAi
+            | ProviderKind::Azure
+            | ProviderKind::Nvidia
+    )
+}
+
+fn default_base_url(provider: &ProviderKind) -> Option<&'static str> {
+    match provider {
+        ProviderKind::OpenRouter => Some("https://openrouter.ai/api/v1"),
+        ProviderKind::Zen => Some("https://opencode.ai/zen/v1"),
+        ProviderKind::OpenAi => Some("https://api.openai.com/v1"),
+        _ => None,
+    }
+}
+
+fn prompt_provider(output: &mut impl Write, interactive: bool) -> Result<ProviderKind> {
+    let value = prompt_or_value(
+        output,
+        interactive,
+        "Provider (codex, copilot, openrouter, zen, openai)",
+        None,
+        Some("openai".to_owned()),
+    )?;
+    value
+        .parse::<ProviderKind>()
+        .map_err(|error| anyhow::anyhow!(error))
+}
+
+fn prompt_or_value(
+    output: &mut impl Write,
+    interactive: bool,
+    label: &str,
+    value: Option<String>,
+    default: Option<String>,
+) -> Result<String> {
+    match value {
+        Some(value) if !value.trim().is_empty() => Ok(value),
+        _ if interactive => prompt_line(output, label, default),
+        _ => anyhow::bail!(
+            "missing {}. rerun with --help or use `gunmetal setup` interactively",
+            label.to_lowercase()
+        ),
+    }
+}
+
+fn prompt_optional(
+    output: &mut impl Write,
+    interactive: bool,
+    label: &str,
+    value: Option<String>,
+    default: Option<String>,
+) -> Result<Option<String>> {
+    match value {
+        Some(value) => Ok((!value.trim().is_empty()).then_some(value)),
+        None if interactive => {
+            let value = prompt_line_allow_empty(output, label, default)?;
+            Ok((!value.trim().is_empty()).then_some(value))
+        }
+        None => Ok(default),
+    }
+}
+
+fn prompt_line(output: &mut impl Write, label: &str, default: Option<String>) -> Result<String> {
+    loop {
+        let value = prompt_line_allow_empty(output, label, default.clone())?;
+        if !value.trim().is_empty() {
+            return Ok(value);
+        }
+    }
+}
+
+fn prompt_line_allow_empty(
+    output: &mut impl Write,
+    label: &str,
+    default: Option<String>,
+) -> Result<String> {
+    match &default {
+        Some(default) => write!(output, "{} [{}]: ", label, default)?,
+        None => write!(output, "{}: ", label)?,
+    }
+    output.flush()?;
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer)?;
+    let trimmed = buffer.trim().to_owned();
+    if trimmed.is_empty() {
+        Ok(default.unwrap_or_default())
+    } else {
+        Ok(trimmed)
+    }
 }
 
 fn profile_credentials(
@@ -609,7 +985,7 @@ fn profile_credentials(
 mod tests {
     use clap::Parser;
 
-    use super::{Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand};
+    use super::{AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand};
 
     #[test]
     fn parses_key_create_command() {
@@ -716,6 +1092,34 @@ mod tests {
         match cli.command.unwrap() {
             Command::Logs { command } => match command {
                 LogCommand::List { limit } => assert_eq!(limit, 12),
+            },
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
+    fn parses_setup_command() {
+        let cli = Cli::parse_from([
+            "gunmetal",
+            "setup",
+            "--provider",
+            "openai",
+            "--name",
+            "father-openai",
+            "--api-key",
+            "sk-test",
+        ]);
+
+        assert!(matches!(cli.command.unwrap(), Command::Setup(_)));
+    }
+
+    #[test]
+    fn parses_named_profile_selectors() {
+        let cli = Cli::parse_from(["gunmetal", "auth", "status", "father-openai"]);
+        match cli.command.unwrap() {
+            Command::Auth { command } => match command {
+                AuthCommand::Status { profile } => assert_eq!(profile, "father-openai"),
+                _ => panic!("unexpected auth command"),
             },
             _ => panic!("unexpected command"),
         }
