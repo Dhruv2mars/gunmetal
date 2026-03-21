@@ -98,9 +98,17 @@ pub enum ProfileCommand {
         #[arg(long)]
         name: String,
         #[arg(long)]
+        base_url: Option<String>,
+        #[arg(long)]
+        api_key: Option<String>,
+        #[arg(long)]
         bin_path: Option<PathBuf>,
         #[arg(long)]
         cwd: Option<PathBuf>,
+        #[arg(long)]
+        http_referer: Option<String>,
+        #[arg(long)]
+        title: Option<String>,
     },
     List,
 }
@@ -210,15 +218,19 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
             ProfileCommand::Create {
                 provider,
                 name,
+                base_url,
+                api_key,
                 bin_path,
                 cwd,
+                http_referer,
+                title,
             } => {
                 let profile = paths.storage_handle()?.create_profile(NewProviderProfile {
                     provider,
                     name,
-                    base_url: None,
+                    base_url,
                     enabled: true,
-                    credentials: profile_credentials(bin_path, cwd),
+                    credentials: profile_credentials(api_key, bin_path, cwd, http_referer, title),
                 })?;
                 writeln!(output, "created profile {}", profile.name)?;
                 writeln!(output, "id: {}", profile.id)?;
@@ -287,13 +299,28 @@ fn require_profile(
         .ok_or_else(|| anyhow::anyhow!("profile '{}' not found", profile_id))
 }
 
-fn profile_credentials(bin_path: Option<PathBuf>, cwd: Option<PathBuf>) -> Option<Value> {
+fn profile_credentials(
+    api_key: Option<String>,
+    bin_path: Option<PathBuf>,
+    cwd: Option<PathBuf>,
+    http_referer: Option<String>,
+    title: Option<String>,
+) -> Option<Value> {
     let mut object = Map::new();
+    if let Some(api_key) = api_key {
+        object.insert("api_key".to_owned(), json!(api_key));
+    }
     if let Some(bin_path) = bin_path {
         object.insert("bin_path".to_owned(), json!(bin_path));
     }
     if let Some(cwd) = cwd {
         object.insert("cwd".to_owned(), json!(cwd));
+    }
+    if let Some(http_referer) = http_referer {
+        object.insert("http_referer".to_owned(), json!(http_referer));
+    }
+    if let Some(title) = title {
+        object.insert("title".to_owned(), json!(title));
     }
     (!object.is_empty()).then_some(Value::Object(object))
 }
@@ -343,18 +370,32 @@ mod tests {
             "profiles",
             "create",
             "--provider",
-            "codex",
+            "openrouter",
             "--name",
-            "default",
-            "--bin-path",
-            "/usr/local/bin/codex",
+            "gateway",
+            "--base-url",
+            "https://openrouter.ai/api/v1",
+            "--api-key",
+            "sk-or-test",
+            "--http-referer",
+            "https://gunmetal.dev",
+            "--title",
+            "gunmetal",
         ]);
 
         match cli.command.unwrap() {
             Command::Profiles { command } => match command {
-                ProfileCommand::Create { provider, name, .. } => {
-                    assert_eq!(provider, gunmetal_core::ProviderKind::Codex);
-                    assert_eq!(name, "default");
+                ProfileCommand::Create {
+                    provider,
+                    name,
+                    base_url,
+                    api_key,
+                    ..
+                } => {
+                    assert_eq!(provider, gunmetal_core::ProviderKind::OpenRouter);
+                    assert_eq!(name, "gateway");
+                    assert_eq!(base_url.as_deref(), Some("https://openrouter.ai/api/v1"));
+                    assert_eq!(api_key.as_deref(), Some("sk-or-test"));
                 }
                 _ => panic!("unexpected subcommand"),
             },

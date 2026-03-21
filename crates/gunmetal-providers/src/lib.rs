@@ -9,9 +9,11 @@ use gunmetal_storage::AppPaths;
 
 mod codex;
 mod copilot;
+mod openrouter;
 
 pub use codex::{CodexClient, CodexClientOptions};
 pub use copilot::{CopilotClient, CopilotClientOptions, CopilotSession};
+pub use openrouter::{OpenRouterClient, OpenRouterClientOptions};
 
 type CodexConnector = Arc<
     dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>>
@@ -20,6 +22,14 @@ type CodexConnector = Arc<
 >;
 type CopilotConnector = Arc<
     dyn Fn(ProviderProfile, AppPaths) -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>>
+        + Send
+        + Sync,
+>;
+type OpenRouterConnector = Arc<
+    dyn Fn(
+            ProviderProfile,
+            AppPaths,
+        ) -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>>
         + Send
         + Sync,
 >;
@@ -43,6 +53,7 @@ pub struct ProviderHub {
     paths: AppPaths,
     codex_connector: CodexConnector,
     copilot_connector: CopilotConnector,
+    openrouter_connector: OpenRouterConnector,
 }
 
 impl ProviderHub {
@@ -61,6 +72,13 @@ impl ProviderHub {
                     ))
                 })
             }),
+            openrouter_connector: Arc::new(|profile, _paths| {
+                Box::pin(async move {
+                    Ok(OpenRouterClient::with_options(
+                        OpenRouterClientOptions::from_profile(&profile),
+                    ))
+                })
+            }),
         }
     }
 
@@ -68,11 +86,13 @@ impl ProviderHub {
         paths: AppPaths,
         codex_connector: CodexConnector,
         copilot_connector: CopilotConnector,
+        openrouter_connector: OpenRouterConnector,
     ) -> Self {
         Self {
             paths,
             codex_connector,
             copilot_connector,
+            openrouter_connector,
         }
     }
 
@@ -84,7 +104,19 @@ impl ProviderHub {
                 Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
             },
         );
-        Self::with_connectors(paths, codex_connector, copilot_connector)
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        Self::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        )
     }
 
     pub fn with_copilot_connector(paths: AppPaths, copilot_connector: CopilotConnector) -> Self {
@@ -95,7 +127,45 @@ impl ProviderHub {
                 Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
             },
         );
-        Self::with_connectors(paths, codex_connector, copilot_connector)
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        Self::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        )
+    }
+
+    pub fn with_openrouter_connector(
+        paths: AppPaths,
+        openrouter_connector: OpenRouterConnector,
+    ) -> Self {
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        Self::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        )
     }
 
     pub async fn auth_status(&self, profile: &ProviderProfile) -> Result<ProviderAuthStatus> {
@@ -103,6 +173,11 @@ impl ProviderHub {
             ProviderKind::Codex => self.codex(profile).await?.auth_status().await,
             ProviderKind::Copilot => {
                 let result = self.copilot(profile).await?.auth_status(profile).await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.status)
+            }
+            ProviderKind::OpenRouter => {
+                let result = self.openrouter(profile).await?.auth_status(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.status)
             }
@@ -135,6 +210,12 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.session)
             }
+            ProviderKind::OpenRouter => {
+                bail!(
+                    "provider '{}' does not support browser login",
+                    profile.provider
+                )
+            }
             _ => bail!("provider '{}' login not implemented yet", profile.provider),
         }
     }
@@ -146,6 +227,11 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, None)?;
                 Ok(())
             }
+            ProviderKind::OpenRouter => {
+                let credentials = self.openrouter(profile).await?.clear_credentials();
+                self.persist_credentials(profile.id, credentials)?;
+                Ok(())
+            }
             _ => bail!("provider '{}' logout not implemented yet", profile.provider),
         }
     }
@@ -155,6 +241,11 @@ impl ProviderHub {
             ProviderKind::Codex => self.codex(profile).await?.list_models(profile.id).await,
             ProviderKind::Copilot => {
                 let result = self.copilot(profile).await?.list_models(profile).await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.models)
+            }
+            ProviderKind::OpenRouter => {
+                let result = self.openrouter(profile).await?.list_models(profile).await?;
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.models)
             }
@@ -186,6 +277,15 @@ impl ProviderHub {
                 self.persist_credentials(profile.id, result.credentials)?;
                 Ok(result.completion)
             }
+            ProviderKind::OpenRouter => {
+                let result = self
+                    .openrouter(profile)
+                    .await?
+                    .chat_completion(profile, request)
+                    .await?;
+                self.persist_credentials(profile.id, result.credentials)?;
+                Ok(result.completion)
+            }
             _ => bail!(
                 "provider '{}' chat completions not implemented yet",
                 profile.provider
@@ -199,6 +299,10 @@ impl ProviderHub {
 
     async fn copilot(&self, profile: &ProviderProfile) -> Result<CopilotClient> {
         (self.copilot_connector)(profile.clone(), self.paths.clone()).await
+    }
+
+    async fn openrouter(&self, profile: &ProviderProfile) -> Result<OpenRouterClient> {
+        (self.openrouter_connector)(profile.clone(), self.paths.clone()).await
     }
 
     fn persist_credentials(
@@ -265,7 +369,9 @@ mod tests {
     use tempfile::TempDir;
     use uuid::Uuid;
 
-    use super::{CodexClient, CopilotClient, ProviderClass, ProviderHub, builtin_providers};
+    use super::{
+        CodexClient, CopilotClient, OpenRouterClient, ProviderClass, ProviderHub, builtin_providers,
+    };
 
     #[test]
     fn builtin_provider_order_matches_product_priority() {
@@ -303,7 +409,19 @@ mod tests {
                 Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
             },
         );
-        let hub = ProviderHub::with_connectors(paths, codex_connector, copilot_connector);
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let hub = ProviderHub::with_connectors(
+            paths,
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        );
         let profile = ProviderProfile {
             id: Uuid::new_v4(),
             provider: ProviderKind::Codex,
@@ -357,7 +475,19 @@ mod tests {
                 Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
             },
         );
-        let hub = ProviderHub::with_connectors(paths.clone(), codex_connector, copilot_connector);
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let hub = ProviderHub::with_connectors(
+            paths.clone(),
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        );
         let storage = paths.storage_handle().unwrap();
         let profile = storage
             .create_profile(gunmetal_core::NewProviderProfile {
@@ -390,6 +520,72 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.message.content, "hello from copilot");
+    }
+
+    #[tokio::test]
+    async fn provider_hub_delegates_to_openrouter_connector() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let codex_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CodexClient>> + Send>> {
+                Box::pin(async move { Ok(CodexClient::mock("hello from codex")) })
+            },
+        );
+        let copilot_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<CopilotClient>> + Send>> {
+                Box::pin(async move { Ok(CopilotClient::mock("hello from copilot")) })
+            },
+        );
+        let openrouter_connector = Arc::new(
+            move |_profile: ProviderProfile,
+                  _paths: gunmetal_storage::AppPaths|
+                  -> Pin<Box<dyn Future<Output = Result<OpenRouterClient>> + Send>> {
+                Box::pin(async move { Ok(OpenRouterClient::mock("hello from openrouter")) })
+            },
+        );
+        let hub = ProviderHub::with_connectors(
+            paths.clone(),
+            codex_connector,
+            copilot_connector,
+            openrouter_connector,
+        );
+        let storage = paths.storage_handle().unwrap();
+        let profile = storage
+            .create_profile(gunmetal_core::NewProviderProfile {
+                provider: ProviderKind::OpenRouter,
+                name: "default".to_owned(),
+                base_url: Some("https://openrouter.ai/api/v1".to_owned()),
+                enabled: true,
+                credentials: Some(serde_json::json!({ "api_key": "sk-or-test" })),
+            })
+            .unwrap();
+
+        let status = hub.auth_status(&profile).await.unwrap();
+        assert_eq!(status.state, ProviderAuthState::Connected);
+
+        let models = hub.sync_models(&profile).await.unwrap();
+        assert_eq!(models[0].id, "openrouter/openai/gpt-5.1");
+
+        let response = hub
+            .chat_completion(
+                &profile,
+                &ChatCompletionRequest {
+                    model: "openrouter/openai/gpt-5.1".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.message.content, "hello from openrouter");
     }
 
     #[tokio::test]
