@@ -5,12 +5,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   assetNameFor,
   binNameForPlatform,
   checksumsAssetNameFor,
   installRuntime,
+  isWorkspaceInstall,
   packageManagerHintFromEnv,
   parseChecksumForAsset,
   resolveInstallRoot,
@@ -44,6 +46,18 @@ test("reads package manager hint and install need", () => {
   assert.equal(packageManagerHintFromEnv({ npm_config_user_agent: "bun/1.0" }), "bun");
   assert.equal(shouldInstallBinary({ binExists: false, installedVersion: null, packageVersion: "0.1.0" }), true);
   assert.equal(shouldInstallBinary({ binExists: true, installedVersion: "0.1.0", packageVersion: "0.1.0" }), false);
+});
+
+test("detects workspace installs", async () => {
+  const repoBinDir = fileURLToPath(new URL("../bin", import.meta.url));
+  assert.equal(isWorkspaceInstall(repoBinDir), true);
+
+  const tempRoot = await mkdtemp(join(tmpdir(), "gunmetal-workspace-test-"));
+  try {
+    assert.equal(isWorkspaceInstall(join(tempRoot, "bin")), false);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("install runtime replaces temp download with final binary", async () => {

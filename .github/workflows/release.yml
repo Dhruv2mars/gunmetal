@@ -16,6 +16,9 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref_name }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   resolve_tag:
     runs-on: ubuntu-latest

@@ -73,6 +73,7 @@ test("release workflow keeps publish contract", () => {
   assert.match(text, /id-token: write/);
   assert.match(text, /actions\/checkout@v5/);
   assert.match(text, /actions\/setup-node@v5/);
+  assert.match(text, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24:\s*true/);
   assert.match(text, /npm publish --(?:provenance --)?access public/);
 });
 
