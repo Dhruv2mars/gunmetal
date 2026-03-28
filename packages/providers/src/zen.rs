@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 use anyhow::{Result, anyhow};
+use futures_util::{StreamExt, stream};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
     ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile, RequestMode, TokenUsage,
@@ -11,6 +12,9 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+use crate::{ProviderByteStream, synthetic_chat_sse_stream};
+use crate::{ProviderStreamEvent, ProviderStreamResult, openai_compatible_event_stream};
 
 const DEFAULT_BASE_URL: &str = "https://opencode.ai/zen/v1";
 static HTTP_CLIENT: LazyLock<Client> =
@@ -319,8 +323,7 @@ impl ZenClient {
                     });
 
                 Ok(ZenChatResult {
-                    credentials: options
-                        .persisted_credentials_with_api_key(options.api_key.clone()),
+                    credentials: None,
                     completion: ChatCompletionResult {
                         model: format!("zen/{}", payload.model.unwrap_or_else(|| model.to_owned())),
                         message: ChatMessage {
@@ -335,6 +338,102 @@ impl ZenClient {
                         },
                     },
                 })
+            }
+        }
+    }
+
+    pub async fn stream_chat_completion(
+        &self,
+        _profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        match &self.mode {
+            ZenMode::Mock(response) => Ok(ProviderStreamResult {
+                credentials: None,
+                stream: stream::iter([
+                    Ok(ProviderStreamEvent::TextDelta(response.clone())),
+                    Ok(ProviderStreamEvent::Complete {
+                        model: request.model.clone(),
+                        finish_reason: "stop".to_owned(),
+                        usage: TokenUsage {
+                            input_tokens: Some(8),
+                            output_tokens: Some(3),
+                            total_tokens: Some(11),
+                        },
+                    }),
+                ])
+                .boxed(),
+            }),
+            ZenMode::Live(options) => {
+                let api_key = Self::api_key(options)?;
+                let model = request
+                    .model
+                    .strip_prefix("zen/")
+                    .unwrap_or(&request.model)
+                    .to_owned();
+
+                let response = self
+                    .http
+                    .post(format!("{}/chat/completions", options.base_url))
+                    .headers(self.headers(api_key)?)
+                    .json(&build_zen_request_body(&model, request))
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(read_error(response).await.into());
+                }
+
+                Ok(ProviderStreamResult {
+                    credentials: None,
+                    stream: openai_compatible_event_stream(
+                        response,
+                        format!("zen/{model}"),
+                        |upstream_model| format!("zen/{upstream_model}"),
+                    ),
+                })
+            }
+        }
+    }
+
+    pub async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderByteStream> {
+        match &self.mode {
+            ZenMode::Mock(_) => Ok(synthetic_chat_sse_stream(
+                request.model.clone(),
+                self.stream_chat_completion(profile, request).await?.stream,
+            )),
+            ZenMode::Live(options) => {
+                let api_key = Self::api_key(options)?;
+                let model = request
+                    .model
+                    .strip_prefix("zen/")
+                    .unwrap_or(&request.model)
+                    .to_owned();
+
+                let response = self
+                    .http
+                    .post(format!("{}/chat/completions", options.base_url))
+                    .headers(self.headers(api_key)?)
+                    .json(&build_zen_request_body(&model, request))
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(read_error(response).await.into());
+                }
+
+                Ok(response
+                    .bytes_stream()
+                    .map(|chunk| {
+                        chunk
+                            .map(|bytes| bytes.to_vec())
+                            .map_err(anyhow::Error::from)
+                    })
+                    .boxed())
             }
         }
     }
@@ -393,7 +492,7 @@ fn build_zen_request_body(model: &str, request: &ChatCompletionRequest) -> Value
     let mut body = json!({
         "model": model,
         "messages": request.messages.iter().map(to_upstream_message).collect::<Vec<_>>(),
-        "stream": false
+        "stream": request.stream
     });
     let object = body.as_object_mut().expect("zen request object");
 
@@ -431,6 +530,7 @@ fn to_u32(value: u64) -> u32 {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use futures_util::StreamExt;
     use gunmetal_core::{
         ChatRole, ProviderAuthState, ProviderKind, ProviderProfile, RequestOptions,
     };
@@ -441,6 +541,7 @@ mod tests {
     };
 
     use super::{ZenClient, ZenClientOptions};
+    use crate::ProviderStreamEvent;
 
     #[tokio::test]
     async fn missing_key_is_signed_out() {
@@ -533,5 +634,77 @@ mod tests {
             .unwrap();
         assert_eq!(completion.completion.message.content, "GUNMETAL_ZEN_OK");
         assert_eq!(completion.completion.usage.total_tokens, Some(6));
+    }
+
+    #[tokio::test]
+    async fn streams_chat_chunks_without_buffering_the_full_reply() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .and(header("authorization", "Bearer zen_test_key"))
+            .and(body_string_contains("\"stream\":true"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_raw(
+                    concat!(
+                        "data: {\"model\":\"mimo-v2-flash-free\",\"choices\":[{\"delta\":{\"content\":\"hello \"}}]}\n\n",
+                        "data: {\"model\":\"mimo-v2-flash-free\",\"choices\":[{\"delta\":{\"content\":\"world\"}}]}\n\n",
+                        "data: {\"model\":\"mimo-v2-flash-free\",\"choices\":[{\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":2,\"total_tokens\":7}}\n\n",
+                        "data: [DONE]\n\n"
+                    ),
+                    "text/event-stream",
+                ),
+            )
+            .mount(&server)
+            .await;
+
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Zen,
+            name: "zen".to_owned(),
+            base_url: Some(server.uri()),
+            enabled: true,
+            credentials: Some(json!({ "api_key": "zen_test_key" })),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let client = ZenClient::with_options(ZenClientOptions::from_profile(&profile));
+        let mut stream = client
+            .stream_chat_completion(
+                &profile,
+                &gunmetal_core::ChatCompletionRequest {
+                    model: "zen/mimo-v2-flash-free".to_owned(),
+                    messages: vec![gunmetal_core::ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: true,
+                    options: RequestOptions::default(),
+                },
+            )
+            .await
+            .unwrap()
+            .stream;
+
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::TextDelta("hello ".to_owned())
+        );
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::TextDelta("world".to_owned())
+        );
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::Complete {
+                model: "zen/mimo-v2-flash-free".to_owned(),
+                finish_reason: "stop".to_owned(),
+                usage: gunmetal_core::TokenUsage {
+                    input_tokens: Some(5),
+                    output_tokens: Some(2),
+                    total_tokens: Some(7),
+                },
+            }
+        );
+        assert!(stream.next().await.is_none());
     }
 }

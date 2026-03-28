@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 use anyhow::{Result, anyhow};
+use futures_util::{StreamExt, stream};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
     ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile, RequestMode, TokenUsage,
@@ -11,6 +12,9 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+use crate::{ProviderByteStream, synthetic_chat_sse_stream};
+use crate::{ProviderStreamEvent, ProviderStreamResult, openai_compatible_event_stream};
 
 const DEFAULT_BASE_URL: &str = "https://openrouter.ai/api/v1";
 static HTTP_CLIENT: LazyLock<Client> =
@@ -386,8 +390,7 @@ impl OpenRouterClient {
                     });
 
                 Ok(OpenRouterChatResult {
-                    credentials: options
-                        .persisted_credentials_with_api_key(options.api_key.clone()),
+                    credentials: None,
                     completion: ChatCompletionResult {
                         model: format!(
                             "openrouter/{}",
@@ -405,6 +408,102 @@ impl OpenRouterClient {
                         },
                     },
                 })
+            }
+        }
+    }
+
+    pub async fn stream_chat_completion(
+        &self,
+        _profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        match &self.mode {
+            OpenRouterMode::Mock(response) => Ok(ProviderStreamResult {
+                credentials: None,
+                stream: stream::iter([
+                    Ok(ProviderStreamEvent::TextDelta(response.clone())),
+                    Ok(ProviderStreamEvent::Complete {
+                        model: request.model.clone(),
+                        finish_reason: "stop".to_owned(),
+                        usage: TokenUsage {
+                            input_tokens: Some(8),
+                            output_tokens: Some(3),
+                            total_tokens: Some(11),
+                        },
+                    }),
+                ])
+                .boxed(),
+            }),
+            OpenRouterMode::Live(options) => {
+                let api_key = Self::api_key(options)?;
+                let model = request
+                    .model
+                    .strip_prefix("openrouter/")
+                    .unwrap_or(&request.model)
+                    .to_owned();
+
+                let response = self
+                    .http
+                    .post(format!("{}/chat/completions", options.base_url))
+                    .headers(self.headers(options, api_key)?)
+                    .json(&build_openrouter_request_body(&model, request))
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(read_error(response).await.into());
+                }
+
+                Ok(ProviderStreamResult {
+                    credentials: None,
+                    stream: openai_compatible_event_stream(
+                        response,
+                        format!("openrouter/{model}"),
+                        |upstream_model| format!("openrouter/{upstream_model}"),
+                    ),
+                })
+            }
+        }
+    }
+
+    pub async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderByteStream> {
+        match &self.mode {
+            OpenRouterMode::Mock(_) => Ok(synthetic_chat_sse_stream(
+                request.model.clone(),
+                self.stream_chat_completion(profile, request).await?.stream,
+            )),
+            OpenRouterMode::Live(options) => {
+                let api_key = Self::api_key(options)?;
+                let model = request
+                    .model
+                    .strip_prefix("openrouter/")
+                    .unwrap_or(&request.model)
+                    .to_owned();
+
+                let response = self
+                    .http
+                    .post(format!("{}/chat/completions", options.base_url))
+                    .headers(self.headers(options, api_key)?)
+                    .json(&build_openrouter_request_body(&model, request))
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    return Err(read_error(response).await.into());
+                }
+
+                Ok(response
+                    .bytes_stream()
+                    .map(|chunk| {
+                        chunk
+                            .map(|bytes| bytes.to_vec())
+                            .map_err(anyhow::Error::from)
+                    })
+                    .boxed())
             }
         }
     }
@@ -471,9 +570,16 @@ fn build_openrouter_request_body(model: &str, request: &ChatCompletionRequest) -
     let mut body = json!({
         "model": model,
         "messages": request.messages.iter().map(to_upstream_message).collect::<Vec<_>>(),
-        "stream": false
+        "stream": request.stream
     });
     let object = body.as_object_mut().expect("openrouter request object");
+
+    if request.stream {
+        object.insert(
+            "stream_options".to_owned(),
+            json!({ "include_usage": true }),
+        );
+    }
 
     if let Some(value) = request.options.temperature {
         object.insert("temperature".to_owned(), json!(value));
@@ -509,6 +615,7 @@ fn to_u32(value: u64) -> u32 {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use futures_util::StreamExt;
     use gunmetal_core::{
         ChatRole, ProviderAuthState, ProviderKind, ProviderProfile, RequestOptions,
     };
@@ -519,6 +626,7 @@ mod tests {
     };
 
     use super::{OpenRouterClient, OpenRouterClientOptions};
+    use crate::ProviderStreamEvent;
 
     #[tokio::test]
     async fn validates_key_lists_models_and_completes_chat() {
@@ -607,6 +715,78 @@ mod tests {
             "GUNMETAL_OPENROUTER_OK"
         );
         assert_eq!(completion.completion.usage.total_tokens, Some(7));
+    }
+
+    #[tokio::test]
+    async fn streams_chat_chunks_without_buffering_the_full_reply() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .and(body_string_contains("\"stream\":true"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_raw(
+                    concat!(
+                        "data: {\"model\":\"openai/gpt-5.1\",\"choices\":[{\"delta\":{\"content\":\"hello \"}}]}\n\n",
+                        "data: {\"model\":\"openai/gpt-5.1\",\"choices\":[{\"delta\":{\"content\":\"world\"}}]}\n\n",
+                        "data: {\"model\":\"openai/gpt-5.1\",\"choices\":[{\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":2,\"total_tokens\":7}}\n\n",
+                        "data: [DONE]\n\n"
+                    ),
+                    "text/event-stream",
+                ),
+            )
+            .mount(&server)
+            .await;
+
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::OpenRouter,
+            name: "openrouter".to_owned(),
+            base_url: Some(server.uri()),
+            enabled: true,
+            credentials: Some(json!({ "api_key": "sk-or-test" })),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let client =
+            OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(&profile));
+        let mut stream = client
+            .stream_chat_completion(
+                &profile,
+                &gunmetal_core::ChatCompletionRequest {
+                    model: "openrouter/openai/gpt-5.1".to_owned(),
+                    messages: vec![gunmetal_core::ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: true,
+                    options: RequestOptions::default(),
+                },
+            )
+            .await
+            .unwrap()
+            .stream;
+
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::TextDelta("hello ".to_owned())
+        );
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::TextDelta("world".to_owned())
+        );
+        assert_eq!(
+            stream.next().await.unwrap().unwrap(),
+            ProviderStreamEvent::Complete {
+                model: "openrouter/openai/gpt-5.1".to_owned(),
+                finish_reason: "stop".to_owned(),
+                usage: gunmetal_core::TokenUsage {
+                    input_tokens: Some(5),
+                    output_tokens: Some(2),
+                    total_tokens: Some(7),
+                },
+            }
+        );
+        assert!(stream.next().await.is_none());
     }
 
     #[tokio::test]

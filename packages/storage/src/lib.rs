@@ -11,6 +11,8 @@ use rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+const LAST_USED_TOUCH_INTERVAL_SECONDS: i64 = 60;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppPaths {
     pub root: PathBuf,
@@ -156,6 +158,10 @@ impl StorageHandle {
 
     pub fn list_models(&self) -> Result<Vec<ModelDescriptor>> {
         self.storage()?.list_models()
+    }
+
+    pub fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>> {
+        self.storage()?.get_model(id)
     }
 
     pub fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry> {
@@ -310,33 +316,50 @@ impl Storage {
 
     pub fn authenticate_key(&self, secret: &str) -> Result<Option<GunmetalKey>> {
         let hash = hash_secret(secret);
-        let mut stmt = self
-            .conn
-            .prepare("select id from keys where secret_hash = ?1 limit 1")?;
-        let maybe_id = stmt
-            .query_row([hash], |row| row.get::<_, String>(0))
+        let mut stmt = self.conn.prepare(
+            "select id, name, prefix, state, expires_at, created_at, updated_at, last_used_at
+             from keys
+             where secret_hash = ?1
+             limit 1",
+        )?;
+        let maybe_key = stmt
+            .query_row([hash], |row| {
+                Ok(GunmetalKey {
+                    id: parse_uuid(row.get::<_, String>(0)?)?,
+                    name: row.get(1)?,
+                    prefix: row.get(2)?,
+                    state: parse_key_state(row.get::<_, String>(3)?)?,
+                    scopes: Vec::new(),
+                    allowed_providers: Vec::new(),
+                    expires_at: parse_optional_datetime(row.get::<_, Option<String>>(4)?)?,
+                    created_at: parse_datetime(row.get::<_, String>(5)?)?,
+                    updated_at: parse_datetime(row.get::<_, String>(6)?)?,
+                    last_used_at: parse_optional_datetime(row.get::<_, Option<String>>(7)?)?,
+                })
+            })
             .optional()?;
 
-        let Some(id) = maybe_id else {
+        let Some(mut key) = maybe_key else {
             return Ok(None);
         };
-
-        let key_id = parse_uuid(id)?;
         let now = Utc::now();
-        let Some(key) = self.get_key(key_id)? else {
-            return Ok(None);
-        };
+        key.scopes = self.list_key_scopes(key.id)?;
+        key.allowed_providers = self.list_key_providers(key.id)?;
 
         if !key.is_usable_at(now) {
             return Ok(None);
         }
 
-        self.conn.execute(
-            "update keys set last_used_at = ?2, updated_at = ?2 where id = ?1",
-            params![key.id.to_string(), to_rfc3339(now)],
-        )?;
+        if should_touch_last_used(key.last_used_at, now) {
+            self.conn.execute(
+                "update keys set last_used_at = ?2, updated_at = ?2 where id = ?1",
+                params![key.id.to_string(), to_rfc3339(now)],
+            )?;
+            key.last_used_at = Some(now);
+            key.updated_at = now;
+        }
 
-        self.get_key(key.id)
+        Ok(Some(key))
     }
 
     pub fn set_key_state(&self, id: Uuid, state: KeyState) -> Result<()> {
@@ -536,6 +559,34 @@ impl Storage {
 
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(Into::into)
+    }
+
+    pub fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>> {
+        let mut stmt = self.conn.prepare(
+            "select id, provider, profile_id, upstream_name, display_name, metadata_json
+             from models
+             where id = ?1
+             limit 1",
+        )?;
+
+        stmt.query_row([id], |row| {
+            Ok(ModelDescriptor {
+                id: row.get(0)?,
+                provider: parse_provider(row.get::<_, String>(1)?)?,
+                profile_id: row
+                    .get::<_, Option<String>>(2)?
+                    .map(parse_uuid)
+                    .transpose()?,
+                upstream_name: row.get(3)?,
+                display_name: row.get(4)?,
+                metadata: row
+                    .get::<_, Option<String>>(5)?
+                    .map(|value| serde_json::from_str(&value).map_err(to_from_sql_err))
+                    .transpose()?,
+            })
+        })
+        .optional()
+        .map_err(Into::into)
     }
 
     pub fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry> {
@@ -780,6 +831,15 @@ fn hash_secret(secret: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn should_touch_last_used(last_used_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
+    match last_used_at {
+        Some(last_used_at) => {
+            (now - last_used_at).num_seconds() >= LAST_USED_TOUCH_INTERVAL_SECONDS
+        }
+        None => true,
+    }
+}
+
 fn to_rfc3339(value: DateTime<Utc>) -> String {
     value.to_rfc3339()
 }
@@ -940,6 +1000,11 @@ mod tests {
         let models = storage.list_models().unwrap();
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].id, "openrouter/openai/gpt-5.1");
+        let fetched = storage
+            .get_model("openrouter/openai/gpt-5.1")
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched.id, "openrouter/openai/gpt-5.1");
         assert_eq!(
             models[0]
                 .metadata
@@ -947,6 +1012,25 @@ mod tests {
                 .and_then(|value| value.family.as_deref()),
             Some("gpt")
         );
+    }
+
+    #[test]
+    fn authenticate_key_throttles_last_used_updates() {
+        let storage = Storage::open_in_memory().unwrap();
+        let created = storage
+            .create_key(gunmetal_core::NewGunmetalKey {
+                name: "default".to_owned(),
+                scopes: vec![KeyScope::Inference],
+                allowed_providers: vec![ProviderKind::Codex],
+                expires_at: None,
+            })
+            .unwrap();
+
+        let first = storage.authenticate_key(&created.secret).unwrap().unwrap();
+        let second = storage.authenticate_key(&created.secret).unwrap().unwrap();
+
+        assert_eq!(first.last_used_at, second.last_used_at);
+        assert_eq!(first.updated_at, second.updated_at);
     }
 
     #[test]

@@ -1,8 +1,17 @@
-use std::{convert::Infallible, net::SocketAddr, time::Instant};
+use std::{
+    collections::HashMap,
+    convert::Infallible,
+    net::SocketAddr,
+    sync::mpsc::{self, Sender},
+    sync::{Arc, Mutex},
+    thread,
+    time::Instant,
+};
 
 use anyhow::Result;
 use axum::{
     Json, Router,
+    body::Body,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{
@@ -11,16 +20,19 @@ use axum::{
     },
     routing::{delete, get, post},
 };
+use futures_util::{StreamExt, stream};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, GunmetalKey, KeyScope,
-    KeyState, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry, ProviderKind,
-    ProviderProfile, RequestMode, RequestOptions, TokenUsage,
+    KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry,
+    ProviderKind, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
 };
-use gunmetal_providers::{ProviderClass, ProviderHub, builtin_providers};
+use gunmetal_providers::{
+    ProviderByteStream, ProviderClass, ProviderEventStream, ProviderHub, ProviderStreamEvent,
+    builtin_providers,
+};
 use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use tokio_stream::iter;
 use uuid::Uuid;
 
 const BROWSER_APP_HTML: &str = include_str!("browser_app.html");
@@ -31,28 +43,105 @@ pub struct DaemonState {
     pub storage: StorageHandle,
     pub providers: ProviderHub,
     pub version: String,
+    request_logger: RequestLogger,
+    request_cache: RequestCache,
 }
 
 impl DaemonState {
     pub fn new(paths: AppPaths) -> Result<Self> {
         let storage = paths.storage_handle()?;
         let providers = ProviderHub::new(paths.clone());
+        let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
             storage,
             providers,
             version: env!("CARGO_PKG_VERSION").to_owned(),
+            request_logger,
+            request_cache: RequestCache::default(),
         })
     }
 
     pub fn with_provider_hub(paths: AppPaths, providers: ProviderHub) -> Result<Self> {
         let storage = paths.storage_handle()?;
+        let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
             storage,
             providers,
             version: env!("CARGO_PKG_VERSION").to_owned(),
+            request_logger,
+            request_cache: RequestCache::default(),
         })
+    }
+}
+
+#[derive(Clone)]
+struct RequestLogger {
+    sender: Sender<NewRequestLogEntry>,
+}
+
+#[derive(Clone, Default)]
+struct RequestCache {
+    keys: Arc<Mutex<HashMap<String, GunmetalKey>>>,
+    models: Arc<Mutex<HashMap<String, ModelDescriptor>>>,
+    profiles: Arc<Mutex<HashMap<Uuid, ProviderProfile>>>,
+}
+
+impl RequestCache {
+    fn key(&self, secret: &str) -> Option<GunmetalKey> {
+        let now = chrono::Utc::now();
+        self.keys
+            .lock()
+            .unwrap()
+            .get(secret)
+            .filter(|key| key.is_usable_at(now))
+            .cloned()
+    }
+
+    fn insert_key(&self, secret: String, key: GunmetalKey) {
+        self.keys.lock().unwrap().insert(secret, key);
+    }
+
+    fn model(&self, id: &str) -> Option<ModelDescriptor> {
+        self.models.lock().unwrap().get(id).cloned()
+    }
+
+    fn insert_model(&self, model: ModelDescriptor) {
+        self.models.lock().unwrap().insert(model.id.clone(), model);
+    }
+
+    fn profile(&self, id: Uuid) -> Option<ProviderProfile> {
+        self.profiles.lock().unwrap().get(&id).cloned()
+    }
+
+    fn insert_profile(&self, profile: ProviderProfile) {
+        self.profiles.lock().unwrap().insert(profile.id, profile);
+    }
+
+    fn clear(&self) {
+        self.keys.lock().unwrap().clear();
+        self.models.lock().unwrap().clear();
+        self.profiles.lock().unwrap().clear();
+    }
+}
+
+impl RequestLogger {
+    fn new(storage: StorageHandle) -> Self {
+        let (sender, receiver) = mpsc::channel::<NewRequestLogEntry>();
+        thread::Builder::new()
+            .name("gunmetal-request-logger".to_owned())
+            .spawn(move || {
+                while let Ok(entry) = receiver.recv() {
+                    let _ = storage.log_request(entry);
+                }
+            })
+            .expect("spawn request logger");
+        Self { sender }
+    }
+
+    fn log(&self, entry: NewRequestLogEntry) {
+        let _ = self.sender.send(entry);
     }
 }
 
@@ -127,6 +216,7 @@ async fn create_profile(
         Ok(profile) => profile,
         Err(error) => return internal_error(error),
     };
+    state.request_cache.clear();
 
     Json(OperatorActionResponse::message(format!(
         "Saved profile {} ({})",
@@ -144,6 +234,7 @@ async fn auth_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) ->
     if supports_browser_login(&profile.provider) {
         match state.providers.login(&profile, false).await {
             Ok(session) => {
+                state.request_cache.clear();
                 return Json(OperatorActionResponse {
                     message: format!("Open the browser flow for {}.", profile.name),
                     auth_url: Some(session.auth_url),
@@ -157,11 +248,14 @@ async fn auth_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) ->
     }
 
     match state.providers.auth_status(&profile).await {
-        Ok(status) => Json(OperatorActionResponse::message(format!(
-            "Auth {:?}: {}",
-            status.state, status.label
-        )))
-        .into_response(),
+        Ok(status) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse::message(format!(
+                "Auth {:?}: {}",
+                status.state, status.label
+            )))
+            .into_response()
+        }
         Err(error) => internal_error(error),
     }
 }
@@ -178,12 +272,15 @@ async fn sync_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) ->
             Some(profile.id),
             &models,
         ) {
-            Ok(()) => Json(OperatorActionResponse::message(format!(
-                "Synced {} models for {}.",
-                models.len(),
-                profile.name
-            )))
-            .into_response(),
+            Ok(()) => {
+                state.request_cache.clear();
+                Json(OperatorActionResponse::message(format!(
+                    "Synced {} models for {}.",
+                    models.len(),
+                    profile.name
+                )))
+                .into_response()
+            }
             Err(error) => internal_error(error),
         },
         Err(error) => internal_error(error),
@@ -197,11 +294,14 @@ async fn logout_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) 
     };
 
     match state.providers.logout(&profile).await {
-        Ok(()) => Json(OperatorActionResponse::message(format!(
-            "Logged out {}.",
-            profile.name
-        )))
-        .into_response(),
+        Ok(()) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse::message(format!(
+                "Logged out {}.",
+                profile.name
+            )))
+            .into_response()
+        }
         Err(error) => internal_error(error),
     }
 }
@@ -225,13 +325,16 @@ async fn create_profile_key(
         allowed_providers: vec![profile.provider.clone()],
         expires_at: None,
     }) {
-        Ok(created) => Json(OperatorActionResponse {
-            message: format!("Created key {}.", created.record.name),
-            auth_url: None,
-            user_code: None,
-            secret: Some(created.secret),
-        })
-        .into_response(),
+        Ok(created) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse {
+                message: format!("Created key {}.", created.record.name),
+                auth_url: None,
+                user_code: None,
+                secret: Some(created.secret),
+            })
+            .into_response()
+        }
         Err(error) => internal_error(error),
     }
 }
@@ -251,11 +354,14 @@ async fn set_key_state(
     };
 
     match state.storage.set_key_state(key.id, next_state.clone()) {
-        Ok(()) => Json(OperatorActionResponse::message(format!(
-            "Set {} to {}.",
-            key.name, next_state
-        )))
-        .into_response(),
+        Ok(()) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse::message(format!(
+                "Set {} to {}.",
+                key.name, next_state
+            )))
+            .into_response()
+        }
         Err(error) => internal_error(error),
     }
 }
@@ -267,11 +373,14 @@ async fn delete_key(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> R
     };
 
     match state.storage.delete_key(key.id) {
-        Ok(()) => Json(OperatorActionResponse::message(format!(
-            "Deleted key {}.",
-            key.name
-        )))
-        .into_response(),
+        Ok(()) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse::message(format!(
+                "Deleted key {}.",
+                key.name
+            )))
+            .into_response()
+        }
         Err(error) => internal_error(error),
     }
 }
@@ -322,8 +431,22 @@ async fn chat_completions(
         Err(error) => return error.into_response(),
     };
 
+    if payload.stream {
+        return match invoke_provider_raw_stream(
+            &state,
+            key,
+            profile,
+            request.clone(),
+            "/v1/chat/completions",
+        )
+        .await
+        {
+            Ok(result) => raw_streaming_chat_completion(result),
+            Err(response) => response,
+        };
+    }
+
     match invoke_provider(&state, key, profile, request, "/v1/chat/completions").await {
-        Ok(result) if payload.stream => streaming_chat_completion(result),
         Ok(result) => Json(outgoing_chat_completion(result)).into_response(),
         Err(response) => response,
     }
@@ -351,8 +474,16 @@ async fn responses(
         Err(error) => return error.into_response(),
     };
 
+    if payload.stream {
+        return match invoke_provider_stream(&state, key, profile, request.clone(), "/v1/responses")
+            .await
+        {
+            Ok(result) => streaming_response(request.model, result),
+            Err(response) => response,
+        };
+    }
+
     match invoke_provider(&state, key, profile, request, "/v1/responses").await {
-        Ok(result) if payload.stream => streaming_response(result),
         Ok(result) => Json(outgoing_response(result)).into_response(),
         Err(response) => response,
     }
@@ -364,17 +495,23 @@ fn authorize(
     required_scope: KeyScope,
 ) -> Result<gunmetal_core::GunmetalKey, ApiError> {
     let secret = bearer_token(headers)?;
-    let key = state
-        .storage
-        .authenticate_key(&secret)
-        .map_err(internal_api_error)?
-        .ok_or_else(|| {
-            ApiError::new(
-                StatusCode::UNAUTHORIZED,
-                "invalid_api_key",
-                "Invalid or expired Gunmetal key. Create a new key in `gunmetal setup` or `gunmetal keys create`.".to_owned(),
-            )
-        })?;
+    let key = if let Some(key) = state.request_cache.key(&secret) {
+        key
+    } else {
+        let key = state
+            .storage
+            .authenticate_key(&secret)
+            .map_err(internal_api_error)?
+            .ok_or_else(|| {
+                ApiError::new(
+                    StatusCode::UNAUTHORIZED,
+                    "invalid_api_key",
+                    "Invalid or expired Gunmetal key. Create a new key in `gunmetal setup` or `gunmetal keys create`.".to_owned(),
+                )
+            })?;
+        state.request_cache.insert_key(secret, key.clone());
+        key
+    };
 
     if !key.scopes.contains(&required_scope) {
         return Err(ApiError::new(
@@ -475,145 +612,104 @@ fn outgoing_response(result: ChatCompletionResult) -> OutgoingResponsesResponse 
     }
 }
 
-fn streaming_chat_completion(result: ChatCompletionResult) -> Response {
-    let id = format!("chatcmpl-{}", Uuid::new_v4().simple());
-    let created = chrono::Utc::now().timestamp();
-    let mut events = Vec::new();
-
-    events.push(Ok::<Event, Infallible>(
-        Event::default().data(
-            json!({
-                "id": id,
-                "object": "chat.completion.chunk",
-                "created": created,
-                "model": result.model,
-                "choices": [{
-                    "index": 0,
-                    "delta": { "role": "assistant" },
-                    "finish_reason": Value::Null
-                }]
-            })
-            .to_string(),
-        ),
-    ));
-
-    for chunk in text_chunks(&result.message.content) {
-        events.push(Ok::<Event, Infallible>(
-            Event::default().data(
-                json!({
-                    "id": id,
-                    "object": "chat.completion.chunk",
-                    "created": created,
-                    "model": result.model,
-                    "choices": [{
-                        "index": 0,
-                        "delta": { "content": chunk },
-                        "finish_reason": Value::Null
-                    }]
-                })
-                .to_string(),
-            ),
-        ));
-    }
-
-    events.push(Ok::<Event, Infallible>(
-        Event::default().data(
-            json!({
-                "id": id,
-                "object": "chat.completion.chunk",
-                "created": created,
-                "model": result.model,
-                "choices": [{
-                    "index": 0,
-                    "delta": {},
-                    "finish_reason": result.finish_reason
-                }],
-                "usage": result.usage
-            })
-            .to_string(),
-        ),
-    ));
-    events.push(Ok::<Event, Infallible>(Event::default().data("[DONE]")));
-
-    Sse::new(iter(events))
-        .keep_alive(KeepAlive::default())
-        .into_response()
+fn raw_streaming_chat_completion(provider_stream: ProviderByteStream) -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(axum::http::header::CONTENT_TYPE, "text/event-stream")
+        .header(axum::http::header::CACHE_CONTROL, "no-cache")
+        .body(Body::from_stream(provider_stream.map(|item| {
+            match item {
+                Ok(chunk) => Ok::<Vec<u8>, Infallible>(chunk),
+                Err(error) => Ok::<Vec<u8>, Infallible>(
+                    format!(
+                        "event: error\ndata: {}\n\ndata: [DONE]\n\n",
+                        json!({ "error": { "message": error.to_string() } })
+                    )
+                    .into_bytes(),
+                ),
+            }
+        })))
+        .expect("chat completion stream response")
 }
 
-fn streaming_response(result: ChatCompletionResult) -> Response {
+fn streaming_response(model: String, provider_stream: ProviderEventStream) -> Response {
     let response_id = format!("resp_{}", Uuid::new_v4().simple());
     let message_id = format!("msg_{}", Uuid::new_v4().simple());
     let created_at = chrono::Utc::now().timestamp();
-    let mut events = Vec::new();
-
-    events.push(Ok::<Event, Infallible>(
-        Event::default().event("response.created").data(
-            json!({
-                "type": "response.created",
-                "response": {
-                    "id": response_id,
-                    "object": "response",
-                    "created_at": created_at,
-                    "status": "in_progress",
-                    "model": result.model
-                }
-            })
-            .to_string(),
-        ),
-    ));
-
-    for chunk in text_chunks(&result.message.content) {
-        events.push(Ok::<Event, Infallible>(
-            Event::default().event("response.output_text.delta").data(
+    let response_id_for_created = response_id.clone();
+    let model_for_created = model.clone();
+    let created = stream::once(async move {
+        Ok::<Event, Infallible>(
+            Event::default().event("response.created").data(
                 json!({
-                    "type": "response.output_text.delta",
-                    "response_id": response_id,
-                    "item_id": message_id,
-                    "delta": chunk
+                    "type": "response.created",
+                    "response": {
+                        "id": response_id_for_created,
+                        "object": "response",
+                        "created_at": created_at,
+                        "status": "in_progress",
+                        "model": model_for_created
+                    }
                 })
                 .to_string(),
             ),
-        ));
-    }
-
-    events.push(Ok::<Event, Infallible>(
-        Event::default().event("response.completed").data(
-            json!({
-                "type": "response.completed",
-                "response": outgoing_response(result)
-            })
-            .to_string(),
+        )
+    });
+    let response_id_for_events = response_id.clone();
+    let message_id_for_events = message_id.clone();
+    let mut output = String::new();
+    let content = provider_stream.map(move |item| match item {
+        Ok(ProviderStreamEvent::TextDelta(delta)) => {
+            output.push_str(&delta);
+            Ok::<Event, Infallible>(
+                Event::default().event("response.output_text.delta").data(
+                    json!({
+                        "type": "response.output_text.delta",
+                        "response_id": response_id_for_events,
+                        "item_id": message_id_for_events,
+                        "delta": delta
+                    })
+                    .to_string(),
+                ),
+            )
+        }
+        Ok(ProviderStreamEvent::Complete {
+            model,
+            finish_reason,
+            usage,
+        }) => Ok::<Event, Infallible>(
+            Event::default().event("response.completed").data(
+                json!({
+                    "type": "response.completed",
+                    "response": outgoing_response(ChatCompletionResult {
+                        model,
+                        message: ChatMessage {
+                            role: ChatRole::Assistant,
+                            content: output.clone(),
+                        },
+                        finish_reason,
+                        usage,
+                    })
+                })
+                .to_string(),
+            ),
         ),
-    ));
-    events.push(Ok::<Event, Infallible>(Event::default().data("[DONE]")));
+        Err(error) => Ok::<Event, Infallible>(
+            Event::default().event("error").data(
+                json!({
+                    "error": {
+                        "message": error.to_string()
+                    }
+                })
+                .to_string(),
+            ),
+        ),
+    });
+    let done = stream::once(async { Ok::<Event, Infallible>(Event::default().data("[DONE]")) });
 
-    Sse::new(iter(events))
+    Sse::new(created.chain(content).chain(done))
         .keep_alive(KeepAlive::default())
         .into_response()
-}
-
-fn text_chunks(value: &str) -> Vec<String> {
-    if value.is_empty() {
-        return vec![String::new()];
-    }
-
-    let mut chunks = Vec::new();
-    let mut current = String::new();
-    let mut count = 0usize;
-    for ch in value.chars() {
-        current.push(ch);
-        count += 1;
-        if count >= 24 {
-            chunks.push(std::mem::take(&mut current));
-            count = 0;
-        }
-    }
-
-    if !current.is_empty() {
-        chunks.push(current);
-    }
-
-    chunks
 }
 
 fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
@@ -1359,16 +1455,25 @@ fn prepare_request(
 ) -> Result<(GunmetalKey, ProviderProfile, ChatCompletionRequest), ApiError> {
     let key = authorize(state, headers, KeyScope::Inference)?;
 
-    let models = state.storage.list_models().map_err(internal_api_error)?;
-    let Some(model) = models.into_iter().find(|item| item.id == model_id) else {
-        return Err(ApiError::new(
-            StatusCode::NOT_FOUND,
-            "model_not_found",
-            format!(
-                "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <profile>` or call `/v1/models`.",
-                model_id
-            ),
-        ));
+    let model = if let Some(model) = state.request_cache.model(&model_id) {
+        model
+    } else {
+        let Some(model) = state
+            .storage
+            .get_model(&model_id)
+            .map_err(internal_api_error)?
+        else {
+            return Err(ApiError::new(
+                StatusCode::NOT_FOUND,
+                "model_not_found",
+                format!(
+                    "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <profile>` or call `/v1/models`.",
+                    model_id
+                ),
+            ));
+        };
+        state.request_cache.insert_model(model.clone());
+        model
     };
 
     if !key.can_access_provider(&model.provider) {
@@ -1393,19 +1498,25 @@ fn prepare_request(
         ));
     };
 
-    let Some(profile) = state
-        .storage
-        .get_profile(profile_id)
-        .map_err(internal_api_error)?
-    else {
-        return Err(ApiError::new(
-            StatusCode::BAD_REQUEST,
-            "profile_missing",
-            format!(
-                "Profile '{}' does not exist anymore. Recreate it, then run `gunmetal models sync <profile>`.",
-                profile_id
-            ),
-        ));
+    let profile = if let Some(profile) = state.request_cache.profile(profile_id) {
+        profile
+    } else {
+        let Some(profile) = state
+            .storage
+            .get_profile(profile_id)
+            .map_err(internal_api_error)?
+        else {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "profile_missing",
+                format!(
+                    "Profile '{}' does not exist anymore. Recreate it, then run `gunmetal models sync <profile>`.",
+                    profile_id
+                ),
+            ));
+        };
+        state.request_cache.insert_profile(profile.clone());
+        profile
     };
 
     Ok((
@@ -1431,7 +1542,7 @@ async fn invoke_provider(
     match state.providers.chat_completion(&profile, &request).await {
         Ok(result) => {
             let duration_ms = started_at.elapsed().as_millis() as u64;
-            let _ = state.storage.log_request(NewRequestLogEntry {
+            state.request_logger.log(NewRequestLogEntry {
                 key_id: Some(key.id),
                 profile_id: Some(profile.id),
                 provider: profile.provider,
@@ -1446,7 +1557,7 @@ async fn invoke_provider(
         }
         Err(error) => {
             let duration_ms = started_at.elapsed().as_millis() as u64;
-            let _ = state.storage.log_request(NewRequestLogEntry {
+            state.request_logger.log(NewRequestLogEntry {
                 key_id: Some(key.id),
                 profile_id: Some(profile.id),
                 provider: profile.provider,
@@ -1473,10 +1584,178 @@ async fn invoke_provider(
     }
 }
 
+async fn invoke_provider_stream(
+    state: &DaemonState,
+    key: GunmetalKey,
+    profile: ProviderProfile,
+    request: ChatCompletionRequest,
+    endpoint: &'static str,
+) -> Result<ProviderEventStream, Response> {
+    let started_at = Instant::now();
+    let request_model = request.model.clone();
+
+    match state
+        .providers
+        .stream_chat_completion(&profile, &request)
+        .await
+    {
+        Ok(mut provider_stream) => {
+            let request_logger = state.request_logger.clone();
+            let key_id = key.id;
+            let profile_id = profile.id;
+            let provider = profile.provider.clone();
+            let endpoint_name = endpoint.to_owned();
+
+            Ok(async_stream::try_stream! {
+                let mut logged = false;
+                while let Some(item) = provider_stream.next().await {
+                    match item {
+                        Ok(ProviderStreamEvent::Complete { model, finish_reason, usage }) => {
+                            if !logged {
+                                logged = true;
+                                request_logger.log(NewRequestLogEntry {
+                                    key_id: Some(key_id),
+                                    profile_id: Some(profile_id),
+                                    provider: provider.clone(),
+                                    model: request_model.clone(),
+                                    endpoint: endpoint_name.clone(),
+                                    status_code: Some(StatusCode::OK.as_u16()),
+                                    duration_ms: started_at.elapsed().as_millis() as u64,
+                                    usage: usage.clone(),
+                                    error_message: None,
+                                });
+                            }
+
+                            yield ProviderStreamEvent::Complete {
+                                model,
+                                finish_reason,
+                                usage,
+                            };
+                        }
+                        Ok(event) => yield event,
+                        Err(error) => {
+                            if !logged {
+                                logged = true;
+                                request_logger.log(NewRequestLogEntry {
+                                    key_id: Some(key_id),
+                                    profile_id: Some(profile_id),
+                                    provider: provider.clone(),
+                                    model: request_model.clone(),
+                                    endpoint: endpoint_name.clone(),
+                                    status_code: Some(StatusCode::BAD_GATEWAY.as_u16()),
+                                    duration_ms: started_at.elapsed().as_millis() as u64,
+                                    usage: TokenUsage {
+                                        input_tokens: None,
+                                        output_tokens: None,
+                                        total_tokens: None,
+                                    },
+                                    error_message: Some(error.to_string()),
+                                });
+                            }
+
+                            Err::<(), anyhow::Error>(error)?;
+                        }
+                    }
+                }
+
+                if !logged {
+                    request_logger.log(NewRequestLogEntry {
+                        key_id: Some(key_id),
+                        profile_id: Some(profile_id),
+                        provider,
+                        model: request_model,
+                        endpoint: endpoint_name,
+                        status_code: Some(StatusCode::OK.as_u16()),
+                        duration_ms: started_at.elapsed().as_millis() as u64,
+                        usage: TokenUsage {
+                            input_tokens: None,
+                            output_tokens: None,
+                            total_tokens: None,
+                        },
+                        error_message: None,
+                    });
+                }
+            }
+            .boxed())
+        }
+        Err(error) => {
+            state.request_logger.log(NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: profile.provider,
+                model: request.model,
+                endpoint: endpoint.to_owned(),
+                status_code: Some(StatusCode::BAD_GATEWAY.as_u16()),
+                duration_ms: started_at.elapsed().as_millis() as u64,
+                usage: TokenUsage {
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                },
+                error_message: Some(error.to_string()),
+            });
+            Err(api_error(
+                StatusCode::BAD_GATEWAY,
+                "provider_request_failed",
+                format!(
+                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    profile.name, profile.name, error
+                ),
+            ))
+        }
+    }
+}
+
+async fn invoke_provider_raw_stream(
+    state: &DaemonState,
+    key: GunmetalKey,
+    profile: ProviderProfile,
+    request: ChatCompletionRequest,
+    endpoint: &'static str,
+) -> Result<ProviderByteStream, Response> {
+    let started_at = Instant::now();
+
+    match state
+        .providers
+        .raw_stream_chat_completion(&profile, &request)
+        .await
+    {
+        Ok(provider_stream) => Ok(provider_stream),
+        Err(error) => {
+            state.request_logger.log(NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: profile.provider,
+                model: request.model,
+                endpoint: endpoint.to_owned(),
+                status_code: Some(StatusCode::BAD_GATEWAY.as_u16()),
+                duration_ms: started_at.elapsed().as_millis() as u64,
+                usage: TokenUsage {
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                },
+                error_message: Some(error.to_string()),
+            });
+            Err(api_error(
+                StatusCode::BAD_GATEWAY,
+                "provider_request_failed",
+                format!(
+                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    profile.name, profile.name, error
+                ),
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
-    use std::sync::{Arc, Mutex};
+    use std::{
+        sync::{Arc, Mutex},
+        time::Duration,
+    };
 
     use axum::{
         body::{Body, to_bytes},
@@ -1800,7 +2079,7 @@ mod tests {
         let body = to_json(response).await;
         assert_eq!(body["choices"][0]["message"]["content"], "hello from codex");
 
-        let logs = fixture.storage.list_request_logs(10).unwrap();
+        let logs = wait_for_logs(&fixture.storage, 1);
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].status_code, Some(200));
     }
@@ -1985,7 +2264,7 @@ mod tests {
         assert_eq!(body["output"][0]["content"][0]["type"], "output_text");
         assert_eq!(body["output"][0]["content"][0]["text"], "hello from codex");
 
-        let logs = fixture.storage.list_request_logs(10).unwrap();
+        let logs = wait_for_logs(&fixture.storage, 1);
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].status_code, Some(200));
         assert_eq!(logs[0].endpoint, "/v1/responses");
@@ -2114,6 +2393,20 @@ mod tests {
     async fn to_text(response: Response) -> String {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         String::from_utf8(body.to_vec()).unwrap()
+    }
+
+    fn wait_for_logs(
+        storage: &StorageHandle,
+        expected: usize,
+    ) -> Vec<gunmetal_core::RequestLogEntry> {
+        for _ in 0..40 {
+            let logs = storage.list_request_logs(10).unwrap();
+            if logs.len() >= expected {
+                return logs;
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        storage.list_request_logs(10).unwrap()
     }
 
     struct MockCodexAdapter;
