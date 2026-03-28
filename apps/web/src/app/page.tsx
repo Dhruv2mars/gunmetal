@@ -65,7 +65,7 @@ export default function HomePage() {
       <main>
         <section className="poster-hero">
           <div className="poster-copy">
-            <p className="eyebrow">Gunmetal • gunmetal-six.vercel.app</p>
+            <p className="eyebrow">Gunmetal • gunmetalapp.vercel.app</p>
             <h1>The local control plane for every AI account you already pay for.</h1>
             <p className="lede">
               Gunmetal puts one fast local API, one browser UI, one TUI, and
@@ -181,7 +181,7 @@ gunmetal status`}</pre>
       </main>
 
       <footer className="site-frame site-footer site-footer-home">
-        <span>Hosted front door at gunmetal-six.vercel.app.</span>
+        <span>Hosted front door at gunmetalapp.vercel.app.</span>
         <span>Browser UI, TUI, CLI, and local API share one state.</span>
       </footer>
     </div>

@@ -1535,6 +1535,7 @@ mod tests {
         let body = to_text(response).await;
         assert!(body.contains("Gunmetal Web"));
         assert!(body.contains("/app/api/state"));
+        assert!(body.contains("Loading local state"));
     }
 
     #[tokio::test]
@@ -1579,6 +1580,7 @@ mod tests {
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
         assert_eq!(body["counts"]["logs"], 1);
+        assert_eq!(body["service"]["version"], env!("CARGO_PKG_VERSION"));
         assert_eq!(body["profiles"][0]["name"], "default");
         assert_eq!(body["keys"][0]["state"], "active");
         assert_eq!(body["logs"][0]["model"], "codex/gpt-5.4");
