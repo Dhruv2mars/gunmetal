@@ -839,7 +839,7 @@ struct OperatorCountRow {
 struct OperatorProviderRow {
     kind: String,
     class: &'static str,
-    priority: u8,
+    priority: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -873,7 +873,7 @@ struct OperatorLogRow {
     model: String,
     endpoint: String,
     status_code: Option<u16>,
-    duration_ms: u128,
+    duration_ms: u64,
     total_tokens: Option<u32>,
     error_message: Option<String>,
 }
