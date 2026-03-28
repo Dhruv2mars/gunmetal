@@ -94,3 +94,11 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.match(startHerePage, /\/v1\/models/);
   assert.match(startHerePage, /\/v1\/chat\/completions/);
 });
+
+test("web app pins Vercel to the Next.js build path", () => {
+  const vercelConfig = readFileSync("apps/web/vercel.json", "utf8");
+
+  assert.match(vercelConfig, /"framework":\s*"nextjs"/);
+  assert.match(vercelConfig, /"installCommand":\s*"bun install --frozen-lockfile"/);
+  assert.match(vercelConfig, /"buildCommand":\s*"bun run build"/);
+});
