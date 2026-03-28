@@ -584,12 +584,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
         }
     }
 
-    let _ = fs::remove_file(&pid_file);
-    Ok(ServiceStatus {
-        state: "stopping".to_owned(),
-        note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
-        ..daemon_status(paths, host, port).await?
-    })
+    Ok(stop_timeout_status(daemon_status(paths, host, port).await?))
 }
 
 pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
@@ -760,6 +755,14 @@ pub struct ServiceStatus {
     pub url: String,
     pub health: Option<String>,
     pub note: Option<String>,
+}
+
+fn stop_timeout_status(status: ServiceStatus) -> ServiceStatus {
+    ServiceStatus {
+        state: "stopping".to_owned(),
+        note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
+        ..status
+    }
 }
 
 async fn setup(
@@ -1384,6 +1387,28 @@ mod tests {
         assert!(help.contains("Advanced"));
         assert!(help.contains("--no-open"));
         assert!(help.contains("--no-sync"));
+    }
+
+    #[test]
+    fn stop_timeout_keeps_pid_and_running_state() {
+        let status = super::ServiceStatus {
+            state: "running".to_owned(),
+            running: true,
+            pid: Some(42),
+            url: "http://127.0.0.1:4684".to_owned(),
+            health: Some("{\"status\":\"ok\"}".to_owned()),
+            note: None,
+        };
+
+        let result = super::stop_timeout_status(status);
+
+        assert_eq!(result.state, "stopping");
+        assert!(result.running);
+        assert_eq!(result.pid, Some(42));
+        assert_eq!(
+            result.note.as_deref(),
+            Some("Gunmetal is still shutting down. Run `gunmetal status` again.")
+        );
     }
 
     #[tokio::test]

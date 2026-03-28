@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import HomePage from "./page";
+import PerfLabPage from "./perf-lab/page";
 import WebUiPage from "./web-ui/page";
 
 describe("marketing routes", () => {
@@ -21,5 +22,14 @@ describe("marketing routes", () => {
     expect(html).toContain("gunmetal web");
     expect(html).toContain("127.0.0.1");
     expect(html).toContain("open it in your browser");
+  });
+
+  test("perf lab page exposes the browser benchmark surface", () => {
+    const html = renderToStaticMarkup(<PerfLabPage />);
+
+    expect(html).toContain("Perf Lab");
+    expect(html).toContain("openai-compatible");
+    expect(html).toContain("OpenRouter");
+    expect(html).toContain("Codex");
   });
 });
