@@ -11,8 +11,8 @@
     "check": "bun run --filter @gunmetal/web lint && bun run --filter @dhruv2mars/gunmetal check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
     "dev": "bun run --filter @gunmetal/web dev",
     "pack:npm": "npm pack ./packages/npm",
-    "release:tag": "TAG=\"v$(node -p \\\"require('./packages/npm/package.json').version\\\")\" && git tag \"$TAG\" && git push origin \"$TAG\"",
-    "test": "node --test test/repo-structure.test.js && bun run test:web && bun run --filter @dhruv2mars/gunmetal test && cargo test --workspace",
+    "release:tag": "node scripts/release-tag.mjs",
+    "test": "node --test test/*.test.js && bun run test:web && bun run --filter @dhruv2mars/gunmetal test && cargo test --workspace",
     "test:install-smoke": "node scripts/smoke-install.mjs",
     "test:web": "bun run --filter @gunmetal/web test",
     "fmt:web": "bun run --filter @gunmetal/web format"

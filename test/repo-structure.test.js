@@ -39,7 +39,7 @@ test("workspace manifests point at the new layout", () => {
     assert.match(cargoToml, new RegExp(`"${member}"`));
   }
 
-  assert.match(rootPackageJson, /repo-structure\.test\.js/);
+  assert.match(rootPackageJson, /test\/\*\.test\.js/);
   assert.match(npmPackageJson, /"directory": "packages\/npm"/);
 });
 
