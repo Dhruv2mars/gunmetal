@@ -49,7 +49,6 @@ export default function HomePage() {
         </Link>
         <nav className="site-nav" aria-label="Primary">
           <Link href="/web-ui">Web UI</Link>
-          <Link href="/perf-lab">Perf Lab</Link>
           <Link href="/install">Install</Link>
           <Link href="/docs">Docs</Link>
           <a

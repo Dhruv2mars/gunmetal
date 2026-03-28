@@ -6,8 +6,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+async-stream.workspace = true
 async-trait.workspace = true
 anyhow.workspace = true
+chrono.workspace = true
 futures-util.workspace = true
 gunmetal-core = { path = "../core" }
 gunmetal-storage = { path = "../storage" }

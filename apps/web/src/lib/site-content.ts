@@ -1,7 +1,6 @@
 export const primaryNav = [
   { href: "/", label: "Home" },
   { href: "/web-ui", label: "Web UI" },
-  { href: "/perf-lab", label: "Perf Lab" },
   { href: "/start-here", label: "Start Here" },
   { href: "/docs", label: "Docs" },
   { href: "/install", label: "Install" },

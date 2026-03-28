@@ -2,12 +2,16 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Result, anyhow, bail};
 use async_trait::async_trait;
+use futures_util::{
+    StreamExt,
+    stream::{self, BoxStream},
+};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ModelDescriptor, ModelMetadata,
-    ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile,
+    ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile, TokenUsage,
 };
 use gunmetal_storage::AppPaths;
-use reqwest::Client;
+use reqwest::{Client, Response};
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -62,6 +66,29 @@ pub struct ProviderChatResult {
     pub credentials: Option<Value>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProviderStreamEvent {
+    TextDelta(String),
+    Complete {
+        model: String,
+        finish_reason: String,
+        usage: TokenUsage,
+    },
+}
+
+pub type ProviderEventStream = BoxStream<'static, Result<ProviderStreamEvent>>;
+pub type ProviderByteStream = BoxStream<'static, Result<Vec<u8>>>;
+
+pub struct ProviderStreamResult {
+    pub stream: ProviderEventStream,
+    pub credentials: Option<Value>,
+}
+
+pub struct ProviderRawSseResult {
+    pub stream: ProviderByteStream,
+    pub credentials: Option<Value>,
+}
+
 #[async_trait]
 pub trait ProviderAdapter: Send + Sync {
     fn definition(&self) -> ProviderDefinition;
@@ -93,6 +120,32 @@ pub trait ProviderAdapter: Send + Sync {
         paths: &AppPaths,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult>;
+
+    async fn stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        let result = self.chat_completion(profile, paths, request).await?;
+        Ok(ProviderStreamResult {
+            credentials: result.credentials,
+            stream: synthetic_completion_stream(result.completion),
+        })
+    }
+
+    async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderRawSseResult> {
+        let result = self.stream_chat_completion(profile, paths, request).await?;
+        Ok(ProviderRawSseResult {
+            credentials: result.credentials,
+            stream: synthetic_chat_sse_stream(request.model.clone(), result.stream),
+        })
+    }
 }
 
 #[derive(Clone, Default)]
@@ -103,7 +156,7 @@ pub struct ProviderRegistry {
 impl ProviderRegistry {
     pub fn with_defaults() -> Self {
         let mut registry = Self::default();
-        registry.register(CodexAdapter);
+        registry.register(CodexAdapter::default());
         registry.register(CopilotAdapter);
         registry.register(OpenRouterAdapter);
         registry.register(ZenAdapter);
@@ -218,6 +271,32 @@ impl ProviderHub {
         Ok(result.completion)
     }
 
+    pub async fn stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderEventStream> {
+        let adapter = self.adapter(&profile.provider)?;
+        let result = adapter
+            .stream_chat_completion(profile, &self.paths, request)
+            .await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        Ok(result.stream)
+    }
+
+    pub async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderByteStream> {
+        let adapter = self.adapter(&profile.provider)?;
+        let result = adapter
+            .raw_stream_chat_completion(profile, &self.paths, request)
+            .await?;
+        self.persist_credentials(profile.id, result.credentials)?;
+        Ok(result.stream)
+    }
+
     fn adapter(&self, kind: &ProviderKind) -> Result<Arc<dyn ProviderAdapter>> {
         self.registry
             .get(kind)
@@ -229,14 +308,274 @@ impl ProviderHub {
         profile_id: uuid::Uuid,
         credentials: Option<serde_json::Value>,
     ) -> Result<()> {
+        let Some(credentials) = credentials else {
+            return Ok(());
+        };
         self.paths
             .storage_handle()?
-            .update_profile_credentials(profile_id, credentials)
+            .update_profile_credentials(profile_id, Some(credentials))
     }
 }
 
 pub fn builtin_providers() -> Vec<ProviderDefinition> {
     ProviderRegistry::with_defaults().definitions()
+}
+
+fn synthetic_completion_stream(completion: ChatCompletionResult) -> ProviderEventStream {
+    let mut events = text_chunks(&completion.message.content)
+        .into_iter()
+        .map(ProviderStreamEvent::TextDelta)
+        .collect::<Vec<_>>();
+    events.push(ProviderStreamEvent::Complete {
+        model: completion.model,
+        finish_reason: completion.finish_reason,
+        usage: completion.usage,
+    });
+    stream::iter(events.into_iter().map(Ok)).boxed()
+}
+
+fn synthetic_chat_sse_stream(model: String, stream: ProviderEventStream) -> ProviderByteStream {
+    let id = format!("chatcmpl-{}", uuid::Uuid::new_v4().simple());
+    let created = chrono::Utc::now().timestamp();
+    let first = stream::once(async move {
+        Ok::<Vec<u8>, anyhow::Error>(
+            format!(
+                "data: {}\n\n",
+                serde_json::json!({
+                    "id": id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": model,
+                    "choices": [{
+                        "index": 0,
+                        "delta": { "role": "assistant" },
+                        "finish_reason": Value::Null
+                    }]
+                })
+            )
+            .into_bytes(),
+        )
+    });
+
+    let content = stream.map(move |item| match item {
+        Ok(ProviderStreamEvent::TextDelta(chunk)) => Ok(format!(
+            "data: {}\n\n",
+            serde_json::json!({
+                "id": format!("chatcmpl-{}", uuid::Uuid::new_v4().simple()),
+                "object": "chat.completion.chunk",
+                "created": chrono::Utc::now().timestamp(),
+                "choices": [{
+                    "index": 0,
+                    "delta": { "content": chunk },
+                    "finish_reason": Value::Null
+                }]
+            })
+        )
+        .into_bytes()),
+        Ok(ProviderStreamEvent::Complete {
+            model,
+            finish_reason,
+            usage,
+        }) => Ok(format!(
+            "data: {}\n\n",
+            serde_json::json!({
+                "id": format!("chatcmpl-{}", uuid::Uuid::new_v4().simple()),
+                "object": "chat.completion.chunk",
+                "created": chrono::Utc::now().timestamp(),
+                "model": model,
+                "choices": [{
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": finish_reason
+                }],
+                "usage": usage
+            })
+        )
+        .into_bytes()),
+        Err(error) => Ok(format!(
+            "event: error\ndata: {}\n\n",
+            serde_json::json!({ "error": { "message": error.to_string() } })
+        )
+        .into_bytes()),
+    });
+
+    let done = stream::once(async { Ok::<Vec<u8>, anyhow::Error>(b"data: [DONE]\n\n".to_vec()) });
+    first.chain(content).chain(done).boxed()
+}
+
+pub(crate) fn openai_compatible_event_stream<F>(
+    response: Response,
+    fallback_model: String,
+    normalize_model: F,
+) -> ProviderEventStream
+where
+    F: Fn(&str) -> String + Send + Sync + 'static,
+{
+    let normalize_model = Arc::new(normalize_model);
+    async_stream::try_stream! {
+        let mut upstream = response.bytes_stream();
+        let mut decoder = SseDecoder::default();
+        let mut current_model = fallback_model;
+
+        while let Some(chunk) = upstream.next().await {
+            let chunk = chunk?;
+            decoder.push(&chunk);
+
+            while let Some(event) = decoder.next_event() {
+                if event == "[DONE]" {
+                    continue;
+                }
+
+                for parsed in parse_openai_compatible_event(
+                    &event,
+                    &mut current_model,
+                    normalize_model.as_ref(),
+                )? {
+                    yield parsed;
+                }
+            }
+        }
+    }
+    .boxed()
+}
+
+fn parse_openai_compatible_event(
+    event: &str,
+    current_model: &mut String,
+    normalize_model: &dyn Fn(&str) -> String,
+) -> Result<Vec<ProviderStreamEvent>> {
+    let payload = serde_json::from_str::<OpenAiCompatibleStreamChunk>(event)?;
+    if let Some(model) = payload.model.as_deref() {
+        *current_model = normalize_model(model);
+    }
+
+    let mut events = Vec::new();
+    let usage = payload.usage.map(to_token_usage);
+    for choice in payload.choices {
+        if let Some(delta) = choice.delta.and_then(|delta| delta.content)
+            && !delta.is_empty()
+        {
+            events.push(ProviderStreamEvent::TextDelta(delta));
+        }
+
+        if let Some(finish_reason) = choice.finish_reason {
+            events.push(ProviderStreamEvent::Complete {
+                model: current_model.clone(),
+                finish_reason,
+                usage: usage.clone().unwrap_or(TokenUsage {
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                }),
+            });
+        }
+    }
+
+    Ok(events)
+}
+
+fn to_token_usage(usage: OpenAiCompatibleUsage) -> TokenUsage {
+    let input_tokens = usage.prompt_tokens.map(to_u32);
+    let output_tokens = usage.completion_tokens.map(to_u32);
+    let total_tokens =
+        usage
+            .total_tokens
+            .map(to_u32)
+            .or_else(|| match (input_tokens, output_tokens) {
+                (Some(input), Some(output)) => Some(input.saturating_add(output)),
+                _ => None,
+            });
+
+    TokenUsage {
+        input_tokens,
+        output_tokens,
+        total_tokens,
+    }
+}
+
+#[derive(Default)]
+struct SseDecoder {
+    buffer: String,
+}
+
+impl SseDecoder {
+    fn push(&mut self, chunk: &[u8]) {
+        let chunk = String::from_utf8_lossy(chunk);
+        let chunk = chunk.replace("\r\n", "\n");
+        self.buffer.push_str(&chunk);
+    }
+
+    fn next_event(&mut self) -> Option<String> {
+        let separator = self.buffer.find("\n\n")?;
+        let frame = self.buffer[..separator].to_owned();
+        self.buffer.drain(..separator + 2);
+
+        let data = frame
+            .lines()
+            .filter_map(|line| line.strip_prefix("data:"))
+            .map(str::trim_start)
+            .collect::<Vec<_>>()
+            .join("\n");
+        (!data.is_empty()).then_some(data)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiCompatibleStreamChunk {
+    #[serde(default)]
+    model: Option<String>,
+    #[serde(default)]
+    choices: Vec<OpenAiCompatibleStreamChoice>,
+    #[serde(default)]
+    usage: Option<OpenAiCompatibleUsage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiCompatibleStreamChoice {
+    #[serde(default)]
+    delta: Option<OpenAiCompatibleStreamDelta>,
+    #[serde(default)]
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiCompatibleStreamDelta {
+    #[serde(default)]
+    content: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct OpenAiCompatibleUsage {
+    #[serde(default)]
+    prompt_tokens: Option<u64>,
+    #[serde(default)]
+    completion_tokens: Option<u64>,
+    #[serde(default)]
+    total_tokens: Option<u64>,
+}
+
+fn text_chunks(value: &str) -> Vec<String> {
+    if value.is_empty() {
+        return vec![String::new()];
+    }
+
+    let mut chunks = Vec::new();
+    let mut current = String::new();
+    let mut count = 0usize;
+    for ch in value.chars() {
+        current.push(ch);
+        count += 1;
+        if count >= 24 {
+            chunks.push(std::mem::take(&mut current));
+            count = 0;
+        }
+    }
+
+    if !current.is_empty() {
+        chunks.push(current);
+    }
+
+    chunks
 }
 
 #[derive(Clone)]
@@ -392,11 +731,42 @@ fn to_u32(value: u64) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
 }
 
-struct CodexAdapter;
+#[derive(Clone, Default)]
+struct CodexAdapter {
+    clients: Arc<Mutex<HashMap<uuid::Uuid, Arc<Mutex<CodexClient>>>>>,
+}
 struct CopilotAdapter;
 struct OpenRouterAdapter;
 struct ZenAdapter;
 struct OpenAiAdapter;
+
+impl CodexAdapter {
+    async fn cached_client(
+        &self,
+        profile: &ProviderProfile,
+        paths: &AppPaths,
+    ) -> Result<Arc<Mutex<CodexClient>>> {
+        {
+            let clients = self.clients.lock().await;
+            if let Some(client) = clients.get(&profile.id) {
+                return Ok(client.clone());
+            }
+        }
+
+        let client = Arc::new(Mutex::new(
+            CodexClient::spawn(CodexClientOptions::from_profile(profile, paths)).await?,
+        ));
+        let mut clients = self.clients.lock().await;
+        Ok(clients
+            .entry(profile.id)
+            .or_insert_with(|| client.clone())
+            .clone())
+    }
+
+    async fn evict_client(&self, profile_id: uuid::Uuid) {
+        self.clients.lock().await.remove(&profile_id);
+    }
+}
 
 #[async_trait]
 impl ProviderAdapter for CodexAdapter {
@@ -413,12 +783,11 @@ impl ProviderAdapter for CodexAdapter {
         profile: &ProviderProfile,
         paths: &AppPaths,
     ) -> Result<ProviderAuthResult> {
+        let client = self.cached_client(profile, paths).await?;
+        let client = client.lock().await;
         Ok(ProviderAuthResult {
             credentials: None,
-            status: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
-                .await?
-                .auth_status()
-                .await?,
+            status: client.auth_status().await?,
         })
     }
 
@@ -442,10 +811,11 @@ impl ProviderAdapter for CodexAdapter {
     }
 
     async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>> {
-        CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
-            .await?
-            .logout()
-            .await?;
+        let client = self.cached_client(profile, paths).await?;
+        let client = client.lock().await;
+        client.logout().await?;
+        drop(client);
+        self.evict_client(profile.id).await;
         Ok(None)
     }
 
@@ -454,12 +824,11 @@ impl ProviderAdapter for CodexAdapter {
         profile: &ProviderProfile,
         paths: &AppPaths,
     ) -> Result<ProviderModelSyncResult> {
+        let client = self.cached_client(profile, paths).await?;
+        let client = client.lock().await;
         Ok(ProviderModelSyncResult {
             credentials: None,
-            models: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
-                .await?
-                .list_models(profile.id)
-                .await?,
+            models: client.list_models(profile.id).await?,
         })
     }
 
@@ -469,12 +838,11 @@ impl ProviderAdapter for CodexAdapter {
         paths: &AppPaths,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
+        let client = self.cached_client(profile, paths).await?;
+        let client = client.lock().await;
         Ok(ProviderChatResult {
             credentials: None,
-            completion: CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
-                .await?
-                .chat_completion(profile.id, request)
-                .await?,
+            completion: client.chat_completion(profile.id, request).await?,
         })
     }
 }
@@ -551,6 +919,34 @@ impl ProviderAdapter for CopilotAdapter {
             completion: result.completion,
         })
     }
+
+    async fn stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
+            .stream_chat_completion(profile, request)
+            .await?;
+        Ok(ProviderStreamResult {
+            credentials: result.credentials,
+            stream: result.stream,
+        })
+    }
+
+    async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderRawSseResult> {
+        let client = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile));
+        Ok(ProviderRawSseResult {
+            credentials: None,
+            stream: client.raw_stream_chat_completion(profile, request).await?,
+        })
+    }
 }
 
 #[async_trait]
@@ -622,6 +1018,34 @@ impl ProviderAdapter for OpenRouterAdapter {
         Ok(ProviderChatResult {
             credentials: result.credentials,
             completion: result.completion,
+        })
+    }
+
+    async fn stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
+            .stream_chat_completion(profile, request)
+            .await?;
+        Ok(ProviderStreamResult {
+            credentials: result.credentials,
+            stream: result.stream,
+        })
+    }
+
+    async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderRawSseResult> {
+        let client = ZenClient::with_options(ZenClientOptions::from_profile(profile));
+        Ok(ProviderRawSseResult {
+            credentials: None,
+            stream: client.raw_stream_chat_completion(profile, request).await?,
         })
     }
 }
@@ -762,6 +1186,33 @@ impl ProviderAdapter for OpenAiAdapter {
             completion: OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
                 .chat_completion(profile, request)
                 .await?,
+        })
+    }
+
+    async fn stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderStreamResult> {
+        Ok(ProviderStreamResult {
+            credentials: profile.credentials.clone(),
+            stream: OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
+                .stream_chat_completion(profile, request)
+                .await?,
+        })
+    }
+
+    async fn raw_stream_chat_completion(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &AppPaths,
+        request: &ChatCompletionRequest,
+    ) -> Result<ProviderRawSseResult> {
+        let client = OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile));
+        Ok(ProviderRawSseResult {
+            credentials: profile.credentials.clone(),
+            stream: client.raw_stream_chat_completion(profile, request).await?,
         })
     }
 }
