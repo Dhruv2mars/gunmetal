@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use anyhow::{Result, anyhow};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
@@ -11,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
+static HTTP_CLIENT: LazyLock<Client> =
+    LazyLock::new(|| Client::builder().build().expect("reqwest client"));
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenAiClientOptions {
@@ -128,14 +132,14 @@ impl std::error::Error for ApiError {}
 impl OpenAiClient {
     pub fn with_options(options: OpenAiClientOptions) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             mode: OpenAiMode::Live(options),
         }
     }
 
     pub fn mock(response: impl Into<String>) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             mode: OpenAiMode::Mock(response.into()),
         }
     }

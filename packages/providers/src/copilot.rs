@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, LazyLock, Mutex},
 };
 
 use anyhow::{Result, anyhow, bail};
@@ -21,6 +21,8 @@ const DEFAULT_CLIENT_ID: &str = "Iv1.b507a08c87ecfe98";
 const DEFAULT_COPILOT_BASE_URL: &str = "https://api.githubcopilot.com";
 const DEFAULT_LOGIN_BASE_URL: &str = "https://github.com/login";
 const REFRESH_SKEW_SECONDS: u64 = 60;
+static HTTP_CLIENT: LazyLock<Client> =
+    LazyLock::new(|| Client::builder().build().expect("reqwest client"));
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CopilotSession {
@@ -372,7 +374,7 @@ impl std::error::Error for UpstreamError {}
 impl CopilotClient {
     pub fn with_options(options: CopilotClientOptions) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             model_cache: Arc::new(Mutex::new(HashMap::new())),
             mode: CopilotMode::Live(Box::new(options)),
         }
@@ -380,7 +382,7 @@ impl CopilotClient {
 
     pub fn mock(response: impl Into<String>) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             model_cache: Arc::new(Mutex::new(HashMap::new())),
             mode: CopilotMode::Mock(response.into()),
         }
