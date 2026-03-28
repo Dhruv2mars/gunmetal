@@ -3,24 +3,27 @@ use std::{convert::Infallible, net::SocketAddr, time::Instant};
 use anyhow::Result;
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{
-        IntoResponse, Response,
+        Html, IntoResponse, Response,
         sse::{Event, KeepAlive, Sse},
     },
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, GunmetalKey, KeyScope,
-    NewRequestLogEntry, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
+    KeyState, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry, ProviderKind,
+    ProviderProfile, RequestMode, RequestOptions, TokenUsage,
 };
-use gunmetal_providers::ProviderHub;
+use gunmetal_providers::{ProviderClass, ProviderHub, builtin_providers};
 use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio_stream::iter;
 use uuid::Uuid;
+
+const BROWSER_APP_HTML: &str = include_str!("browser_app.html");
 
 #[derive(Clone)]
 pub struct DaemonState {
@@ -56,6 +59,15 @@ impl DaemonState {
 pub fn app(state: DaemonState) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/app", get(browser_app))
+        .route("/app/api/state", get(operator_state))
+        .route("/app/api/profiles", post(create_profile))
+        .route("/app/api/profiles/{id}/auth", post(auth_profile))
+        .route("/app/api/profiles/{id}/sync", post(sync_profile))
+        .route("/app/api/profiles/{id}/logout", post(logout_profile))
+        .route("/app/api/profiles/{id}/keys", post(create_profile_key))
+        .route("/app/api/keys/{id}/state", post(set_key_state))
+        .route("/app/api/keys/{id}", delete(delete_key))
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
         .route("/v1/responses", post(responses))
@@ -74,6 +86,194 @@ async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
         service: "gunmetal",
         version: state.version,
     })
+}
+
+async fn browser_app() -> Html<&'static str> {
+    Html(BROWSER_APP_HTML)
+}
+
+async fn operator_state(State(state): State<DaemonState>) -> Response {
+    match load_operator_state(&state) {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn create_profile(
+    State(state): State<DaemonState>,
+    Json(payload): Json<CreateProfilePayload>,
+) -> Response {
+    let provider = match payload.provider.parse::<ProviderKind>() {
+        Ok(provider) => provider,
+        Err(error) => return api_error(StatusCode::BAD_REQUEST, "invalid_request", error),
+    };
+
+    let name = payload.name.trim();
+    if name.is_empty() {
+        return api_error(
+            StatusCode::BAD_REQUEST,
+            "invalid_request",
+            "profile name is required".to_owned(),
+        );
+    }
+
+    let profile = match state.storage.create_profile(NewProviderProfile {
+        provider: provider.clone(),
+        name: name.to_owned(),
+        base_url: payload.base_url.and_then(trimmed_or_none),
+        enabled: true,
+        credentials: operator_profile_credentials(&provider, payload.api_key),
+    }) {
+        Ok(profile) => profile,
+        Err(error) => return internal_error(error),
+    };
+
+    Json(OperatorActionResponse::message(format!(
+        "Saved profile {} ({})",
+        profile.name, profile.provider
+    )))
+    .into_response()
+}
+
+async fn auth_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> Response {
+    let profile = match require_profile(&state, id) {
+        Ok(profile) => profile,
+        Err(error) => return error.into_response(),
+    };
+
+    if supports_browser_login(&profile.provider) {
+        match state.providers.login(&profile, false).await {
+            Ok(session) => {
+                return Json(OperatorActionResponse {
+                    message: format!("Open the browser flow for {}.", profile.name),
+                    auth_url: Some(session.auth_url),
+                    user_code: session.user_code,
+                    secret: None,
+                })
+                .into_response();
+            }
+            Err(error) => return internal_error(error),
+        }
+    }
+
+    match state.providers.auth_status(&profile).await {
+        Ok(status) => Json(OperatorActionResponse::message(format!(
+            "Auth {:?}: {}",
+            status.state, status.label
+        )))
+        .into_response(),
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn sync_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> Response {
+    let profile = match require_profile(&state, id) {
+        Ok(profile) => profile,
+        Err(error) => return error.into_response(),
+    };
+
+    match state.providers.sync_models(&profile).await {
+        Ok(models) => match state.storage.replace_models_for_profile(
+            &profile.provider,
+            Some(profile.id),
+            &models,
+        ) {
+            Ok(()) => Json(OperatorActionResponse::message(format!(
+                "Synced {} models for {}.",
+                models.len(),
+                profile.name
+            )))
+            .into_response(),
+            Err(error) => internal_error(error),
+        },
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn logout_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> Response {
+    let profile = match require_profile(&state, id) {
+        Ok(profile) => profile,
+        Err(error) => return error.into_response(),
+    };
+
+    match state.providers.logout(&profile).await {
+        Ok(()) => Json(OperatorActionResponse::message(format!(
+            "Logged out {}.",
+            profile.name
+        )))
+        .into_response(),
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn create_profile_key(
+    State(state): State<DaemonState>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<CreateKeyPayload>,
+) -> Response {
+    let profile = match require_profile(&state, id) {
+        Ok(profile) => profile,
+        Err(error) => return error.into_response(),
+    };
+
+    match state.storage.create_key(NewGunmetalKey {
+        name: payload
+            .name
+            .and_then(trimmed_or_none)
+            .unwrap_or_else(|| format!("{}-key", profile.name)),
+        scopes: operator_default_scopes(),
+        allowed_providers: vec![profile.provider.clone()],
+        expires_at: None,
+    }) {
+        Ok(created) => Json(OperatorActionResponse {
+            message: format!("Created key {}.", created.record.name),
+            auth_url: None,
+            user_code: None,
+            secret: Some(created.secret),
+        })
+        .into_response(),
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn set_key_state(
+    State(state): State<DaemonState>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<SetKeyStatePayload>,
+) -> Response {
+    let key = match require_key(&state, id) {
+        Ok(key) => key,
+        Err(error) => return error.into_response(),
+    };
+    let next_state = match payload.state.parse::<KeyState>() {
+        Ok(state) => state,
+        Err(error) => return api_error(StatusCode::BAD_REQUEST, "invalid_request", error),
+    };
+
+    match state.storage.set_key_state(key.id, next_state.clone()) {
+        Ok(()) => Json(OperatorActionResponse::message(format!(
+            "Set {} to {}.",
+            key.name, next_state
+        )))
+        .into_response(),
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn delete_key(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> Response {
+    let key = match require_key(&state, id) {
+        Ok(key) => key,
+        Err(error) => return error.into_response(),
+    };
+
+    match state.storage.delete_key(key.id) {
+        Ok(()) => Json(OperatorActionResponse::message(format!(
+            "Deleted key {}.",
+            key.name
+        )))
+        .into_response(),
+        Err(error) => internal_error(error),
+    }
 }
 
 async fn list_models(State(state): State<DaemonState>, headers: HeaderMap) -> Response {
@@ -416,11 +616,309 @@ fn text_chunks(value: &str) -> Vec<String> {
     chunks
 }
 
+fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
+    let profiles = state.storage.list_profiles()?;
+    let keys = state.storage.list_keys()?;
+    let models = state.storage.list_models()?;
+    let logs = state.storage.list_request_logs(24)?;
+
+    let profile_rows = profiles
+        .iter()
+        .map(|profile| OperatorProfileRow {
+            id: profile.id,
+            provider: profile.provider.to_string(),
+            name: profile.name.clone(),
+            selector: format!("{}:{}", profile.provider, profile.name),
+            base_url: profile.base_url.clone(),
+            auth_label: operator_profile_auth_label(profile),
+            model_count: models
+                .iter()
+                .filter(|model| model.profile_id == Some(profile.id))
+                .count(),
+        })
+        .collect::<Vec<_>>();
+
+    let key_rows = keys
+        .into_iter()
+        .map(|key| OperatorKeyRow {
+            id: key.id,
+            name: key.name,
+            prefix: key.prefix,
+            state: key.state.to_string(),
+            scopes: key
+                .scopes
+                .into_iter()
+                .map(|scope| scope.to_string())
+                .collect(),
+            providers: key
+                .allowed_providers
+                .into_iter()
+                .map(|provider| provider.to_string())
+                .collect(),
+            last_used_at: key.last_used_at.map(|value| value.to_rfc3339()),
+        })
+        .collect::<Vec<_>>();
+
+    let log_rows = logs
+        .into_iter()
+        .map(|log| {
+            let profile_name = profile_rows
+                .iter()
+                .find(|profile| Some(profile.id) == log.profile_id)
+                .map(|profile| profile.name.clone());
+            OperatorLogRow {
+                id: log.id,
+                started_at: log.started_at.to_rfc3339(),
+                provider: log.provider.to_string(),
+                profile_name,
+                model: log.model,
+                endpoint: log.endpoint,
+                status_code: log.status_code,
+                duration_ms: log.duration_ms,
+                total_tokens: log.usage.total_tokens,
+                error_message: log.error_message,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let provider_rows = builtin_providers()
+        .into_iter()
+        .map(|provider| OperatorProviderRow {
+            kind: provider.kind.to_string(),
+            class: match provider.class {
+                ProviderClass::Subscription => "subscription",
+                ProviderClass::Gateway => "gateway",
+                ProviderClass::Direct => "direct",
+            },
+            priority: provider.priority,
+        })
+        .collect::<Vec<_>>();
+
+    Ok(OperatorStateResponse {
+        service: OperatorServiceRow {
+            status: "running",
+            version: state.version.clone(),
+            home: state.paths.root.display().to_string(),
+            api_base_url: "/v1".to_owned(),
+            web_url: "/app".to_owned(),
+        },
+        counts: OperatorCountRow {
+            profiles: profile_rows.len(),
+            models: models.len(),
+            keys: key_rows.len(),
+            logs: log_rows.len(),
+        },
+        providers: provider_rows,
+        profiles: profile_rows,
+        models: models.into_iter().map(ModelResponse::from).collect(),
+        keys: key_rows,
+        logs: log_rows,
+    })
+}
+
+fn require_profile(state: &DaemonState, id: Uuid) -> Result<ProviderProfile, ApiError> {
+    state
+        .storage
+        .get_profile(id)
+        .map_err(internal_api_error)?
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::NOT_FOUND,
+                "profile_not_found",
+                "profile not found".to_owned(),
+            )
+        })
+}
+
+fn require_key(state: &DaemonState, id: Uuid) -> Result<GunmetalKey, ApiError> {
+    state
+        .storage
+        .get_key(id)
+        .map_err(internal_api_error)?
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::NOT_FOUND,
+                "key_not_found",
+                "key not found".to_owned(),
+            )
+        })
+}
+
+fn operator_profile_auth_label(profile: &ProviderProfile) -> String {
+    if supports_browser_login(&profile.provider) {
+        if profile.credentials.is_some() {
+            "session saved".to_owned()
+        } else {
+            "signed out".to_owned()
+        }
+    } else if profile_has_api_key(profile) {
+        "api key saved".to_owned()
+    } else {
+        "missing api key".to_owned()
+    }
+}
+
+fn profile_has_api_key(profile: &ProviderProfile) -> bool {
+    profile
+        .credentials
+        .as_ref()
+        .and_then(|value| value.get("api_key"))
+        .and_then(Value::as_str)
+        .is_some_and(|value| !value.trim().is_empty())
+}
+
+fn operator_profile_credentials(provider: &ProviderKind, api_key: Option<String>) -> Option<Value> {
+    let api_key = api_key.and_then(trimmed_or_none);
+    if needs_api_key(provider) {
+        api_key.map(|value| json!({ "api_key": value }))
+    } else {
+        None
+    }
+}
+
+fn supports_browser_login(provider: &ProviderKind) -> bool {
+    matches!(provider, ProviderKind::Codex | ProviderKind::Copilot)
+}
+
+fn needs_api_key(provider: &ProviderKind) -> bool {
+    matches!(
+        provider,
+        ProviderKind::OpenRouter
+            | ProviderKind::Zen
+            | ProviderKind::OpenAi
+            | ProviderKind::Azure
+            | ProviderKind::Nvidia
+    )
+}
+
+fn operator_default_scopes() -> Vec<KeyScope> {
+    vec![KeyScope::Inference, KeyScope::ModelsRead]
+}
+
+fn trimmed_or_none(value: String) -> Option<String> {
+    let trimmed = value.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
+}
+
 #[derive(Debug, Serialize)]
 struct HealthResponse {
     status: &'static str,
     service: &'static str,
     version: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorStateResponse {
+    service: OperatorServiceRow,
+    counts: OperatorCountRow,
+    providers: Vec<OperatorProviderRow>,
+    profiles: Vec<OperatorProfileRow>,
+    models: Vec<ModelResponse>,
+    keys: Vec<OperatorKeyRow>,
+    logs: Vec<OperatorLogRow>,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorServiceRow {
+    status: &'static str,
+    version: String,
+    home: String,
+    api_base_url: String,
+    web_url: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorCountRow {
+    profiles: usize,
+    models: usize,
+    keys: usize,
+    logs: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorProviderRow {
+    kind: String,
+    class: &'static str,
+    priority: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorProfileRow {
+    id: Uuid,
+    provider: String,
+    name: String,
+    selector: String,
+    base_url: Option<String>,
+    auth_label: String,
+    model_count: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorKeyRow {
+    id: Uuid,
+    name: String,
+    prefix: String,
+    state: String,
+    scopes: Vec<String>,
+    providers: Vec<String>,
+    last_used_at: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorLogRow {
+    id: Uuid,
+    started_at: String,
+    provider: String,
+    profile_name: Option<String>,
+    model: String,
+    endpoint: String,
+    status_code: Option<u16>,
+    duration_ms: u64,
+    total_tokens: Option<u32>,
+    error_message: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateProfilePayload {
+    provider: String,
+    name: String,
+    #[serde(default)]
+    base_url: Option<String>,
+    #[serde(default)]
+    api_key: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateKeyPayload {
+    #[serde(default)]
+    name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SetKeyStatePayload {
+    state: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorActionResponse {
+    message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auth_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    secret: Option<String>,
+}
+
+impl OperatorActionResponse {
+    fn message(message: String) -> Self {
+        Self {
+            message,
+            auth_url: None,
+            user_code: None,
+            secret: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1018,6 +1516,134 @@ mod tests {
         let body = to_json(response).await;
         assert_eq!(body["status"], "ok");
         assert_eq!(body["service"], "gunmetal");
+    }
+
+    #[tokio::test]
+    async fn browser_app_shell_is_served() {
+        let fixture = Fixture::new();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .uri("/app")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_text(response).await;
+        assert!(body.contains("Gunmetal Web"));
+        assert!(body.contains("/app/api/state"));
+    }
+
+    #[tokio::test]
+    async fn operator_state_reports_profiles_keys_models_and_logs() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+        let key = fixture.storage.authenticate_key(&secret).unwrap().unwrap();
+        let profile = fixture.storage.list_profiles().unwrap().pop().unwrap();
+        fixture
+            .storage
+            .log_request(gunmetal_core::NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: ProviderKind::Codex,
+                model: "codex/gpt-5.4".to_owned(),
+                endpoint: "/v1/chat/completions".to_owned(),
+                status_code: Some(200),
+                duration_ms: 12,
+                usage: TokenUsage {
+                    input_tokens: Some(2),
+                    output_tokens: Some(3),
+                    total_tokens: Some(5),
+                },
+                error_message: None,
+            })
+            .unwrap();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .uri("/app/api/state")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["counts"]["profiles"], 1);
+        assert_eq!(body["counts"]["models"], 1);
+        assert_eq!(body["counts"]["keys"], 1);
+        assert_eq!(body["counts"]["logs"], 1);
+        assert_eq!(body["profiles"][0]["name"], "default");
+        assert_eq!(body["keys"][0]["state"], "active");
+        assert_eq!(body["logs"][0]["model"], "codex/gpt-5.4");
+    }
+
+    #[tokio::test]
+    async fn operator_flow_can_create_profile_auth_and_key() {
+        let fixture = Fixture::new();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/app/api/profiles")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "provider": "codex",
+                            "name": "browser"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let profile = fixture.storage.list_profiles().unwrap().pop().unwrap();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/app/api/profiles/{}/auth", profile.id))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["auth_url"], "https://example.com");
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/app/api/profiles/{}/keys", profile.id))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "name": "browser-key"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert!(body["secret"].as_str().unwrap().starts_with("gm_"));
+        assert_eq!(fixture.storage.list_keys().unwrap().len(), 1);
     }
 
     #[tokio::test]

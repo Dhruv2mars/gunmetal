@@ -1,138 +1,189 @@
 import Link from "next/link";
 
-import { SiteShell } from "@/components/site-shell";
-import {
-  apiSnippet,
-  installSnippet,
-  moduleCards,
-  providerLanes,
-} from "@/lib/site-content";
+const surfaces = [
+  {
+    title: "Landing page",
+    body: "Hosted on Vercel at gunmetal.vercel.app with the install path, docs, and product story in one place.",
+  },
+  {
+    title: "Web UI",
+    body: "Run `gunmetal web` to open your local control plane in the browser on the same machine that owns the keys and sessions.",
+  },
+  {
+    title: "CLI + TUI",
+    body: "Use the same profiles, keys, logs, and models from a shell or from the terminal dashboard.",
+  },
+];
 
-export default function Home() {
+const proof = [
+  "No hosted relay",
+  "One local API surface",
+  "Same state across browser, TUI, and CLI",
+  "Explicit provider/model ids only",
+];
+
+const providerBands = [
+  { label: "Subscription", items: "codex, copilot" },
+  { label: "Gateway", items: "openrouter, zen" },
+  { label: "Direct", items: "openai, azure, nvidia" },
+];
+
+const operators = [
+  "Create or save provider profiles",
+  "Finish auth flows for browser-login providers",
+  "Sync upstream models into one local registry",
+  "Mint scoped Gunmetal keys for real apps",
+  "Inspect request logs and model inventory",
+];
+
+export default function HomePage() {
   return (
-    <SiteShell
-      eyebrow="New repo. New product. Local-first by design."
-      title="The dashboard and local API for every AI provider you already use."
-      lede="Gunmetal connects subscription providers, gateways, and direct API keys behind one local endpoint, one local key system, one CLI, and one TUI."
-    >
-      <section className="hero-grid">
-        <article className="signal-panel signal-panel-large">
-          <div className="signal-rail">
-            <span>LOCAL</span>
-            <span>EXPLICIT</span>
-            <span>MODULAR</span>
-          </div>
-          <div className="signal-copy">
-            <p className="stat-line">One download. One binary. One local service.</p>
-            <p>
-              Gunmetal does not resell subscriptions. It gives your machine a
-              clean local inference surface and routes requests to the upstream
-              account you connected on purpose.
+    <div className="home-page">
+      <header className="site-frame site-header site-header-home">
+        <Link className="brand-mark" href="/">
+          <span className="brand-chip">GM</span>
+          <span className="brand-copy">
+            <strong>Gunmetal</strong>
+            <span>Local-first AI switchboard</span>
+          </span>
+        </Link>
+        <nav className="site-nav" aria-label="Primary">
+          <Link href="/web-ui">Web UI</Link>
+          <Link href="/install">Install</Link>
+          <Link href="/docs">Docs</Link>
+          <a
+            className="nav-cta"
+            href="https://github.com/Dhruv2mars/gunmetal"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </nav>
+      </header>
+
+      <main>
+        <section className="poster-hero">
+          <div className="poster-copy">
+            <p className="eyebrow">Gunmetal • gunmetal.vercel.app</p>
+            <h1>The local control plane for every AI account you already pay for.</h1>
+            <p className="lede">
+              Gunmetal puts one fast local API, one browser UI, one TUI, and
+              one CLI in front of subscription providers, gateways, and direct
+              keys without adding a hosted relay in the middle.
             </p>
             <div className="button-row">
               <Link className="button button-primary" href="/install">
-                Install Gunmetal
+                Install now
               </Link>
-              <Link className="button button-secondary" href="/docs">
-                Read the contract
+              <Link className="button button-secondary" href="/web-ui">
+                See Web UI
               </Link>
             </div>
           </div>
-        </article>
 
-        <article className="signal-panel">
-          <p className="panel-kicker">Provider lanes</p>
-          <ul className="stack-list">
-            <li>subscription: codex, copilot</li>
-            <li>gateway: openrouter, zen</li>
-            <li>direct key: openai, azure, nvidia</li>
-          </ul>
-          <p className="panel-note">
-            Routing is explicit only. No policy mode. No hidden alias layer.
-          </p>
-        </article>
-      </section>
+          <div className="poster-stage">
+            <div className="stage-window">
+              <div className="stage-topline">
+                <span>gunmetal web</span>
+                <span>local browser UI</span>
+              </div>
+              <div className="stage-columns">
+                <div>
+                  <p className="panel-kicker">Operator flow</p>
+                  <ul className="stack-list">
+                    {operators.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="stage-command mono">
+                  <span>npm i -g @dhruv2mars/gunmetal</span>
+                  <span>gunmetal setup</span>
+                  <span>gunmetal web</span>
+                  <span>OPENAI_BASE_URL=http://127.0.0.1:4684/v1</span>
+                </div>
+              </div>
+            </div>
+            <div className="proof-strip">
+              {proof.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+        </section>
 
-      <section className="section-grid">
-        <div className="section-head">
-          <p className="section-tag">Architecture</p>
-          <h2>Built as modules, shipped as one product.</h2>
-        </div>
-        <div className="card-grid">
-          {moduleCards.map((card) => (
-            <article key={card.title} className="card">
-              <h3>{card.title}</h3>
-              <p>{card.body}</p>
+        <section className="site-frame home-sections">
+          <section className="surface-grid">
+            {surfaces.map((surface) => (
+              <article key={surface.title} className="surface-panel">
+                <p className="panel-kicker">{surface.title}</p>
+                <p>{surface.body}</p>
+              </article>
+            ))}
+          </section>
+
+          <section className="deep-grid">
+            <article className="deep-copy">
+              <p className="section-tag">Why this exists</p>
+              <h2>Apps should talk to one local endpoint. Providers stay explicit behind it.</h2>
+              <p>
+                Gunmetal is built for the boring real problem: you already have
+                a mix of Codex, Copilot, OpenRouter, Zen, and direct provider
+                keys, but each app wants a different setup story. Gunmetal
+                gives your machine one consistent front door and keeps the
+                provider choice visible instead of hiding it behind aliases.
+              </p>
             </article>
-          ))}
-        </div>
-      </section>
+            <div className="deep-stack">
+              {providerBands.map((band) => (
+                <article key={band.label} className="band-panel">
+                  <p className="panel-kicker">{band.label}</p>
+                  <h3>{band.items}</h3>
+                </article>
+              ))}
+            </div>
+          </section>
 
-      <section className="section-grid">
-        <div className="section-head">
-          <p className="section-tag">Provider model</p>
-          <h2>Three provider classes. One local contract.</h2>
-        </div>
-        <div className="lane-grid">
-          {providerLanes.map((lane) => (
-            <article key={lane.title} className="lane-card">
-              <p className="panel-kicker">{lane.title}</p>
-              <p>{lane.body}</p>
-              <div className="chip-row">
-                {lane.items.map((item) => (
-                  <span key={item} className="chip">
-                    {item}
-                  </span>
-                ))}
+          <section className="dual-panel">
+            <article className="code-panel home-code-panel">
+              <div className="code-head">
+                <span>First real path</span>
+              </div>
+              <pre>{`npm i -g @dhruv2mars/gunmetal
+
+gunmetal setup
+gunmetal web
+
+# or keep the daemon alive without opening the browser
+gunmetal start
+gunmetal status`}</pre>
+            </article>
+            <article className="warning-band home-warning-band">
+              <p className="section-tag">Compatibility rule</p>
+              <h2>Gunmetal works when the app talks to Gunmetal.</h2>
+              <p>
+                Custom base URL. Custom API key. Arbitrary model names like
+                `provider/model`. If the app hardcodes the upstream endpoint,
+                Gunmetal cannot help there.
+              </p>
+              <div className="button-row">
+                <Link className="button button-secondary" href="/docs">
+                  Read the API contract
+                </Link>
+                <Link className="button button-secondary" href="/start-here">
+                  Follow the setup path
+                </Link>
               </div>
             </article>
-          ))}
-        </div>
-      </section>
+          </section>
+        </section>
+      </main>
 
-      <section className="section-grid split-code">
-        <div className="section-head">
-          <p className="section-tag">First run</p>
-          <h2>Install it. Launch it. Point apps at it.</h2>
-          <p>
-            The fastest path is `gunmetal setup`, then `gunmetal start`, then
-            one `/v1/models` request with the key setup created. After that,
-            point apps at Gunmetal instead of the upstream provider.
-          </p>
-        </div>
-        <div className="code-stack">
-          <article className="code-panel">
-            <div className="code-head">
-              <span>install + local control</span>
-            </div>
-            <pre>{installSnippet}</pre>
-          </article>
-          <article className="code-panel">
-            <div className="code-head">
-              <span>OpenAI-style compatibility</span>
-            </div>
-            <pre>{apiSnippet}</pre>
-          </article>
-        </div>
-      </section>
-
-      <section className="warning-band">
-        <p className="section-tag">Compatibility rule</p>
-        <h2>Gunmetal works when the app talks to Gunmetal.</h2>
-        <p>
-          The app needs a custom base URL, a custom API key field, and support
-          for arbitrary model names. If the app hardcodes an upstream endpoint,
-          Gunmetal cannot intercept it.
-        </p>
-        <div className="button-row">
-          <Link className="button button-secondary" href="/docs">
-            See full API syntax
-          </Link>
-          <Link className="button button-secondary" href="/changelog">
-            View current build
-          </Link>
-        </div>
-      </section>
-    </SiteShell>
+      <footer className="site-frame site-footer site-footer-home">
+        <span>Hosted front door at gunmetal.vercel.app.</span>
+        <span>Browser UI, TUI, CLI, and local API share one state.</span>
+      </footer>
+    </div>
   );
 }

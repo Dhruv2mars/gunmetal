@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gunmetal Web</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #060708;
+        --panel: rgba(19, 22, 26, 0.88);
+        --panel-2: rgba(12, 15, 18, 0.94);
+        --line: rgba(255, 255, 255, 0.1);
+        --line-strong: rgba(255, 255, 255, 0.18);
+        --text: #f4f4ee;
+        --muted: #9aa3ad;
+        --accent: #d8b26e;
+        --accent-2: #7dd3c8;
+        --danger: #ff8d78;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        --radius: 24px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans", "SF Pro Display", system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(216, 178, 110, 0.16), transparent 34%),
+          radial-gradient(circle at top right, rgba(125, 211, 200, 0.12), transparent 28%),
+          linear-gradient(180deg, #0d1013, var(--bg) 34%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .shell {
+        width: min(1480px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 20px 0 56px;
+      }
+
+      .masthead {
+        display: grid;
+        gap: 20px;
+        padding: 20px 0 28px;
+      }
+
+      .brand-row,
+      .status-row,
+      .command-row,
+      .section-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .brand-row {
+        grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+      }
+
+      .hero,
+      .hero-side,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(120deg, rgba(216, 178, 110, 0.16), transparent 32%),
+          radial-gradient(circle at 80% 10%, rgba(125, 211, 200, 0.16), transparent 24%);
+        pointer-events: none;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin: 0 0 12px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 11ch;
+        font-size: clamp(3rem, 8vw, 6.4rem);
+        line-height: 0.9;
+        letter-spacing: -0.04em;
+      }
+
+      .lede {
+        max-width: 34rem;
+        margin-top: 16px;
+        font-size: clamp(1rem, 2vw, 1.18rem);
+        line-height: 1.45;
+        color: rgba(244, 244, 238, 0.84);
+      }
+
+      .hero-actions,
+      .mini-actions,
+      .provider-list,
+      .count-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-actions {
+        margin-top: 22px;
+      }
+
+      .btn,
+      .ghost-btn {
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        padding: 10px 14px;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+        cursor: pointer;
+        transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+      }
+
+      .btn:hover,
+      .ghost-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(216, 178, 110, 0.58);
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, rgba(216, 178, 110, 0.2), rgba(216, 178, 110, 0.08));
+        border-color: rgba(216, 178, 110, 0.48);
+      }
+
+      .hero-side,
+      .panel {
+        padding: 20px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .status-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .stat {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .stat-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin-top: 8px;
+        font-size: clamp(1.8rem, 3.6vw, 3rem);
+        line-height: 0.94;
+      }
+
+      .command-row {
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      }
+
+      .panel-kicker {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        color: var(--muted);
+      }
+
+      .mono {
+        font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+      }
+
+      .command-block {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.26);
+        overflow: auto;
+      }
+
+      .section-grid {
+        grid-template-columns: minmax(0, 0.86fr) minmax(340px, 0.74fr);
+        align-items: start;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .profile-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .profile-card {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .profile-meta,
+      .key-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .profile-actions,
+      .key-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      input,
+      select {
+        width: 100%;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: rgba(0, 0, 0, 0.24);
+        color: var(--text);
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+
+      .table th,
+      .table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      .table th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+      }
+
+      .note {
+        margin-top: 12px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .banner {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line-strong);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .banner strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .success {
+        border-color: rgba(125, 211, 200, 0.32);
+        background: rgba(125, 211, 200, 0.08);
+      }
+
+      .danger {
+        border-color: rgba(255, 141, 120, 0.38);
+        background: rgba(255, 141, 120, 0.08);
+      }
+
+      .subtle {
+        color: var(--muted);
+      }
+
+      @media (max-width: 1080px) {
+        .brand-row,
+        .status-row,
+        .command-row,
+        .section-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="masthead">
+        <div class="brand-row">
+          <section class="hero">
+            <p class="eyebrow">Gunmetal Web</p>
+            <h1>Local control. Browser comfort.</h1>
+            <p class="lede">
+              Same daemon. Same keys. Same provider state. This is the browser
+              face of Gunmetal, served straight from your local gateway.
+            </p>
+            <div class="hero-actions">
+              <button class="btn primary" id="refresh-button" type="button">
+                Refresh state
+              </button>
+              <button class="btn" id="copy-api-button" type="button">
+                Copy API base URL
+              </button>
+            </div>
+          </section>
+          <aside class="hero-side">
+            <p class="panel-kicker">Operator flow</p>
+            <div class="provider-list" id="provider-strip"></div>
+            <div class="banner" id="message-banner">
+              <strong>Ready.</strong>
+              <span class="subtle">Create a profile, auth it, sync models, mint a key.</span>
+            </div>
+            <div class="banner success" id="secret-banner" hidden></div>
+          </aside>
+        </div>
+        <section class="status-row" id="count-grid"></section>
+        <section class="command-row">
+          <article class="panel">
+            <p class="panel-kicker">Golden path</p>
+            <div class="command-block mono" id="command-block"></div>
+          </article>
+          <article class="panel">
+            <p class="panel-kicker">Service</p>
+            <div class="stack" id="service-panel"></div>
+          </article>
+        </section>
+      </header>
+
+      <main class="section-grid">
+        <section class="stack">
+          <article class="panel">
+            <p class="panel-kicker">Profiles</p>
+            <div id="profiles"></div>
+          </article>
+          <article class="panel">
+            <p class="panel-kicker">Recent logs</p>
+            <div id="logs"></div>
+          </article>
+        </section>
+        <section class="stack">
+          <article class="panel">
+            <p class="panel-kicker">Create profile</p>
+            <p class="note">
+              Start with one provider. Browser-login providers open an auth URL.
+              Key-based providers need the upstream API key saved here.
+            </p>
+            <form id="profile-form">
+              <label>
+                Provider
+                <select name="provider">
+                  <option value="codex">codex</option>
+                  <option value="copilot">copilot</option>
+                  <option value="openrouter">openrouter</option>
+                  <option value="zen">zen</option>
+                  <option value="openai">openai</option>
+                  <option value="azure">azure</option>
+                  <option value="nvidia">nvidia</option>
+                </select>
+              </label>
+              <label>
+                Profile name
+                <input name="name" placeholder="work-openai" required />
+              </label>
+              <label>
+                Base URL
+                <input name="base_url" placeholder="optional override" />
+              </label>
+              <label>
+                API key
+                <input name="api_key" placeholder="optional for browser-login providers" />
+              </label>
+              <button class="btn primary" type="submit">Save profile</button>
+            </form>
+          </article>
+          <article class="panel">
+            <p class="panel-kicker">Keys</p>
+            <div id="keys"></div>
+          </article>
+          <article class="panel">
+            <p class="panel-kicker">Models</p>
+            <div id="models"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const appState = {
+        data: null,
+      };
+
+      const $ = (id) => document.getElementById(id);
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function setBanner(message, tone = "default") {
+        const banner = $("message-banner");
+        banner.className = "banner";
+        if (tone === "danger") banner.classList.add("danger");
+        if (tone === "success") banner.classList.add("success");
+        banner.innerHTML = `<strong>${tone === "danger" ? "Action failed." : "Updated."}</strong><span>${escapeHtml(message)}</span>`;
+      }
+
+      function setSecret(secret) {
+        const banner = $("secret-banner");
+        if (!secret) {
+          banner.hidden = true;
+          banner.innerHTML = "";
+          return;
+        }
+        banner.hidden = false;
+        banner.innerHTML = `<strong>New key secret</strong><span class="mono">${escapeHtml(secret)}</span>`;
+      }
+
+      async function fetchJson(url, options) {
+        const response = await fetch(url, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        const text = await response.text();
+        const body = text ? JSON.parse(text) : {};
+        if (!response.ok) {
+          throw new Error(body?.error?.message || body?.message || "request failed");
+        }
+        return body;
+      }
+
+      async function loadState() {
+        try {
+          const data = await fetchJson("/app/api/state");
+          appState.data = data;
+          render();
+        } catch (error) {
+          setBanner(error.message, "danger");
+        }
+      }
+
+      function render() {
+        const data = appState.data;
+        if (!data) return;
+        const apiBaseUrl = new URL(data.service.api_base_url, window.location.origin).toString();
+        const webUrl = new URL(data.service.web_url, window.location.origin).toString();
+
+        $("provider-strip").innerHTML = data.providers
+          .map(
+            (provider) =>
+              `<span class="pill">${escapeHtml(provider.kind)} · ${escapeHtml(provider.class)}</span>`,
+          )
+          .join("");
+
+        $("count-grid").innerHTML = [
+          ["Profiles", data.counts.profiles],
+          ["Models", data.counts.models],
+          ["Keys", data.counts.keys],
+          ["Logs", data.counts.logs],
+        ]
+          .map(
+            ([label, value]) => `
+              <article class="stat">
+                <div class="stat-label">${escapeHtml(label)}</div>
+                <div class="stat-value">${escapeHtml(value)}</div>
+              </article>
+            `,
+          )
+          .join("");
+
+        $("command-block").innerHTML = escapeHtml(
+          [
+            "npm i -g @dhruv2mars/gunmetal",
+            "gunmetal setup",
+            "gunmetal web",
+            "",
+            "OPENAI_BASE_URL=" + apiBaseUrl,
+            "OPENAI_API_KEY=gm_your_local_key",
+            "MODEL=provider/model",
+          ].join("\n"),
+        );
+
+        $("service-panel").innerHTML = `
+          <div><strong>Status</strong><div class="subtle">${escapeHtml(data.service.status)}</div></div>
+          <div><strong>Version</strong><div class="subtle mono">${escapeHtml(data.service.version)}</div></div>
+          <div><strong>Web</strong><div class="subtle mono">${escapeHtml(webUrl)}</div></div>
+          <div><strong>API</strong><div class="subtle mono">${escapeHtml(apiBaseUrl)}</div></div>
+          <div><strong>Home</strong><div class="subtle mono">${escapeHtml(data.service.home)}</div></div>
+        `;
+
+        $("profiles").innerHTML = data.profiles.length
+          ? `<div class="profile-grid">${data.profiles
+              .map(
+                (profile) => `
+                <article class="profile-card">
+                  <h3>${escapeHtml(profile.name)}</h3>
+                  <div class="profile-meta">
+                    <span class="pill">${escapeHtml(profile.provider)}</span>
+                    <span class="pill">${escapeHtml(profile.auth_label)}</span>
+                    <span class="pill">${escapeHtml(profile.model_count)} models</span>
+                  </div>
+                  <p class="note mono">${escapeHtml(profile.selector)}${profile.base_url ? ` · ${escapeHtml(profile.base_url)}` : ""}</p>
+                  <div class="profile-actions">
+                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'auth')">Auth / Check</button>
+                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'sync')">Sync models</button>
+                    <button class="ghost-btn" type="button" onclick="createKey('${profile.id}')">Create key</button>
+                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'logout')">Logout</button>
+                  </div>
+                </article>
+              `,
+              )
+              .join("")}</div>`
+          : `<p class="note">No profiles yet. Save one on the right, then auth and sync it here.</p>`;
+
+        $("keys").innerHTML = data.keys.length
+          ? `<table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>State</th>
+                  <th>Providers</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.keys
+                  .map(
+                    (key) => `
+                    <tr>
+                      <td><strong>${escapeHtml(key.name)}</strong><div class="subtle mono">${escapeHtml(key.prefix)}</div></td>
+                      <td>${escapeHtml(key.state)}</td>
+                      <td>${escapeHtml(key.providers.length ? key.providers.join(", ") : "all")}</td>
+                      <td>
+                        <div class="key-actions">
+                          <button class="ghost-btn" type="button" onclick="setKeyState('${key.id}', 'disabled')">Disable</button>
+                          <button class="ghost-btn" type="button" onclick="setKeyState('${key.id}', 'revoked')">Revoke</button>
+                          <button class="ghost-btn" type="button" onclick="deleteKey('${key.id}')">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>`
+          : `<p class="note">No keys yet. Create one from a profile card.</p>`;
+
+        $("models").innerHTML = data.models.length
+          ? `<table class="table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Provider</th>
+                  <th>Reasoning</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.models
+                  .slice(0, 14)
+                  .map(
+                    (model) => `
+                      <tr>
+                        <td><strong>${escapeHtml(model.id)}</strong></td>
+                        <td>${escapeHtml(model.provider)}</td>
+                        <td>${escapeHtml(model.supports_reasoning == null ? "unknown" : model.supports_reasoning ? "yes" : "no")}</td>
+                      </tr>
+                    `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>`
+          : `<p class="note">No models synced yet. Sync at least one profile.</p>`;
+
+        $("logs").innerHTML = data.logs.length
+          ? `<table class="table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Model</th>
+                  <th>Result</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.logs
+                  .map(
+                    (log) => `
+                      <tr>
+                        <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(log.started_at)}</div></td>
+                        <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.endpoint)}</div></td>
+                        <td>${escapeHtml(log.status_code ?? "pending")}${log.error_message ? `<div class="subtle">${escapeHtml(log.error_message)}</div>` : ""}</td>
+                        <td>${escapeHtml(log.duration_ms)} ms${log.total_tokens ? `<div class="subtle">${escapeHtml(log.total_tokens)} tokens</div>` : ""}</td>
+                      </tr>
+                    `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>`
+          : `<p class="note">No request history yet. Point one app at Gunmetal, then come back.</p>`;
+      }
+
+      async function submitAction(url, options) {
+        try {
+          const body = await fetchJson(url, options);
+          if (body.auth_url) {
+            window.open(body.auth_url, "_blank", "noopener,noreferrer");
+          }
+          setBanner(body.message, "success");
+          setSecret(body.secret || null);
+          await loadState();
+        } catch (error) {
+          setBanner(error.message, "danger");
+        }
+      }
+
+      async function profileAction(id, action) {
+        await submitAction(`/app/api/profiles/${id}/${action}`, { method: "POST" });
+      }
+
+      async function createKey(id) {
+        const chosen = window.prompt("Key name", "gunmetal-key");
+        if (chosen == null) return;
+        await submitAction(`/app/api/profiles/${id}/keys`, {
+          method: "POST",
+          body: JSON.stringify({ name: chosen }),
+        });
+      }
+
+      async function setKeyState(id, state) {
+        await submitAction(`/app/api/keys/${id}/state`, {
+          method: "POST",
+          body: JSON.stringify({ state }),
+        });
+      }
+
+      async function deleteKey(id) {
+        if (!window.confirm("Delete this key?")) return;
+        await submitAction(`/app/api/keys/${id}`, { method: "DELETE" });
+      }
+
+      $("profile-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        await submitAction("/app/api/profiles", {
+          method: "POST",
+          body: JSON.stringify({
+            provider: form.get("provider"),
+            name: form.get("name"),
+            base_url: form.get("base_url"),
+            api_key: form.get("api_key"),
+          }),
+        });
+        event.currentTarget.reset();
+      });
+
+      $("refresh-button").addEventListener("click", () => {
+        setSecret(null);
+        loadState();
+      });
+
+      $("copy-api-button").addEventListener("click", async () => {
+        const base = appState.data
+          ? new URL(appState.data.service.api_base_url, window.location.origin).toString()
+          : null;
+        if (!base) return;
+        await navigator.clipboard.writeText(base);
+        setBanner("Copied API base URL.", "success");
+      });
+
+      loadState();
+    </script>
+  </body>
+</html>

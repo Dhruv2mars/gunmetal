@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use anyhow::{Result, anyhow};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
@@ -11,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 const DEFAULT_BASE_URL: &str = "https://openrouter.ai/api/v1";
+static HTTP_CLIENT: LazyLock<Client> =
+    LazyLock::new(|| Client::builder().build().expect("reqwest client"));
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenRouterClientOptions {
@@ -171,14 +175,14 @@ impl std::error::Error for ApiError {}
 impl OpenRouterClient {
     pub fn with_options(options: OpenRouterClientOptions) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             mode: OpenRouterMode::Live(options),
         }
     }
 
     pub fn mock(response: impl Into<String>) -> Self {
         Self {
-            http: Client::builder().build().expect("reqwest client"),
+            http: HTTP_CLIENT.clone(),
             mode: OpenRouterMode::Mock(response.into()),
         }
     }

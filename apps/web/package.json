@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",
-    "test": "tsc --noEmit",
+    "test": "bun test && tsc --noEmit",
     "format": "eslint src --fix"
   },
   "dependencies": {

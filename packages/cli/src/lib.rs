@@ -25,7 +25,7 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. create or save one provider profile\n  2. auth that profile\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 
 #[derive(Debug, Parser)]
@@ -43,6 +43,7 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     Setup(SetupArgs),
+    Web(WebArgs),
     Start(StartArgs),
     Serve(ServeArgs),
     Stop(StopArgs),
@@ -80,6 +81,16 @@ pub struct StartArgs {
     pub host: IpAddr,
     #[arg(long, default_value_t = DEFAULT_PORT)]
     pub port: u16,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct WebArgs {
+    #[arg(long, default_value = DEFAULT_HOST)]
+    pub host: IpAddr,
+    #[arg(long, default_value_t = DEFAULT_PORT)]
+    pub port: u16,
+    #[arg(long)]
+    pub no_open: bool,
 }
 
 #[derive(Debug, clap::Args)]
@@ -227,6 +238,26 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
     match command {
         Command::Setup(args) => {
             setup(paths, &providers, &mut output, args).await?;
+        }
+        Command::Web(args) => {
+            let status = ensure_daemon_running(paths, args.host, args.port).await?;
+            let app_url = format!("{}/app", status.url);
+            writeln!(output, "Gunmetal browser UI")?;
+            if let Some(note) = &status.note {
+                writeln!(output, "{note}")?;
+            }
+            writeln!(output, "Open: {app_url}")?;
+            writeln!(output, "API: {}/v1", status.url)?;
+            if let Some(pid) = status.pid {
+                writeln!(output, "PID: {pid}")?;
+            }
+            if !args.no_open {
+                if let Err(error) = webbrowser::open(&app_url) {
+                    writeln!(output, "Browser open failed: {error}")?;
+                } else {
+                    writeln!(output, "Opened in your default browser.")?;
+                }
+            }
         }
         Command::Start(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
@@ -866,7 +897,10 @@ async fn setup(
     }
     writeln!(output)?;
     writeln!(output, "What to do next")?;
-    writeln!(output, "1. Start Gunmetal: gunmetal start")?;
+    writeln!(
+        output,
+        "1. Start Gunmetal: gunmetal web  (or gunmetal start)"
+    )?;
     writeln!(output, "2. Base URL: {BASE_URL}")?;
     writeln!(output, "3. Model format: provider/model")?;
     if let (Some(secret), Some(model)) = (created_secret, models.first()) {
@@ -1274,6 +1308,9 @@ mod tests {
         let cli = Cli::parse_from(["gunmetal", "start"]);
         assert!(matches!(cli.command.unwrap(), Command::Start(_)));
 
+        let cli = Cli::parse_from(["gunmetal", "web", "--no-open"]);
+        assert!(matches!(cli.command.unwrap(), Command::Web(_)));
+
         let cli = Cli::parse_from(["gunmetal", "stop"]);
         assert!(matches!(cli.command.unwrap(), Command::Stop(_)));
 
@@ -1326,6 +1363,7 @@ mod tests {
         let help = Cli::command().render_help().to_string();
 
         assert!(help.contains("gunmetal setup"));
+        assert!(help.contains("gunmetal web"));
         assert!(help.contains("gunmetal start"));
         assert!(help.contains("gunmetal status"));
         assert!(help.contains("http://127.0.0.1:4684/v1"));
