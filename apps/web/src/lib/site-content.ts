@@ -1,5 +1,6 @@
 export const primaryNav = [
-  { href: "/", label: "Overview" },
+  { href: "/", label: "Home" },
+  { href: "/web-ui", label: "Web UI" },
   { href: "/start-here", label: "Start Here" },
   { href: "/docs", label: "Docs" },
   { href: "/install", label: "Install" },
@@ -108,6 +109,9 @@ export const changelogEntries = [
 export const installSnippet = `npm i -g @dhruv2mars/gunmetal
 
 gunmetal setup
+gunmetal web
+
+# or keep the daemon running without opening the browser
 gunmetal start
 gunmetal status
 

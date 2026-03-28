@@ -21,13 +21,13 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gunmetal.dev"),
+  metadataBase: new URL("https://gunmetal.vercel.app"),
   title: {
     default: "Gunmetal",
     template: "%s | Gunmetal",
   },
   description:
-    "Gunmetal is a local-first AI switchboard for subscription providers, gateways, and direct API-key providers.",
+    "Gunmetal is a local-first AI switchboard with a hosted landing page, a local browser UI, a TUI, a CLI, and one fast local API.",
 };
 
 export default function RootLayout({
