@@ -102,3 +102,11 @@ test("web app pins Vercel to the Next.js build path", () => {
   assert.match(vercelConfig, /"installCommand":\s*"bun install --frozen-lockfile"/);
   assert.match(vercelConfig, /"buildCommand":\s*"bun run build"/);
 });
+
+test("workspace cargo version matches the published npm package version", () => {
+  const cargoToml = readFileSync("Cargo.toml", "utf8");
+  const npmPackageJson = JSON.parse(readFileSync("packages/npm/package.json", "utf8"));
+  const cargoVersion = cargoToml.match(/^\[workspace\.package\][\s\S]*?^version = "([^"]+)"/m)?.[1];
+
+  assert.equal(cargoVersion, npmPackageJson.version);
+});

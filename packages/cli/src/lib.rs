@@ -1392,11 +1392,14 @@ mod tests {
         let paths =
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let mut output = Vec::new();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
 
         execute(
             Command::Status(StatusArgs {
                 host: "127.0.0.1".parse().unwrap(),
-                port: 4684,
+                port,
             }),
             &paths,
             &mut output,
@@ -1407,7 +1410,7 @@ mod tests {
         let text = String::from_utf8(output).unwrap();
         assert!(text.contains("Gunmetal is not running."));
         assert!(text.contains("Run `gunmetal start` or open `gunmetal`."));
-        assert!(text.contains("http://127.0.0.1:4684/v1"));
+        assert!(text.contains(&format!("http://127.0.0.1:{port}/v1")));
     }
 
     #[tokio::test]

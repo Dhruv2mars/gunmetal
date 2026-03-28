@@ -378,8 +378,8 @@
             <p class="panel-kicker">Operator flow</p>
             <div class="provider-list" id="provider-strip"></div>
             <div class="banner" id="message-banner">
-              <strong>Ready.</strong>
-              <span class="subtle">Create a profile, auth it, sync models, mint a key.</span>
+              <strong>Loading local state...</strong>
+              <span class="subtle">Reading profiles, models, keys, and recent logs from your local Gunmetal home.</span>
             </div>
             <div class="banner success" id="secret-banner" hidden></div>
           </aside>
@@ -489,6 +489,40 @@
         banner.innerHTML = `<strong>New key secret</strong><span class="mono">${escapeHtml(secret)}</span>`;
       }
 
+      function syncBanner(data) {
+        if (!data.profiles.length) {
+          $("message-banner").className = "banner";
+          $("message-banner").innerHTML =
+            "<strong>Ready.</strong><span class=\"subtle\">Create a profile, auth it, sync models, mint a key.</span>";
+          return;
+        }
+
+        if (!data.models.length) {
+          $("message-banner").className = "banner";
+          $("message-banner").innerHTML =
+            "<strong>Profile saved.</strong><span class=\"subtle\">Sync models next so apps can target explicit provider/model ids.</span>";
+          return;
+        }
+
+        if (!data.keys.length) {
+          $("message-banner").className = "banner success";
+          $("message-banner").innerHTML =
+            "<strong>Models are ready.</strong><span class=\"subtle\">Mint a Gunmetal key next, then point one app at the local API.</span>";
+          return;
+        }
+
+        if (!data.logs.length) {
+          $("message-banner").className = "banner success";
+          $("message-banner").innerHTML =
+            "<strong>Ready for traffic.</strong><span class=\"subtle\">Use the local base URL and one Gunmetal key in any OpenAI-compatible app.</span>";
+          return;
+        }
+
+        $("message-banner").className = "banner success";
+        $("message-banner").innerHTML =
+          "<strong>Traffic flowing.</strong><span class=\"subtle\">Review recent logs below or keep refining keys and provider coverage.</span>";
+      }
+
       async function fetchJson(url, options) {
         const response = await fetch(url, {
           headers: { "Content-Type": "application/json" },
@@ -517,6 +551,7 @@
         if (!data) return;
         const apiBaseUrl = new URL(data.service.api_base_url, window.location.origin).toString();
         const webUrl = new URL(data.service.web_url, window.location.origin).toString();
+        syncBanner(data);
 
         $("provider-strip").innerHTML = data.providers
           .map(

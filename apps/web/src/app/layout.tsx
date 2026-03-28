@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gunmetal-six.vercel.app"),
+  metadataBase: new URL("https://gunmetalapp.vercel.app"),
   title: {
     default: "Gunmetal",
     template: "%s | Gunmetal",

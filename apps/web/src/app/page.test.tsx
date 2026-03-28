@@ -9,7 +9,7 @@ describe("marketing routes", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
     expect(html).toContain("Gunmetal");
-    expect(html).toContain("gunmetal-six.vercel.app");
+    expect(html).toContain("gunmetalapp.vercel.app");
     expect(html).toContain("gunmetal web");
     expect(html).toContain("No hosted relay");
   });
