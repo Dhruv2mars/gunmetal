@@ -367,7 +367,6 @@ impl CodexClient {
                     "model": model,
                     "personality": "friendly",
                     "sandboxPolicy": { "type": "readOnly", "networkAccess": false },
-                    "summary": "concise",
                     "threadId": thread_id,
                 }),
             )
@@ -777,6 +776,12 @@ mod tests {
                             .unwrap();
                     }
                     "turn/start" => {
+                        assert!(
+                            request
+                                .get("params")
+                                .and_then(|params| params.as_object())
+                                .is_some_and(|params| !params.contains_key("summary"))
+                        );
                         server_writer
                             .write_all(
                                 format!(
