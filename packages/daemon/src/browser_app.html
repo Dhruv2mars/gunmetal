@@ -613,6 +613,7 @@
                     <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'sync')">Sync models</button>
                     <button class="ghost-btn" type="button" onclick="createKey('${profile.id}')">Create key</button>
                     <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'logout')">Logout</button>
+                    <button class="ghost-btn" type="button" onclick="deleteProfile('${profile.id}')">Delete</button>
                   </div>
                 </article>
               `,
@@ -744,6 +745,11 @@
       async function deleteKey(id) {
         if (!window.confirm("Delete this key?")) return;
         await submitAction(`/app/api/keys/${id}`, { method: "DELETE" });
+      }
+
+      async function deleteProfile(id) {
+        if (!window.confirm("Delete this profile and its synced models?")) return;
+        await submitAction(`/app/api/profiles/${id}`, { method: "DELETE" });
       }
 
       $("profile-form").addEventListener("submit", async (event) => {
