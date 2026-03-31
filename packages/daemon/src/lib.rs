@@ -322,7 +322,7 @@ async fn create_profile_key(
             .and_then(trimmed_or_none)
             .unwrap_or_else(|| format!("{}-key", profile.name)),
         scopes: operator_default_scopes(),
-        allowed_providers: vec![profile.provider.clone()],
+        allowed_providers: Vec::new(),
         expires_at: None,
     }) {
         Ok(created) => {
@@ -1924,7 +1924,107 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_json(response).await;
         assert!(body["secret"].as_str().unwrap().starts_with("gm_"));
-        assert_eq!(fixture.storage.list_keys().unwrap().len(), 1);
+        let keys = fixture.storage.list_keys().unwrap();
+        assert_eq!(keys.len(), 1);
+        assert!(keys[0].allowed_providers.is_empty());
+    }
+
+    #[tokio::test]
+    async fn operator_created_key_can_list_models_from_any_provider() {
+        let fixture = Fixture::new();
+        let codex = fixture
+            .storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        let zen = fixture
+            .storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Zen,
+                name: "zen".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: Some(json!({ "api_key": "zen_test_key" })),
+            })
+            .unwrap();
+        fixture
+            .storage
+            .replace_models_for_profile(
+                &ProviderKind::Codex,
+                Some(codex.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(codex.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+        fixture
+            .storage
+            .replace_models_for_profile(
+                &ProviderKind::Zen,
+                Some(zen.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "zen/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Zen,
+                    profile_id: Some(zen.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/app/api/profiles/{}/keys", codex.id))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "name": "shared-key"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        let secret = body["secret"].as_str().unwrap();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        let model_ids = body["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|item| item["id"].as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(model_ids.len(), 2);
+        assert!(model_ids.contains(&"codex/gpt-5.4"));
+        assert!(model_ids.contains(&"zen/gpt-5.4"));
     }
 
     #[tokio::test]

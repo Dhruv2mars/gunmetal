@@ -462,7 +462,7 @@ impl DashboardApp {
         let created = paths.storage_handle()?.create_key(NewGunmetalKey {
             name: format!("{}-key", profile.name),
             scopes: vec![KeyScope::Inference, KeyScope::ModelsRead],
-            allowed_providers: vec![profile.provider.clone()],
+            allowed_providers: Vec::new(),
             expires_at: None,
         })?;
         self.last_secret = Some(created.secret);
@@ -1025,7 +1025,7 @@ mod tests {
     }
 
     #[test]
-    fn creating_provider_key_scopes_it_to_selected_profile() {
+    fn creating_provider_key_creates_shared_access() {
         let temp = TempDir::new().unwrap();
         let paths =
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
@@ -1054,7 +1054,7 @@ mod tests {
 
         let keys = storage.list_keys().unwrap();
         assert_eq!(keys.len(), 1);
-        assert_eq!(keys[0].allowed_providers, vec![ProviderKind::OpenAi]);
+        assert!(keys[0].allowed_providers.is_empty());
         assert!(
             app.last_secret
                 .as_deref()
@@ -1297,7 +1297,7 @@ mod tests {
 
         let keys = storage.list_keys().unwrap();
         assert_eq!(keys.len(), 1);
-        assert_eq!(keys[0].allowed_providers, vec![ProviderKind::OpenRouter]);
+        assert!(keys[0].allowed_providers.is_empty());
         assert_eq!(app.tab, super::Tab::Snippets);
     }
 }
