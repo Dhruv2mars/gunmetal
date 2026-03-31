@@ -775,7 +775,7 @@ async fn setup(
     writeln!(output, "Gunmetal setup")?;
     writeln!(
         output,
-        "This creates one provider profile, checks auth, syncs models, and creates one local key."
+        "This creates one provider profile, checks auth, syncs models, and creates one local key that works across providers."
     )?;
     writeln!(output)?;
     let provider = match args.provider {
@@ -873,7 +873,7 @@ async fn setup(
         let created = storage.create_key(NewGunmetalKey {
             name: key_name,
             scopes: default_scopes(),
-            allowed_providers: vec![profile.provider.clone()],
+            allowed_providers: Vec::new(),
             expires_at: None,
         })?;
         created_secret = Some(created.secret.clone());
