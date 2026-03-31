@@ -7,7 +7,10 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use gunmetal_core::{KeyScope, NewGunmetalKey, NewProviderProfile, ProviderKind, ProviderProfile};
+use gunmetal_core::{
+    KeyScope, NewGunmetalKey, NewProviderProfile, ProviderKind, ProviderLoginSession,
+    ProviderProfile,
+};
 use gunmetal_providers::ProviderHub;
 use gunmetal_storage::AppPaths;
 use ratatui::{
@@ -54,6 +57,41 @@ fn run_loop(
             break Ok(());
         }
     }
+}
+
+async fn start_browser_auth_via_service(
+    service_url: &str,
+    profile_id: uuid::Uuid,
+) -> Result<ProviderLoginSession> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{service_url}/app/api/profiles/{profile_id}/auth"))
+        .send()
+        .await?;
+    let response_status = response.status();
+    let body = response.json::<serde_json::Value>().await?;
+    if !response_status.is_success() {
+        let message = body
+            .get("error")
+            .and_then(|value| value.get("message"))
+            .and_then(|value| value.as_str())
+            .unwrap_or("auth request failed");
+        bail!(message.to_owned());
+    }
+
+    Ok(ProviderLoginSession {
+        login_id: "daemon-flow".to_owned(),
+        auth_url: body
+            .get("auth_url")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_owned(),
+        user_code: body
+            .get("user_code")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+        interval_seconds: None,
+    })
 }
 
 fn render(frame: &mut Frame, app: &DashboardApp) {
@@ -407,10 +445,17 @@ impl DashboardApp {
             return Ok(());
         };
         let providers = ProviderHub::new(paths.clone());
+        let service_url = self.service.url.clone();
         let message = runtime.block_on(async move {
             match profile.provider {
                 ProviderKind::Codex | ProviderKind::Copilot => {
-                    let session = providers.login(&profile, true).await?;
+                    let session = start_browser_auth_via_service(&service_url, profile.id).await?;
+                    if let Err(error) = webbrowser::open(&session.auth_url) {
+                        return Ok::<String, anyhow::Error>(format!(
+                            "Browser open failed: {error}. Auth URL: {}",
+                            session.auth_url
+                        ));
+                    }
                     Ok::<String, anyhow::Error>(format!(
                         "Opened auth in browser: {}",
                         session.auth_url

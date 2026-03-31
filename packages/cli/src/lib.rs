@@ -10,11 +10,15 @@ use std::{
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use gunmetal_core::{KeyScope, KeyState, NewGunmetalKey, NewProviderProfile, ProviderKind};
+use gunmetal_core::{
+    KeyScope, KeyState, NewGunmetalKey, NewProviderProfile, ProviderAuthState, ProviderKind,
+    ProviderLoginSession,
+};
 use gunmetal_daemon::DaemonState;
 use gunmetal_providers::{ProviderHub, builtin_providers};
 use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
+use uuid::Uuid;
 
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
@@ -457,43 +461,13 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 let profile_record = require_profile(&storage, &profile)?;
                 let browser_login = supports_browser_login(&profile_record.provider);
                 let session = if browser_login {
-                    let status = ensure_daemon_running(
+                    start_browser_auth_via_daemon(
                         paths,
+                        profile_record.id,
                         DEFAULT_HOST.parse().expect("default host ip"),
                         DEFAULT_PORT,
                     )
-                    .await?;
-                    let client = reqwest::Client::new();
-                    let response = client
-                        .post(format!(
-                            "{}/app/api/profiles/{}/auth",
-                            status.url, profile_record.id
-                        ))
-                        .send()
-                        .await?;
-                    let response_status = response.status();
-                    let body = response.json::<serde_json::Value>().await?;
-                    if !response_status.is_success() {
-                        let message = body
-                            .get("error")
-                            .and_then(|value| value.get("message"))
-                            .and_then(|value| value.as_str())
-                            .unwrap_or("auth request failed");
-                        return Err(anyhow::anyhow!(message.to_owned()));
-                    }
-                    gunmetal_core::ProviderLoginSession {
-                        login_id: "daemon-flow".to_owned(),
-                        auth_url: body
-                            .get("auth_url")
-                            .and_then(|value| value.as_str())
-                            .unwrap_or_default()
-                            .to_owned(),
-                        user_code: body
-                            .get("user_code")
-                            .and_then(|value| value.as_str())
-                            .map(ToOwned::to_owned),
-                        interval_seconds: None,
-                    }
+                    .await?
                 } else {
                     providers.login(&profile_record, !no_open).await?
                 };
@@ -698,6 +672,58 @@ async fn daemon_home(url: &str) -> Option<String> {
         .and_then(|service| service.get("home"))
         .and_then(|home| home.as_str())
         .map(ToOwned::to_owned)
+}
+
+async fn start_browser_auth_via_daemon(
+    paths: &AppPaths,
+    profile_id: Uuid,
+    host: IpAddr,
+    port: u16,
+) -> Result<ProviderLoginSession> {
+    let status = ensure_daemon_running(paths, host, port).await?;
+    start_browser_auth_via_service(&status.url, profile_id).await
+}
+
+async fn start_browser_auth_via_service(
+    service_url: &str,
+    profile_id: Uuid,
+) -> Result<ProviderLoginSession> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{service_url}/app/api/profiles/{profile_id}/auth"))
+        .send()
+        .await?;
+    let response_status = response.status();
+    let body = response.json::<serde_json::Value>().await?;
+    parse_browser_auth_session(response_status, body)
+}
+
+fn parse_browser_auth_session(
+    response_status: reqwest::StatusCode,
+    body: serde_json::Value,
+) -> Result<ProviderLoginSession> {
+    if !response_status.is_success() {
+        let message = body
+            .get("error")
+            .and_then(|value| value.get("message"))
+            .and_then(|value| value.as_str())
+            .unwrap_or("auth request failed");
+        anyhow::bail!(message.to_owned());
+    }
+
+    Ok(ProviderLoginSession {
+        login_id: "daemon-flow".to_owned(),
+        auth_url: body
+            .get("auth_url")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_owned(),
+        user_code: body
+            .get("user_code")
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
+        interval_seconds: None,
+    })
 }
 
 fn start_daemon_process(paths: &AppPaths, host: IpAddr, port: u16) -> Result<()> {
@@ -909,11 +935,24 @@ async fn setup(
         profile.name, profile.provider
     )?;
 
-    if supports_browser_login(&provider) {
-        let session = providers.login(&profile, !args.no_open).await?;
+    let browser_login = supports_browser_login(&provider);
+    let mut auth_ready_for_sync = true;
+    if browser_login {
+        let session = start_browser_auth_via_daemon(
+            paths,
+            profile.id,
+            DEFAULT_HOST.parse().expect("default host ip"),
+            DEFAULT_PORT,
+        )
+        .await?;
         writeln!(output, "Open this URL to finish auth: {}", session.auth_url)?;
         if let Some(user_code) = session.user_code.clone() {
             writeln!(output, "User code: {user_code}")?;
+        }
+        if !args.no_open
+            && let Err(error) = webbrowser::open(&session.auth_url)
+        {
+            writeln!(output, "Browser open failed: {error}")?;
         }
         if !args.no_wait {
             wait_for_provider_auth(
@@ -924,6 +963,7 @@ async fn setup(
             )
             .await?;
         } else {
+            auth_ready_for_sync = false;
             writeln!(
                 output,
                 "Auth still needs to finish. Run `gunmetal auth status {}` when done.",
@@ -933,13 +973,28 @@ async fn setup(
     } else {
         let status = providers.auth_status(&profile).await?;
         writeln!(output, "Auth: {}", status.label)?;
+        auth_ready_for_sync = auth_state_is_connected(&status.state);
     }
 
     let mut models = Vec::new();
-    if !args.no_sync {
+    if args.no_sync {
+        writeln!(output, "Skipping model sync because `--no-sync` was set.")?;
+    } else if auth_ready_for_sync {
         models = providers.sync_models(&profile).await?;
         storage.replace_models_for_profile(&profile.provider, Some(profile.id), &models)?;
         writeln!(output, "Synced {} models.", models.len())?;
+    } else if browser_login {
+        writeln!(
+            output,
+            "Skipping model sync until browser auth finishes for {}.",
+            profile.name
+        )?;
+    } else {
+        writeln!(
+            output,
+            "Skipping model sync until auth works for {}.",
+            profile.name
+        )?;
     }
 
     let mut created_secret = None;
@@ -1095,6 +1150,10 @@ fn normalize_scopes(scopes: Vec<KeyScope>) -> Vec<KeyScope> {
 
 fn default_scopes() -> Vec<KeyScope> {
     vec![KeyScope::Inference, KeyScope::ModelsRead]
+}
+
+fn auth_state_is_connected(state: &ProviderAuthState) -> bool {
+    matches!(state, ProviderAuthState::Connected)
 }
 
 fn supports_browser_login(provider: &ProviderKind) -> bool {
@@ -1289,11 +1348,23 @@ fn profile_credentials(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    use async_trait::async_trait;
     use clap::{CommandFactory, Parser};
+    use gunmetal_core::{ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile};
+    use gunmetal_providers::{
+        ProviderAdapter, ProviderAuthResult, ProviderDefinition, ProviderModelSyncResult,
+        ProviderRegistry,
+    };
+    use gunmetal_storage::AppPaths;
     use tempfile::TempDir;
 
     use super::{
-        AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand,
+        AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand, SetupArgs,
         StatusArgs, execute,
     };
 
@@ -1495,9 +1566,7 @@ mod tests {
         let paths =
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let mut output = Vec::new();
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
+        let port = 46849;
 
         execute(
             Command::Status(StatusArgs {
@@ -1627,5 +1696,133 @@ mod tests {
             &paths,
         )
         .unwrap();
+    }
+
+    #[derive(Clone)]
+    struct SetupAuthGateAdapter {
+        sync_called: Arc<AtomicBool>,
+    }
+
+    #[async_trait]
+    impl ProviderAdapter for SetupAuthGateAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            ProviderDefinition {
+                kind: ProviderKind::OpenRouter,
+                class: gunmetal_providers::ProviderClass::Gateway,
+                priority: 1,
+            }
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::SignedOut,
+                    label: "User not found.".to_owned(),
+                },
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
+            anyhow::bail!("browser login not used in this test")
+        }
+
+        async fn logout(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<Option<serde_json::Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderModelSyncResult> {
+            self.sync_called.store(true, Ordering::SeqCst);
+            anyhow::bail!("sync should have been skipped")
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &ProviderProfile,
+            _paths: &AppPaths,
+            _request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<gunmetal_providers::ProviderChatResult> {
+            anyhow::bail!("chat not used in this test")
+        }
+    }
+
+    #[tokio::test]
+    async fn setup_skips_sync_when_auth_is_not_connected() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let sync_called = Arc::new(AtomicBool::new(false));
+        let mut registry = ProviderRegistry::default();
+        registry.register(SetupAuthGateAdapter {
+            sync_called: sync_called.clone(),
+        });
+        let providers = gunmetal_providers::ProviderHub::with_registry(paths.clone(), registry);
+        let mut output = Vec::new();
+
+        super::setup(
+            &paths,
+            &providers,
+            &mut output,
+            SetupArgs {
+                provider: Some(ProviderKind::OpenRouter),
+                name: Some("gateway".to_owned()),
+                base_url: None,
+                api_key: Some("bad-key".to_owned()),
+                key_name: None,
+                bin_path: None,
+                cwd: None,
+                http_referer: None,
+                title: None,
+                no_open: false,
+                no_wait: false,
+                no_sync: false,
+                no_key: true,
+            },
+        )
+        .await
+        .unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("Auth: User not found."));
+        assert!(text.contains("Skipping model sync until auth works for gateway."));
+        assert!(!sync_called.load(Ordering::SeqCst));
+
+        let storage = paths.storage_handle().unwrap();
+        let profiles = storage.list_profiles().unwrap();
+        let models = storage.list_models().unwrap();
+        assert_eq!(profiles.len(), 1);
+        assert!(models.is_empty());
+    }
+
+    #[tokio::test]
+    async fn browser_auth_service_parses_daemon_session() {
+        let session = super::parse_browser_auth_session(
+            reqwest::StatusCode::OK,
+            serde_json::json!({
+                "auth_url": "https://example.com/auth",
+                "user_code": "ABCD-EFGH",
+            }),
+        )
+        .unwrap();
+        assert_eq!(session.login_id, "daemon-flow");
+        assert_eq!(session.auth_url, "https://example.com/auth");
+        assert_eq!(session.user_code.as_deref(), Some("ABCD-EFGH"));
     }
 }
