@@ -425,13 +425,12 @@ impl Storage {
     }
 
     pub fn delete_profile(&self, id: Uuid) -> Result<()> {
-        self.conn.execute(
-            "delete from models where profile_id = ?1",
+        self.conn
+            .execute("delete from models where profile_id = ?1", [id.to_string()])?;
+        let changed = self.conn.execute(
+            "delete from provider_profiles where id = ?1",
             [id.to_string()],
         )?;
-        let changed = self
-            .conn
-            .execute("delete from provider_profiles where id = ?1", [id.to_string()])?;
 
         if changed == 0 {
             bail!("profile not found");
@@ -511,24 +510,16 @@ impl Storage {
     pub fn replace_models_for_profile(
         &self,
         provider: &ProviderKind,
-        profile_id: Option<Uuid>,
+        _profile_id: Option<Uuid>,
         models: &[ModelDescriptor],
     ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        match profile_id {
-            Some(profile_id) => {
-                tx.execute(
-                    "delete from models where provider = ?1 and profile_id = ?2",
-                    params![provider.to_string(), profile_id.to_string()],
-                )?;
-            }
-            None => {
-                tx.execute(
-                    "delete from models where provider = ?1 and profile_id is null",
-                    params![provider.to_string()],
-                )?;
-            }
-        }
+        // Public model ids are provider-scoped today (for example `codex/gpt-5.4`), so
+        // Gunmetal can only expose one synced catalog per provider without collisions.
+        tx.execute(
+            "delete from models where provider = ?1",
+            params![provider.to_string()],
+        )?;
 
         for model in models {
             tx.execute(
@@ -1148,7 +1139,7 @@ mod tests {
     }
 
     #[test]
-    fn replacing_models_only_touches_one_profile_slice() {
+    fn replacing_models_keeps_other_providers_and_refreshes_one_provider_catalog() {
         let storage = Storage::open_in_memory().unwrap();
         let codex = storage
             .create_profile(NewProviderProfile {
@@ -1220,6 +1211,64 @@ mod tests {
                 .iter()
                 .any(|model| model.id == "openrouter/openai/gpt-5.1")
         );
+    }
+
+    #[test]
+    fn replacing_models_for_second_profile_of_same_provider_replaces_provider_catalog() {
+        let storage = Storage::open_in_memory().unwrap();
+        let first = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex-a".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        let second = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex-b".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::Codex,
+                Some(first.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(first.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::Codex,
+                Some(second.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(second.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        let models = storage.list_models().unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].id, "codex/gpt-5.4");
+        assert_eq!(models[0].profile_id, Some(second.id));
     }
 
     #[test]

@@ -797,10 +797,9 @@ impl ProviderAdapter for CodexAdapter {
         paths: &AppPaths,
         open_browser: bool,
     ) -> Result<ProviderLoginResult> {
-        let session = CodexClient::spawn(CodexClientOptions::from_profile(profile, paths))
-            .await?
-            .login()
-            .await?;
+        let client = self.cached_client(profile, paths).await?;
+        let client = client.lock().await;
+        let session = client.login().await?;
         if open_browser {
             let _ = webbrowser::open(&session.auth_url);
         }
