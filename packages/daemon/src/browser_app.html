@@ -458,6 +458,7 @@
     <script>
       const appState = {
         data: null,
+        banner: null,
       };
 
       const $ = (id) => document.getElementById(id);
@@ -471,7 +472,16 @@
       }
 
       function setBanner(message, tone = "default") {
+        appState.banner = { message, tone };
+        renderBanner();
+      }
+
+      function renderBanner() {
         const banner = $("message-banner");
+        if (!appState.banner) {
+          return;
+        }
+        const { message, tone } = appState.banner;
         banner.className = "banner";
         if (tone === "danger") banner.classList.add("danger");
         if (tone === "success") banner.classList.add("success");
@@ -490,6 +500,10 @@
       }
 
       function syncBanner(data) {
+        if (appState.banner) {
+          renderBanner();
+          return;
+        }
         if (!data.profiles.length) {
           $("message-banner").className = "banner";
           $("message-banner").innerHTML =
@@ -768,6 +782,7 @@
       });
 
       $("refresh-button").addEventListener("click", () => {
+        appState.banner = null;
         setSecret(null);
         loadState();
       });
