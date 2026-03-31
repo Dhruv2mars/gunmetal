@@ -586,8 +586,14 @@ pub async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceSt
 
 async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
     let pid_file = paths.daemon_pid_file();
-    let Some(pid) = read_pid(&pid_file)? else {
+    let Some(pid) = managed_daemon_pid(paths)? else {
         let mut status = daemon_status(paths, host, port).await?;
+        if status.running {
+            status.note = Some(
+                "Gunmetal is running, but not under managed daemon state. Stop the foreground `gunmetal serve` process directly.".to_owned(),
+            );
+            return Ok(status);
+        }
         status.state = "stopped".to_owned();
         status.note = Some("Gunmetal was already stopped.".to_owned());
         return Ok(status);
@@ -613,7 +619,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
 pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
     let url = format!("http://{host}:{port}");
     let health_url = format!("{url}/health");
-    let pid = read_pid(&paths.daemon_pid_file())?;
+    let pid = managed_daemon_pid(paths)?;
     match reqwest::get(&health_url).await {
         Ok(response) => {
             let health = response.text().await.ok();
@@ -784,6 +790,18 @@ fn read_pid(path: &std::path::Path) -> Result<Option<u32>> {
     }
     let raw = fs::read_to_string(path)?;
     Ok(raw.trim().parse::<u32>().ok())
+}
+
+fn managed_daemon_pid(paths: &AppPaths) -> Result<Option<u32>> {
+    let pid_file = paths.daemon_pid_file();
+    let Some(pid) = read_pid(&pid_file)? else {
+        return Ok(None);
+    };
+    if process_exists(pid) {
+        return Ok(Some(pid));
+    }
+    let _ = fs::remove_file(pid_file);
+    Ok(None)
 }
 
 fn process_exists(pid: u32) -> bool {
@@ -1235,7 +1253,10 @@ fn write_service_report(
 ) -> Result<()> {
     match verb {
         ServiceVerb::Start if status.running => writeln!(output, "Gunmetal is running.")?,
-        ServiceVerb::Stop if status.running => writeln!(output, "Gunmetal is still stopping.")?,
+        ServiceVerb::Stop if status.state == "stopping" => {
+            writeln!(output, "Gunmetal is still stopping.")?
+        }
+        ServiceVerb::Stop if status.running => writeln!(output, "Gunmetal is running.")?,
         ServiceVerb::Stop => writeln!(output, "Gunmetal is stopped.")?,
         ServiceVerb::Status if status.running => writeln!(output, "Gunmetal is running.")?,
         ServiceVerb::Status => writeln!(output, "Gunmetal is not running.")?,
@@ -1560,6 +1581,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn managed_daemon_pid_clears_stale_pid_files() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        std::fs::write(paths.daemon_pid_file(), "999999").unwrap();
+
+        let pid = super::managed_daemon_pid(&paths).unwrap();
+
+        assert_eq!(pid, None);
+        assert!(!paths.daemon_pid_file().exists());
+    }
+
     #[tokio::test]
     async fn status_output_tells_user_how_to_recover_when_daemon_is_stopped() {
         let temp = TempDir::new().unwrap();
@@ -1583,6 +1617,32 @@ mod tests {
         assert!(text.contains("Gunmetal is not running."));
         assert!(text.contains("Run `gunmetal start` or open `gunmetal`."));
         assert!(text.contains(&format!("http://127.0.0.1:{port}/v1")));
+    }
+
+    #[test]
+    fn stop_output_for_unmanaged_running_daemon_does_not_claim_shutdown() {
+        let mut output = Vec::new();
+
+        super::write_service_report(
+            &mut output,
+            &super::ServiceStatus {
+                state: "running".to_owned(),
+                running: true,
+                pid: None,
+                url: "http://127.0.0.1:4684".to_owned(),
+                health: Some("{\"status\":\"ok\"}".to_owned()),
+                home: None,
+                note: Some(
+                    "Gunmetal is running, but not under managed daemon state. Stop the foreground `gunmetal serve` process directly.".to_owned(),
+                ),
+            },
+            super::ServiceVerb::Stop,
+        )
+        .unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("Gunmetal is running."));
+        assert!(!text.contains("Gunmetal is still stopping."));
     }
 
     #[tokio::test]
