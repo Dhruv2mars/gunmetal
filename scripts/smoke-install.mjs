@@ -71,6 +71,7 @@ const smokeEnv = {
   GUNMETAL_INSTALL_ROOT: installRoot,
   GUNMETAL_HOME: appHome,
 };
+let globalLauncher = null;
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url || "/", "http://127.0.0.1");
@@ -174,7 +175,7 @@ try {
     fail(`expected installed version ${packageVersion}, got ${meta.version}`);
   }
 
-  const globalLauncher = process.platform === "win32"
+  globalLauncher = process.platform === "win32"
     ? join(globalPrefix, "gunmetal.cmd")
     : join(globalPrefix, "bin", "gunmetal");
 
@@ -410,6 +411,15 @@ function cleanup() {
 }
 
 function fail(message) {
+  if (globalLauncher && existsSync(globalLauncher)) {
+    try {
+      run(globalLauncher, ["stop"], {
+        cwd: repoRoot,
+        env: smokeEnv,
+        capture: true,
+      });
+    } catch {}
+  }
   cleanup();
   console.error(`gunmetal install smoke: ${message}`);
   process.exit(1);

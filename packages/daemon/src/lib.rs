@@ -83,26 +83,11 @@ struct RequestLogger {
 
 #[derive(Clone, Default)]
 struct RequestCache {
-    keys: Arc<Mutex<HashMap<String, GunmetalKey>>>,
     models: Arc<Mutex<HashMap<String, ModelDescriptor>>>,
     profiles: Arc<Mutex<HashMap<Uuid, ProviderProfile>>>,
 }
 
 impl RequestCache {
-    fn key(&self, secret: &str) -> Option<GunmetalKey> {
-        let now = chrono::Utc::now();
-        self.keys
-            .lock()
-            .unwrap()
-            .get(secret)
-            .filter(|key| key.is_usable_at(now))
-            .cloned()
-    }
-
-    fn insert_key(&self, secret: String, key: GunmetalKey) {
-        self.keys.lock().unwrap().insert(secret, key);
-    }
-
     fn model(&self, id: &str) -> Option<ModelDescriptor> {
         self.models.lock().unwrap().get(id).cloned()
     }
@@ -120,7 +105,6 @@ impl RequestCache {
     }
 
     fn clear(&self) {
-        self.keys.lock().unwrap().clear();
         self.models.lock().unwrap().clear();
         self.profiles.lock().unwrap().clear();
     }
@@ -515,23 +499,17 @@ fn authorize(
     required_scope: KeyScope,
 ) -> Result<gunmetal_core::GunmetalKey, ApiError> {
     let secret = bearer_token(headers)?;
-    let key = if let Some(key) = state.request_cache.key(&secret) {
-        key
-    } else {
-        let key = state
-            .storage
-            .authenticate_key(&secret)
-            .map_err(internal_api_error)?
-            .ok_or_else(|| {
-                ApiError::new(
-                    StatusCode::UNAUTHORIZED,
-                    "invalid_api_key",
-                    "Invalid or expired Gunmetal key. Create a new key in `gunmetal setup` or `gunmetal keys create`.".to_owned(),
-                )
-            })?;
-        state.request_cache.insert_key(secret, key.clone());
-        key
-    };
+    let key = state
+        .storage
+        .authenticate_key(&secret)
+        .map_err(internal_api_error)?
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                "invalid_api_key",
+                "Invalid or expired Gunmetal key. Create a new key in `gunmetal setup` or `gunmetal keys create`.".to_owned(),
+            )
+        })?;
 
     if !key.scopes.contains(&required_scope) {
         return Err(ApiError::new(
@@ -1783,9 +1761,9 @@ mod tests {
         response::Response,
     };
     use gunmetal_core::{
-        ChatCompletionResult, ChatMessage, ChatRole, KeyScope, NewGunmetalKey, NewProviderProfile,
-        ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderLoginSession, RequestMode,
-        TokenUsage,
+        ChatCompletionResult, ChatMessage, ChatRole, KeyScope, KeyState, NewGunmetalKey,
+        NewProviderProfile, ProviderAuthState, ProviderAuthStatus, ProviderKind,
+        ProviderLoginSession, RequestMode, TokenUsage,
     };
     use gunmetal_providers::{
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderDefinition, ProviderHub,
@@ -2155,6 +2133,46 @@ mod tests {
                 .unwrap()
                 .contains("gunmetal keys create")
         );
+    }
+
+    #[tokio::test]
+    async fn revoked_key_is_rejected_even_after_it_was_cached() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::ModelsRead], vec![ProviderKind::Codex]);
+        let state = fixture.state();
+
+        let first = app(state.clone())
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let key = fixture.storage.authenticate_key(&secret).unwrap().unwrap();
+        fixture
+            .storage
+            .set_key_state(key.id, KeyState::Revoked)
+            .unwrap();
+
+        let second = app(state)
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/models")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.status(), StatusCode::UNAUTHORIZED);
+        let body = to_json(second).await;
+        assert_eq!(body["error"]["code"], "invalid_api_key");
     }
 
     #[tokio::test]
