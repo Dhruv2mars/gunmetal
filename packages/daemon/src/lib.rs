@@ -155,6 +155,7 @@ pub fn app(state: DaemonState) -> Router {
         .route("/app/api/profiles/{id}/sync", post(sync_profile))
         .route("/app/api/profiles/{id}/logout", post(logout_profile))
         .route("/app/api/profiles/{id}/keys", post(create_profile_key))
+        .route("/app/api/profiles/{id}", delete(delete_profile))
         .route("/app/api/keys/{id}/state", post(set_key_state))
         .route("/app/api/keys/{id}", delete(delete_key))
         .route("/v1/models", get(list_models))
@@ -333,6 +334,25 @@ async fn create_profile_key(
                 user_code: None,
                 secret: Some(created.secret),
             })
+            .into_response()
+        }
+        Err(error) => internal_error(error),
+    }
+}
+
+async fn delete_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) -> Response {
+    let profile = match require_profile(&state, id) {
+        Ok(profile) => profile,
+        Err(error) => return error.into_response(),
+    };
+
+    match state.storage.delete_profile(profile.id) {
+        Ok(()) => {
+            state.request_cache.clear();
+            Json(OperatorActionResponse::message(format!(
+                "Deleted profile {}.",
+                profile.name
+            )))
             .into_response()
         }
         Err(error) => internal_error(error),
@@ -2025,6 +2045,53 @@ mod tests {
         assert_eq!(model_ids.len(), 2);
         assert!(model_ids.contains(&"codex/gpt-5.4"));
         assert!(model_ids.contains(&"zen/gpt-5.4"));
+    }
+
+    #[tokio::test]
+    async fn operator_can_delete_profile_and_its_models() {
+        let fixture = Fixture::new();
+        let profile = fixture
+            .storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Zen,
+                name: "zen".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: Some(json!({ "api_key": "zen_test_key" })),
+            })
+            .unwrap();
+        fixture
+            .storage
+            .replace_models_for_profile(
+                &ProviderKind::Zen,
+                Some(profile.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "zen/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Zen,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/app/api/profiles/{}", profile.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["message"], "Deleted profile zen.");
+        assert!(fixture.storage.get_profile(profile.id).unwrap().is_none());
+        assert!(fixture.storage.list_models().unwrap().is_empty());
     }
 
     #[tokio::test]

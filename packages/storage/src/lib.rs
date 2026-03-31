@@ -130,6 +130,10 @@ impl StorageHandle {
         self.storage()?.create_profile(draft)
     }
 
+    pub fn delete_profile(&self, id: Uuid) -> Result<()> {
+        self.storage()?.delete_profile(id)
+    }
+
     pub fn list_profiles(&self) -> Result<Vec<ProviderProfile>> {
         self.storage()?.list_profiles()
     }
@@ -418,6 +422,22 @@ impl Storage {
 
         self.get_profile(id)?
             .ok_or_else(|| anyhow!("created profile was not persisted"))
+    }
+
+    pub fn delete_profile(&self, id: Uuid) -> Result<()> {
+        self.conn.execute(
+            "delete from models where profile_id = ?1",
+            [id.to_string()],
+        )?;
+        let changed = self
+            .conn
+            .execute("delete from provider_profiles where id = ?1", [id.to_string()])?;
+
+        if changed == 0 {
+            bail!("profile not found");
+        }
+
+        Ok(())
     }
 
     pub fn list_profiles(&self) -> Result<Vec<ProviderProfile>> {
@@ -1012,6 +1032,40 @@ mod tests {
                 .and_then(|value| value.family.as_deref()),
             Some("gpt")
         );
+    }
+
+    #[test]
+    fn deletes_profiles_and_their_models() {
+        let storage = Storage::open_in_memory().unwrap();
+        let profile = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenRouter,
+                name: "team".to_owned(),
+                base_url: Some("https://openrouter.ai/api/v1".to_owned()),
+                enabled: true,
+                credentials: Some(json!({ "api_key": "secret" })),
+            })
+            .unwrap();
+
+        storage
+            .replace_models_for_profile(
+                &ProviderKind::OpenRouter,
+                Some(profile.id),
+                &[gunmetal_core::ModelDescriptor {
+                    id: "openrouter/openai/gpt-5.1".to_owned(),
+                    provider: ProviderKind::OpenRouter,
+                    profile_id: Some(profile.id),
+                    upstream_name: "openai/gpt-5.1".to_owned(),
+                    display_name: "GPT-5.1".to_owned(),
+                    metadata: None,
+                }],
+            )
+            .unwrap();
+
+        storage.delete_profile(profile.id).unwrap();
+
+        assert!(storage.get_profile(profile.id).unwrap().is_none());
+        assert!(storage.list_models().unwrap().is_empty());
     }
 
     #[test]
