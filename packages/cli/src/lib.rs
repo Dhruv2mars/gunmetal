@@ -455,7 +455,48 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
             } => {
                 let storage = paths.storage_handle()?;
                 let profile_record = require_profile(&storage, &profile)?;
-                let session = providers.login(&profile_record, !no_open).await?;
+                let browser_login = supports_browser_login(&profile_record.provider);
+                let session = if browser_login {
+                    let status = ensure_daemon_running(
+                        paths,
+                        DEFAULT_HOST.parse().expect("default host ip"),
+                        DEFAULT_PORT,
+                    )
+                    .await?;
+                    let client = reqwest::Client::new();
+                    let response = client
+                        .post(format!(
+                            "{}/app/api/profiles/{}/auth",
+                            status.url, profile_record.id
+                        ))
+                        .send()
+                        .await?;
+                    let response_status = response.status();
+                    let body = response.json::<serde_json::Value>().await?;
+                    if !response_status.is_success() {
+                        let message = body
+                            .get("error")
+                            .and_then(|value| value.get("message"))
+                            .and_then(|value| value.as_str())
+                            .unwrap_or("auth request failed");
+                        return Err(anyhow::anyhow!(message.to_owned()));
+                    }
+                    gunmetal_core::ProviderLoginSession {
+                        login_id: "daemon-flow".to_owned(),
+                        auth_url: body
+                            .get("auth_url")
+                            .and_then(|value| value.as_str())
+                            .unwrap_or_default()
+                            .to_owned(),
+                        user_code: body
+                            .get("user_code")
+                            .and_then(|value| value.as_str())
+                            .map(ToOwned::to_owned),
+                        interval_seconds: None,
+                    }
+                } else {
+                    providers.login(&profile_record, !no_open).await?
+                };
                 let user_code = session.user_code.clone();
                 let interval_seconds = session.interval_seconds;
                 writeln!(
@@ -471,7 +512,13 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 if let Some(interval_seconds) = interval_seconds {
                     writeln!(output, "Gunmetal will check every {}s.", interval_seconds)?;
                 }
-                if !no_wait && supports_browser_login(&profile_record.provider) {
+                if !no_open
+                    && browser_login
+                    && let Err(error) = webbrowser::open(&session.auth_url)
+                {
+                    writeln!(output, "Browser open failed: {error}")?;
+                }
+                if !no_wait && browser_login {
                     wait_for_provider_auth(
                         &providers,
                         &profile_record,
@@ -531,6 +578,7 @@ pub async fn ensure_daemon_running(
 ) -> Result<ServiceStatus> {
     let current = daemon_status(paths, host, port).await?;
     if current.running {
+        ensure_daemon_matches_home(&current, paths)?;
         return Ok(ServiceStatus {
             note: Some("Gunmetal was already running.".to_owned()),
             ..current
@@ -542,6 +590,7 @@ pub async fn ensure_daemon_running(
 
     start_daemon_process(paths, host, port)?;
     let status = wait_for_health(paths, host, port, 20).await?;
+    ensure_daemon_matches_home(&status, paths)?;
     if status.running {
         return Ok(ServiceStatus {
             note: Some("Gunmetal started.".to_owned()),
@@ -594,12 +643,14 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
     match reqwest::get(&health_url).await {
         Ok(response) => {
             let health = response.text().await.ok();
+            let home = daemon_home(&url).await;
             Ok(ServiceStatus {
                 state: "running".to_owned(),
                 running: true,
                 pid,
                 url,
                 health,
+                home,
                 note: None,
             })
         }
@@ -612,6 +663,7 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                         pid: Some(pid),
                         url,
                         health: None,
+                        home: None,
                         note: Some("Gunmetal is still starting.".to_owned()),
                     });
                 }
@@ -622,6 +674,7 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                     pid: None,
                     url,
                     health: None,
+                    home: None,
                     note: Some("Removed stale daemon state.".to_owned()),
                 });
             }
@@ -631,10 +684,20 @@ pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<
                 pid: None,
                 url,
                 health: None,
+                home: None,
                 note: None,
             })
         }
     }
+}
+
+async fn daemon_home(url: &str) -> Option<String> {
+    let response = reqwest::get(format!("{url}/app/api/state")).await.ok()?;
+    let body = response.json::<serde_json::Value>().await.ok()?;
+    body.get("service")
+        .and_then(|service| service.get("home"))
+        .and_then(|home| home.as_str())
+        .map(ToOwned::to_owned)
 }
 
 fn start_daemon_process(paths: &AppPaths, host: IpAddr, port: u16) -> Result<()> {
@@ -754,7 +817,21 @@ pub struct ServiceStatus {
     pub pid: Option<u32>,
     pub url: String,
     pub health: Option<String>,
+    pub home: Option<String>,
     pub note: Option<String>,
+}
+
+fn ensure_daemon_matches_home(status: &ServiceStatus, paths: &AppPaths) -> Result<()> {
+    let expected = paths.root.display().to_string();
+    if let Some(home) = status.home.as_deref()
+        && home != expected
+    {
+        anyhow::bail!(
+            "port already serves Gunmetal home {}. stop it first or switch back to that home.",
+            home
+        );
+    }
+    Ok(())
 }
 
 fn stop_timeout_status(status: ServiceStatus) -> ServiceStatus {
@@ -1397,6 +1474,7 @@ mod tests {
             pid: Some(42),
             url: "http://127.0.0.1:4684".to_owned(),
             health: Some("{\"status\":\"ok\"}".to_owned()),
+            home: None,
             note: None,
         };
 
@@ -1488,5 +1566,66 @@ mod tests {
         assert!(message.contains("profile 'missing' not found"));
         assert!(message.contains("gunmetal setup"));
         assert!(message.contains("gunmetal profiles list"));
+    }
+
+    #[test]
+    fn daemon_home_mismatch_is_reported_clearly() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let error = super::ensure_daemon_matches_home(
+            &super::ServiceStatus {
+                state: "running".to_owned(),
+                running: true,
+                pid: Some(7),
+                url: "http://127.0.0.1:4684".to_owned(),
+                health: Some("{\"status\":\"ok\"}".to_owned()),
+                home: Some("/tmp/other-home".to_owned()),
+                note: None,
+            },
+            &paths,
+        )
+        .unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("port already serves Gunmetal home /tmp/other-home")
+        );
+    }
+
+    #[test]
+    fn daemon_home_match_or_unknown_is_allowed() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+
+        super::ensure_daemon_matches_home(
+            &super::ServiceStatus {
+                state: "running".to_owned(),
+                running: true,
+                pid: Some(7),
+                url: "http://127.0.0.1:4684".to_owned(),
+                health: Some("{\"status\":\"ok\"}".to_owned()),
+                home: Some(paths.root.display().to_string()),
+                note: None,
+            },
+            &paths,
+        )
+        .unwrap();
+
+        super::ensure_daemon_matches_home(
+            &super::ServiceStatus {
+                state: "running".to_owned(),
+                running: true,
+                pid: Some(7),
+                url: "http://127.0.0.1:4684".to_owned(),
+                health: Some("{\"status\":\"ok\"}".to_owned()),
+                home: None,
+                note: None,
+            },
+            &paths,
+        )
+        .unwrap();
     }
 }
