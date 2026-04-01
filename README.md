@@ -16,19 +16,23 @@ Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
 
 ```bash
 gunmetal setup
+gunmetal web
 gunmetal start
 gunmetal status
 ```
 
 `gunmetal setup` is the golden path. It saves one profile, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
 
+`gunmetal web` opens the local browser surface at `http://127.0.0.1:4684/app`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
+
 ## Start Here
 
 1. Install: `npm i -g @dhruv2mars/gunmetal`
 2. Run `gunmetal setup`
-3. Run `gunmetal start`
-4. Call `GET /v1/models`
-5. Call `POST /v1/chat/completions`
+3. Run `gunmetal web` for the local browser UI, or `gunmetal start` for the API only
+4. Open `http://127.0.0.1:4684/app` if you want the local control plane
+5. Call `GET /v1/models`
+6. Call `POST /v1/chat/completions`
 
 ```bash
 export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
@@ -89,6 +93,7 @@ Gunmetal works when the app talks to Gunmetal:
 
 ```bash
 gunmetal setup
+gunmetal web
 gunmetal start
 gunmetal status
 gunmetal profiles list
