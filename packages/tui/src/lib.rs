@@ -393,7 +393,7 @@ impl DashboardApp {
                 self.status_message = "Cancelled profile creation.".to_owned();
             }
             KeyCode::Backspace => {
-                prompt.current_value_mut().pop();
+                prompt.fields[prompt.index].pop_char();
             }
             KeyCode::Enter => {
                 if prompt.advance() {
@@ -403,7 +403,7 @@ impl DashboardApp {
             KeyCode::Char(ch)
                 if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT =>
             {
-                prompt.current_value_mut().push(ch);
+                prompt.fields[prompt.index].push_char(ch);
             }
             _ => {}
         }
@@ -948,10 +948,6 @@ impl NewProfilePrompt {
         &self.fields[self.index].value
     }
 
-    fn current_value_mut(&mut self) -> &mut String {
-        &mut self.fields[self.index].value
-    }
-
     fn advance(&mut self) -> bool {
         if self.index + 1 >= self.fields.len() {
             true
@@ -987,6 +983,7 @@ impl NewProfilePrompt {
 struct PromptField {
     label: String,
     value: String,
+    pristine: bool,
 }
 
 impl PromptField {
@@ -994,7 +991,25 @@ impl PromptField {
         Self {
             label: label.to_owned(),
             value: value.to_owned(),
+            pristine: !value.is_empty(),
         }
+    }
+
+    fn push_char(&mut self, ch: char) {
+        if self.pristine {
+            self.value.clear();
+            self.pristine = false;
+        }
+        self.value.push(ch);
+    }
+
+    fn pop_char(&mut self) {
+        if self.pristine {
+            self.value.clear();
+            self.pristine = false;
+            return;
+        }
+        self.value.pop();
     }
 }
 
@@ -1382,5 +1397,41 @@ mod tests {
             .join("\n");
 
         assert!(rendered.contains("k  create a shared Gunmetal key"));
+    }
+
+    #[test]
+    fn typing_provider_replaces_prefilled_default_in_new_profile_prompt() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let mut app = DashboardApp::load(
+            &paths,
+            ServiceSnapshot {
+                state: "running".to_owned(),
+                running: true,
+                url: "http://127.0.0.1:4684".to_owned(),
+                pid: Some(1),
+            },
+        )
+        .unwrap();
+        let runtime = Runtime::new().unwrap();
+
+        app.handle_key(
+            KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE),
+            &runtime,
+            &paths,
+        )
+        .unwrap();
+
+        for ch in "openai".chars() {
+            app.handle_key(
+                KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE),
+                &runtime,
+                &paths,
+            )
+            .unwrap();
+        }
+
+        assert_eq!(app.prompt.as_ref().unwrap().fields[0].value, "openai");
     }
 }
