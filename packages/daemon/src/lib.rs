@@ -595,6 +595,7 @@ fn outgoing_response(result: ChatCompletionResult) -> OutgoingResponsesResponse 
         created_at: chrono::Utc::now().timestamp(),
         status: "completed",
         model: result.model,
+        output_text: output_text.clone(),
         output: vec![OutgoingResponseItem {
             id: message_id,
             item_type: "message",
@@ -1371,6 +1372,7 @@ struct OutgoingResponsesResponse {
     created_at: i64,
     status: &'static str,
     model: String,
+    output_text: String,
     output: Vec<OutgoingResponseItem>,
     usage: OutgoingResponseUsage,
 }
@@ -2444,6 +2446,7 @@ mod tests {
         let body = to_json(response).await;
         assert_eq!(body["object"], "response");
         assert_eq!(body["status"], "completed");
+        assert_eq!(body["output_text"], "hello from codex");
         assert_eq!(body["output"][0]["type"], "message");
         assert_eq!(body["output"][0]["role"], "assistant");
         assert_eq!(body["output"][0]["content"][0]["type"], "output_text");
