@@ -1930,6 +1930,70 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn operator_save_profile_updates_matching_provider_and_name() {
+        let fixture = Fixture::new();
+
+        let first = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/app/api/profiles")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "provider": "openai",
+                            "name": "browser",
+                            "base_url": "https://one.example/v1",
+                            "api_key": "first"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let second = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/app/api/profiles")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "provider": "openai",
+                            "name": "browser",
+                            "base_url": "https://two.example/v1",
+                            "api_key": "second"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.status(), StatusCode::OK);
+
+        let profiles = fixture.storage.list_profiles().unwrap();
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].provider, ProviderKind::OpenAi);
+        assert_eq!(profiles[0].name, "browser");
+        assert_eq!(
+            profiles[0].base_url.as_deref(),
+            Some("https://two.example/v1")
+        );
+        assert_eq!(
+            profiles[0]
+                .credentials
+                .as_ref()
+                .and_then(|value| value.get("api_key"))
+                .and_then(|value| value.as_str()),
+            Some("second")
+        );
+    }
+
+    #[tokio::test]
     async fn operator_created_key_can_list_models_from_any_provider() {
         let fixture = Fixture::new();
         let codex = fixture

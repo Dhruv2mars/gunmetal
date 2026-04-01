@@ -398,11 +398,44 @@ impl Storage {
     }
 
     pub fn create_profile(&self, draft: NewProviderProfile) -> Result<ProviderProfile> {
-        if draft.name.trim().is_empty() {
+        let name = draft.name.trim();
+        if name.is_empty() {
             bail!("profile name cannot be empty");
         }
 
         let now = Utc::now();
+        let provider = draft.provider.to_string();
+        if let Some(existing) = self
+            .conn
+            .query_row(
+                "select id from provider_profiles where provider = ?1 and name = ?2",
+                params![provider, name],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?
+        {
+            let id = parse_uuid(existing)?;
+            self.conn.execute(
+                "update provider_profiles
+                 set base_url = ?2,
+                     enabled = ?3,
+                     credentials_json = ?4,
+                     updated_at = ?5
+                 where id = ?1",
+                params![
+                    id.to_string(),
+                    draft.base_url,
+                    if draft.enabled { 1 } else { 0 },
+                    draft.credentials.map(|value| value.to_string()),
+                    to_rfc3339(now),
+                ],
+            )?;
+
+            return self
+                .get_profile(id)?
+                .ok_or_else(|| anyhow!("updated profile was not persisted"));
+        }
+
         let id = Uuid::new_v4();
         self.conn.execute(
             "insert into provider_profiles (
@@ -410,8 +443,8 @@ impl Storage {
             ) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 id.to_string(),
-                draft.provider.to_string(),
-                draft.name,
+                provider,
+                name,
                 draft.base_url,
                 if draft.enabled { 1 } else { 0 },
                 draft.credentials.map(|value| value.to_string()),
@@ -1022,6 +1055,47 @@ mod tests {
                 .as_ref()
                 .and_then(|value| value.family.as_deref()),
             Some("gpt")
+        );
+    }
+
+    #[test]
+    fn creating_same_provider_and_name_updates_existing_profile() {
+        let storage = Storage::open_in_memory().unwrap();
+        let first = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "default".to_owned(),
+                base_url: Some("https://one.example/v1".to_owned()),
+                enabled: true,
+                credentials: Some(json!({ "api_key": "first" })),
+            })
+            .unwrap();
+
+        let updated = storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "default".to_owned(),
+                base_url: Some("https://two.example/v1".to_owned()),
+                enabled: true,
+                credentials: Some(json!({ "api_key": "second" })),
+            })
+            .unwrap();
+
+        let profiles = storage.list_profiles().unwrap();
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(updated.id, first.id);
+        assert_eq!(profiles[0].id, first.id);
+        assert_eq!(
+            profiles[0].base_url.as_deref(),
+            Some("https://two.example/v1")
+        );
+        assert_eq!(
+            profiles[0]
+                .credentials
+                .as_ref()
+                .and_then(|value| value.get("api_key"))
+                .and_then(|value| value.as_str()),
+            Some("second")
         );
     }
 
