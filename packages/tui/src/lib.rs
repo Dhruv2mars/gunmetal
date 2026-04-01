@@ -602,7 +602,7 @@ impl DashboardApp {
             Line::from("a  browser auth for codex/copilot; auth check for key-based providers"),
             Line::from("s  sync models from upstream and enrich from models.dev"),
             Line::from("o  clear provider auth"),
-            Line::from("k  create a provider-scoped Gunmetal key"),
+            Line::from("k  create a shared Gunmetal key"),
         ]
     }
 
@@ -1344,5 +1344,43 @@ mod tests {
         assert_eq!(keys.len(), 1);
         assert!(keys[0].allowed_providers.is_empty());
         assert_eq!(app.tab, super::Tab::Snippets);
+    }
+
+    #[test]
+    fn profile_detail_describes_k_as_shared_key_creation() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        paths
+            .storage_handle()
+            .unwrap()
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::OpenAi,
+                name: "one".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+
+        let app = DashboardApp::load(
+            &paths,
+            ServiceSnapshot {
+                state: "running".to_owned(),
+                running: true,
+                url: "http://127.0.0.1:4684".to_owned(),
+                pid: Some(1),
+            },
+        )
+        .unwrap();
+
+        let rendered = app
+            .profile_detail_lines()
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        assert!(rendered.contains("k  create a shared Gunmetal key"));
     }
 }
