@@ -223,6 +223,24 @@ impl OpenRouterClient {
 
                 if !response.status().is_success() {
                     let error = read_error(response).await;
+                    if error.status == 401 && error.message == "User not found." {
+                        let models_probe = self
+                            .http
+                            .get(format!("{}/models", options.base_url))
+                            .headers(self.headers(options, api_key)?)
+                            .send()
+                            .await?;
+                        if models_probe.status().is_success() {
+                            return Ok(OpenRouterAuthStatusResult {
+                                credentials: options
+                                    .persisted_credentials_with_api_key(options.api_key.clone()),
+                                status: ProviderAuthStatus {
+                                    state: ProviderAuthState::Connected,
+                                    label: "OpenRouter API key".to_owned(),
+                                },
+                            });
+                        }
+                    }
                     let state = if error.status == 401 {
                         ProviderAuthState::Error
                     } else {
@@ -281,7 +299,7 @@ impl OpenRouterClient {
                 let api_key = Self::api_key(options)?;
                 let response = self
                     .http
-                    .get(format!("{}/models/user", options.base_url))
+                    .get(format!("{}/models", options.base_url))
                     .headers(self.headers(options, api_key)?)
                     .send()
                     .await?;
@@ -639,7 +657,7 @@ mod tests {
             .mount(&server)
             .await;
         Mock::given(method("GET"))
-            .and(path("/models/user"))
+            .and(path("/models"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
                 "data": [{
                     "id": "openai/gpt-5.1",
@@ -715,6 +733,48 @@ mod tests {
             "GUNMETAL_OPENROUTER_OK"
         );
         assert_eq!(completion.completion.usage.total_tokens, Some(7));
+    }
+
+    #[tokio::test]
+    async fn auth_status_falls_back_to_models_probe_when_key_endpoint_rejects_live_key() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/key"))
+            .respond_with(
+                ResponseTemplate::new(401)
+                    .set_body_json(json!({ "error": { "message": "User not found." } })),
+            )
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/models"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "data": [{
+                    "id": "openai/gpt-5.1",
+                    "canonical_slug": "openai/gpt-5.1",
+                    "name": "GPT-5.1"
+                }]
+            })))
+            .mount(&server)
+            .await;
+
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::OpenRouter,
+            name: "openrouter".to_owned(),
+            base_url: Some(server.uri()),
+            enabled: true,
+            credentials: Some(json!({ "api_key": "sk-or-test" })),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let client =
+            OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(&profile));
+
+        let status = client.auth_status(&profile).await.unwrap();
+
+        assert_eq!(status.status.state, ProviderAuthState::Connected);
+        assert_eq!(status.status.label, "OpenRouter API key");
     }
 
     #[tokio::test]
