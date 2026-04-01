@@ -75,6 +75,8 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.doesNotMatch(rootReadme, /run Gunmetal from source/i);
   assert.match(rootReadme, /npm i -g @dhruv2mars\/gunmetal/);
   assert.match(rootReadme, /gunmetal setup/);
+  assert.match(rootReadme, /gunmetal web/);
+  assert.match(rootReadme, /127\.0\.0\.1:4684\/app/);
   assert.match(rootReadme, /curl .*\/v1\/models/s);
 
   assert.doesNotMatch(npmReadme, /not published yet/);
