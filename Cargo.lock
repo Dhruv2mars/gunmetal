@@ -901,7 +901,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -913,7 +913,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-cli"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-core"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "chrono",
  "serde",
@@ -943,7 +943,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-daemon"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-providers"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -987,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-storage"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1002,7 +1002,7 @@ dependencies = [
 
 [[package]]
 name = "gunmetal-tui"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "arboard",
