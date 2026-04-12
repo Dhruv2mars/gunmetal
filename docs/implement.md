@@ -1,0 +1,12 @@
+# Implement
+- Read `docs/prompt.md` and `docs/plans.md` before substantial work.
+- Treat those files as the source of truth for the active task in this repo.
+- Plan first. If the task meaningfully changes scope, update `docs/prompt.md` and `docs/plans.md` before broad implementation.
+- Work one milestone at a time.
+- Keep diffs scoped to the active milestone.
+- Verify after each milestone when possible.
+- Fix failures before moving on.
+- Update `docs/plans.md` as milestone status, decisions, risks, or validation steps change.
+- Update `docs/documentation.md` so it always matches the current reality of the project and task.
+- When a task depends on prior behavior, consult git history instead of relying on memory.
+- Do not let the durable-memory files drift into placeholders or generic notes.
