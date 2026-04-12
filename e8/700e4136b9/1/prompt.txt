@@ -1,7 +1,1 @@
-pre-requisits:
-- you need to checkout the whole codebase, git repo, full history of work progress that have happened. this is so that you have full context about what it is, my vision, how things are working, and what has happened till now. 
-- you need to create durable-memory for this project. 
-- if you have any questions, doubts, need more context, ask me.
-
-
-once the is done. we will move forward!
+if you have full context about this whole project, then push the above changes to main. if not, get the full context and then push to main.
