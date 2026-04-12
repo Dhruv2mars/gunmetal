@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.5.2",
+  "checkpoint_id": "e8700e4136b9",
+  "session_id": "019d8078-3084-7b00-b053-31b744e0a08e",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-12T07:00:18.080213Z",
+  "branch": "docs/durable-memory-init",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/plans.md",
+    "docs/prompt.md",
+    "docs/documentation.md",
+    "docs/implement.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4-mini",
+  "turn_id": "58996d7e9098",
+  "initial_attribution": {
+    "calculated_at": "2026-04-12T07:00:18.079574Z",
+    "agent_lines": 189,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 189,
+    "agent_percentage": 100
+  }
+}
