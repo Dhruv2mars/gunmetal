@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.5.2",
+  "checkpoint_id": "e8700e4136b9",
+  "session_id": "019d8076-5a27-73f2-8b11-ebf5bd656176",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-12T07:00:18.069457Z",
+  "branch": "docs/durable-memory-init",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/implement.md",
+    "docs/plans.md",
+    "docs/prompt.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "b550096065a9",
+  "token_usage": {
+    "input_tokens": 757750,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 669696,
+    "output_tokens": 10927,
+    "api_call_count": 16
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-12T07:00:17.869187Z",
+    "agent_lines": 189,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 189,
+    "agent_percentage": 100
+  }
+}
