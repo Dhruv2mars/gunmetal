@@ -1897,6 +1897,8 @@ mod tests {
         assert!(body.contains("Loading local state"));
         assert!(body.contains("setup-grid"));
         assert!(body.contains("traffic-grid"));
+        assert!(body.contains("profile-form-helper"));
+        assert!(body.contains("request-detail"));
     }
 
     #[tokio::test]

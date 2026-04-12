@@ -3,7 +3,7 @@
 This document is updated continuously as milestones land so it reflects reality.
 
 ## What This Work Is
-- This pass continues the first-principles refactor by improving actual usability on top of the completed copy pass. The repo layout and internal SDK boundary already exist. The current slice is intentionally narrow: improve the local browser UI and its `/app/api/state` payload so setup progress and request/token visibility are clearer.
+- This pass continues the first-principles refactor by improving actual usability on top of the completed copy pass. The repo layout and internal SDK boundary already exist. The current slice is intentionally narrow: improve the local browser UI workflow itself so provider setup adapts to the selected provider and request history supports a real drill-down.
 
 ## Current Status
 - Durable memory exists and is updated for the browser-UI usability pass.
@@ -13,14 +13,15 @@ This document is updated continuously as milestones land so it reflects reality.
 - The internal SDK extraction is already implemented and verified.
 - Repo-structure refactor is implemented and verified.
 - The first UX cleanup pass is implemented and verified.
-- The deeper usability pass is now focused on the local browser UI.
-- The browser-UI/state implementation is in place and verified.
+- The deeper usability pass is now focused on the local browser UI workflow.
+- The setup/traffic browser-UI/state implementation is already in place and verified.
+- The workflow-polish implementation is complete and verified.
 
 ## Status By Milestone
-- Milestone 1 complete: durable-memory refresh for the browser-UI usability pass.
-- Milestone 2 complete: inspected the local browser UI and the `/app/api/state` payload.
-- Milestone 3 complete: implemented setup-progress and request/token visibility improvements cleanly.
-- Milestone 4 complete: reran verification and prepared the refactor slice for commit.
+- Milestone 1 complete: durable-memory refresh for the workflow-polish pass.
+- Milestone 2 complete: inspected the local browser UI workflow.
+- Milestone 3 complete: implemented adaptive provider setup and request drill-down.
+- Milestone 4 complete: reran verification and confirmed this checkpoint is ready to move to `main`.
 
 ## Setup And Verification
 - Repo state:
@@ -69,6 +70,11 @@ This document is updated continuously as milestones land so it reflects reality.
   - updated the browser UI to render a four-step setup checklist under the golden path
   - replaced the old service-only side panel with a traffic snapshot plus service details
   - updated request-history rows to show token breakdowns and localized timestamps
+- Current workflow-polish implementation:
+  - added a provider-form helper region to the browser shell
+  - the provider form now adapts for browser-login vs API-key providers
+  - added a selected-request detail region above request history
+  - request rows are now selectable and render focused latency/token/endpoint detail
 
 ## Validation Results
 - The SDK extraction pass was previously verified:
@@ -105,6 +111,11 @@ This document is updated continuously as milestones land so it reflects reality.
 - Repo-wide verification completed:
   - `bun run test` passed
   - `cargo test --workspace` passed
+- Focused workflow-polish verification completed:
+  - `cargo test -p gunmetal-daemon` passed
+- Repo-wide workflow-polish verification completed:
+  - `bun run test` passed
+  - `cargo test --workspace` passed
 
 ## Decisions
 - Product promise: use AI subscriptions and provider accounts through one local middle layer for inference.
@@ -123,7 +134,7 @@ This document is updated continuously as milestones land so it reflects reality.
   - app-only Rust support packages under `packages/app-*`
 
 ## Next Steps
-- Commit the full refactor worktree.
+- Move the verified workflow-polish slice through to `main`.
 - Use this cleaner browser UI as the base for deeper flow work later.
 - Revisit SDK naming and public packaging only when the internal SDK surface is stable enough to publish confidently.
 

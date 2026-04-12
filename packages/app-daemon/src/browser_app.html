@@ -371,6 +371,29 @@
         line-height: 1.45;
       }
 
+      .form-helper {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .form-helper strong {
+        display: block;
+      }
+
+      .form-helper span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .field-hidden {
+        display: none;
+      }
+
       .banner {
         padding: 14px 16px;
         border-radius: 18px;
@@ -401,6 +424,43 @@
         margin-top: 4px;
       }
 
+      .request-detail {
+        margin-top: 14px;
+      }
+
+      .request-detail-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 12px;
+      }
+
+      .request-detail-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .request-detail-card strong,
+      .request-detail-card span {
+        display: block;
+      }
+
+      .request-detail-card span {
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .request-row {
+        cursor: pointer;
+      }
+
+      .request-row-active {
+        background: rgba(125, 211, 200, 0.08);
+      }
+
       @media (max-width: 1080px) {
         .brand-row,
         .status-row,
@@ -410,7 +470,8 @@
         }
 
         .setup-grid,
-        .snapshot-grid {
+        .snapshot-grid,
+        .request-detail-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -470,6 +531,7 @@
           </article>
           <article class="panel">
             <p class="panel-kicker">Request history</p>
+            <div class="request-detail" id="request-detail"></div>
             <div id="logs"></div>
           </article>
         </section>
@@ -480,6 +542,7 @@
               Start with one provider. Browser-login providers open an auth URL.
               Key-based providers need the upstream API key saved here.
             </p>
+            <div class="form-helper" id="profile-form-helper"></div>
             <form id="profile-form">
               <label>
                 Provider
@@ -497,11 +560,11 @@
                 Provider name
                 <input name="name" placeholder="work-openai" required />
               </label>
-              <label>
+              <label id="base-url-field">
                 Base URL
                 <input name="base_url" placeholder="optional override" />
               </label>
-              <label>
+              <label id="api-key-field">
                 API key
                 <input name="api_key" placeholder="optional for browser-login providers" />
               </label>
@@ -524,6 +587,7 @@
       const appState = {
         data: null,
         banner: null,
+        selectedLogId: null,
       };
 
       const $ = (id) => document.getElementById(id);
@@ -568,6 +632,102 @@
         }
         banner.hidden = false;
         banner.innerHTML = `<strong>New key secret</strong><span class="mono">${escapeHtml(secret)}</span>`;
+      }
+
+      function providerUiConfig(kind) {
+        switch (kind) {
+          case "codex":
+          case "copilot":
+            return {
+              helperTitle: "Browser sign-in provider",
+              helperBody: "Gunmetal opens a browser flow for auth. API key and base URL are not needed here.",
+              requiresApiKey: false,
+              supportsBaseUrl: false,
+              baseUrlPlaceholder: "not used for this provider",
+              suggestedName: kind,
+            };
+          case "openrouter":
+            return {
+              helperTitle: "Gateway provider",
+              helperBody: "Save your upstream API key here. Base URL usually stays on the default OpenRouter endpoint.",
+              requiresApiKey: true,
+              supportsBaseUrl: true,
+              baseUrlPlaceholder: "https://openrouter.ai/api/v1",
+              suggestedName: kind,
+            };
+          case "zen":
+            return {
+              helperTitle: "Gateway provider",
+              helperBody: "Save your upstream API key here. Base URL usually stays on the default Zen endpoint.",
+              requiresApiKey: true,
+              supportsBaseUrl: true,
+              baseUrlPlaceholder: "https://opencode.ai/zen/v1",
+              suggestedName: kind,
+            };
+          case "openai":
+            return {
+              helperTitle: "Direct provider",
+              helperBody: "Save your upstream API key here. Base URL is optional unless you need a custom endpoint.",
+              requiresApiKey: true,
+              supportsBaseUrl: true,
+              baseUrlPlaceholder: "https://api.openai.com/v1",
+              suggestedName: kind,
+            };
+          case "azure":
+          case "nvidia":
+            return {
+              helperTitle: "Direct provider",
+              helperBody: "Save your upstream API key here. Use base URL only if your endpoint is custom.",
+              requiresApiKey: true,
+              supportsBaseUrl: true,
+              baseUrlPlaceholder: "optional override",
+              suggestedName: kind,
+            };
+          default:
+            return {
+              helperTitle: "Provider",
+              helperBody: "Save one provider first, then auth it, sync models, and create one key.",
+              requiresApiKey: true,
+              supportsBaseUrl: true,
+              baseUrlPlaceholder: "optional override",
+              suggestedName: kind || "provider",
+            };
+        }
+      }
+
+      function syncProviderForm() {
+        const form = $("profile-form");
+        const provider = String(new FormData(form).get("provider") || "");
+        const config = providerUiConfig(provider);
+        const nameInput = form.elements.namedItem("name");
+        const baseUrlInput = form.elements.namedItem("base_url");
+        const apiKeyInput = form.elements.namedItem("api_key");
+
+        $("profile-form-helper").innerHTML = `
+          <strong>${escapeHtml(config.helperTitle)}</strong>
+          <span>${escapeHtml(config.helperBody)}</span>
+        `;
+
+        if (nameInput && !nameInput.value.trim()) {
+          nameInput.placeholder = `work-${config.suggestedName}`;
+        }
+
+        if (baseUrlInput) {
+          baseUrlInput.placeholder = config.baseUrlPlaceholder;
+        }
+
+        $("base-url-field").classList.toggle("field-hidden", !config.supportsBaseUrl);
+        if (!config.supportsBaseUrl && baseUrlInput) {
+          baseUrlInput.value = "";
+        }
+
+        $("api-key-field").classList.toggle("field-hidden", !config.requiresApiKey);
+        if (config.requiresApiKey && apiKeyInput) {
+          apiKeyInput.placeholder = "required for this provider";
+        }
+        if (!config.requiresApiKey && apiKeyInput) {
+          apiKeyInput.value = "";
+        }
       }
 
       function syncBanner(data) {
@@ -636,6 +796,9 @@
         if (!data) return;
         const apiBaseUrl = new URL(data.service.api_base_url, window.location.origin).toString();
         const webUrl = new URL(data.service.web_url, window.location.origin).toString();
+        if (!appState.selectedLogId && data.logs.length) {
+          appState.selectedLogId = data.logs[0].id;
+        }
         syncBanner(data);
 
         $("provider-strip").innerHTML = data.providers
@@ -856,7 +1019,7 @@
                 ${data.logs
                   .map(
                     (log) => `
-                      <tr>
+                      <tr class="request-row${appState.selectedLogId === log.id ? " request-row-active" : ""}" onclick="selectLog('${log.id}')">
                         <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(formatTimestamp(log.started_at))}</div></td>
                         <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.endpoint)}</div></td>
                         <td>${escapeHtml(log.status_code ?? "pending")}${log.error_message ? `<div class="subtle">${escapeHtml(log.error_message)}</div>` : ""}</td>
@@ -868,6 +1031,38 @@
               </tbody>
             </table>`
           : `<p class="note">No request history yet. Point one app at Gunmetal, then come back.</p>`;
+
+        const selectedLog = data.logs.find((log) => log.id === appState.selectedLogId) || data.logs[0] || null;
+        if (selectedLog) {
+          appState.selectedLogId = selectedLog.id;
+        }
+
+        $("request-detail").innerHTML = selectedLog
+          ? `
+              <div class="banner success">
+                <strong>Selected request</strong>
+                <span>${escapeHtml(selectedLog.model)} via ${escapeHtml(selectedLog.profile_name || selectedLog.provider)}</span>
+              </div>
+              <div class="request-detail-grid">
+                <article class="request-detail-card">
+                  <strong>Status</strong>
+                  <span>${escapeHtml(selectedLog.status_code ?? "pending")}${selectedLog.error_message ? ` · ${escapeHtml(selectedLog.error_message)}` : ""}</span>
+                </article>
+                <article class="request-detail-card">
+                  <strong>Latency</strong>
+                  <span>${escapeHtml(selectedLog.duration_ms)} ms</span>
+                </article>
+                <article class="request-detail-card">
+                  <strong>Tokens</strong>
+                  <span>in ${escapeHtml(selectedLog.input_tokens ?? 0)} · out ${escapeHtml(selectedLog.output_tokens ?? 0)} · total ${escapeHtml(selectedLog.total_tokens ?? 0)}</span>
+                </article>
+                <article class="request-detail-card">
+                  <strong>Endpoint</strong>
+                  <span>${escapeHtml(selectedLog.endpoint)} · ${escapeHtml(formatTimestamp(selectedLog.started_at))}</span>
+                </article>
+              </div>
+            `
+          : `<div class="banner"><strong>No request selected.</strong><span class="subtle">Your first request will appear here with latency and token details.</span></div>`;
       }
 
       async function submitAction(url, options) {
@@ -914,6 +1109,11 @@
         await submitAction(`/app/api/profiles/${id}`, { method: "DELETE" });
       }
 
+      function selectLog(id) {
+        appState.selectedLogId = id;
+        render();
+      }
+
       $("profile-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
@@ -927,12 +1127,17 @@
           }),
         });
         event.currentTarget.reset();
+        syncProviderForm();
       });
 
       $("refresh-button").addEventListener("click", () => {
         appState.banner = null;
         setSecret(null);
         loadState();
+      });
+
+      $("profile-form").elements.namedItem("provider").addEventListener("change", () => {
+        syncProviderForm();
       });
 
       $("copy-api-button").addEventListener("click", async () => {
@@ -944,6 +1149,7 @@
         setBanner("Copied API base URL.", "success");
       });
 
+      syncProviderForm();
       loadState();
     </script>
   </body>

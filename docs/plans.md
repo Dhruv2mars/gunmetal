@@ -9,34 +9,35 @@ This document is the execution plan and ongoing notes for the current task. Keep
 - `cargo test -p gunmetal-daemon`
 - `bun run test`
 - `cargo test --workspace`
+- `git status --short --branch`
 - Last verified: 2026-04-12
 
 ## Milestones
-- `[done]` Milestone 1: refresh durable memory for the browser-UI usability pass
-  - Scope: rewrite the active task around the primary local operator surface
+- `[done]` Milestone 1: refresh durable memory for the workflow-polish pass
+  - Scope: rewrite the active task around the next local browser-UI flow improvements
   - Key areas: `docs/prompt.md`, `docs/plans.md`, `docs/documentation.md`
-  - Acceptance criteria: docs reflect the narrowed browser/UI state scope
+  - Acceptance criteria: docs reflect the narrowed workflow scope
   - Verification steps: direct review of the updated docs
-- `[done]` Milestone 2: inspect the local browser UI and state payload
-  - Scope: identify the smallest changes that materially improve setup progress and traffic visibility
-  - Key areas: `packages/app-daemon/src/browser_app.html`, `packages/app-daemon/src/lib.rs`
+- `[done]` Milestone 2: inspect the local browser UI workflow
+  - Scope: identify the smallest changes that materially improve provider setup and request inspection
+  - Key areas: `packages/app-daemon/src/browser_app.html`
   - Acceptance criteria: a tight implementation target exists before editing
-  - Verification steps: targeted reads of the UI and `/app/api/state` implementation
-- `[done]` Milestone 3: implement the clutter-free browser UI pass
-  - Scope: add setup progress and request/token summary support, then render it cleanly
+  - Verification steps: targeted reads of the UI
+- `[done]` Milestone 3: implement the workflow polish
+  - Scope: adaptive provider form plus selected-request detail view
   - Key areas: `packages/app-daemon/src/browser_app.html`, `packages/app-daemon/src/lib.rs`
   - Acceptance criteria: the browser UI is more useful without feeling denser
   - Verification steps: daemon tests plus local UI source review
-- `[done]` Milestone 4: verify and prepare the commit
-  - Scope: rerun verification and commit the full refactor slice
-  - Key areas: touched daemon/UI files plus the existing refactor worktree
-  - Acceptance criteria: tests pass and the branch has one clean commit
+- `[done]` Milestone 4: verify and decide on main
+  - Scope: rerun verification and decide whether to merge/push this checkpoint to `main`
+  - Key areas: touched daemon/UI files plus branch status
+  - Acceptance criteria: tests pass and the branch state is clear
   - Verification steps: `bun run test`, `cargo test --workspace`, `git status`
 
 ## Acceptance Checks
-- Durable memory states the browser-UI usability decisions.
-- The local browser UI shows where the user is in the setup flow.
-- Request history and token usage are easier to inspect at a glance.
+- Durable memory states the workflow-polish decisions.
+- The provider form adapts to the selected provider.
+- Request history has a useful selected-request view.
 - The workspace still tests green after the pass.
 
 ## Validation
@@ -45,7 +46,7 @@ This document is the execution plan and ongoing notes for the current task. Keep
 - `cargo test -p gunmetal-daemon`
 - `bun run test`
 - `cargo test --workspace`
-- `git add ... && git commit ...`
+- optional `git push origin main` if this checkpoint is clean enough
 
 ## Decisions
 - Product thesis: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.
@@ -55,6 +56,7 @@ This document is the execution plan and ongoing notes for the current task. Keep
 - The current pass is usability-first on top of the already-finished app/sdk/extensions layout.
 - Users should connect providers, mint a key, make requests, and then inspect request history and token stats.
 - Keep command names and storage contracts stable in this pass unless a small UI/state addition is clearly worth it.
+- The next workflow-polish slice should stay browser-UI-only unless a tiny daemon/API adjustment is required.
 
 ## Implementation Notes
 - Current branch for this work: `refactor/internal-sdk`.
@@ -103,14 +105,27 @@ This document is the execution plan and ongoing notes for the current task. Keep
 - Repo-wide verification completed:
   - `bun run test`
   - `cargo test --workspace`
+- Current workflow-polish target:
+  - make the provider form adapt to the selected provider so users see only relevant fields and guidance
+  - make request history support a selected-request detail view
+- Implemented in this pass:
+  - browser shell now includes a provider-form helper region
+  - provider form now adapts for browser-sign-in vs API-key providers
+  - browser shell now includes a selected-request detail region
+  - request rows are selectable and render focused latency/token/endpoint detail
+- Focused verification completed for this pass:
+  - `cargo test -p gunmetal-daemon`
+- Repo-wide verification completed for this pass:
+  - `bun run test`
+  - `cargo test --workspace`
 
 ## Risks
-- Risk: the browser UI gains too much density while trying to show more state.
-  - Mitigation: prefer one compact progress surface and one compact traffic-summary surface.
+- Risk: the browser UI gains too much density while trying to show more interaction.
+  - Mitigation: keep the detail view compact and reuse the existing panel instead of adding new columns.
 - Risk: UX edits drift away from the product thesis.
   - Mitigation: keep the docs current and use them as the source of truth during the pass.
-- Risk: small `/app/api/state` changes ripple into tests.
-  - Mitigation: update daemon tests with the new fields and rerun the full workspace checks.
+- Risk: browser-only behavior is weakly tested.
+  - Mitigation: keep adding shell markers and rerun daemon plus repo-wide verification.
 
 ## Architecture
 - Product: local-first inference middle layer for individuals.
