@@ -1,0 +1,106 @@
+if you have full context about this whole project, then push the above changes to main. if not, get the full context and then push to main.
+
+---
+
+ok, so basically, i want to rethink the whole project from scratch again, first principles. i have something in mind. and i want you to think hard and we'll discuss and brainstorm
+
+---
+
+ok, i dont know how to phrase it, but the vision is something like, gunmetal being a control/command centre for your inference usage. basically, like how a toll is on the highway. 
+
+our current architecture is great. but i think we can simlify it even more to my vision. 
+
+overall, i thought of 3 things (products):
+
+- api console - the current implementation, where the users can add their providers and create api keys to route to them. this is for consumers, where they wanna use already existing subscriptions for inference in other apps they use which require api keys. 
+
+- extention store - current implementation of our providers is modular design, where we can add as many as we want. i want to just package it differently. basically, a extention store, which will have all the providers as extentions. this extention store is going to be like a sdk or something. it is for devs who are building their software and wanna add multiple proivder support. it is very similar in terms of goal to pi-ai : https://github.com/badlogic/pi-mono/tree/main/packages/ai
+
+- toll booth - if you see, gunmetal is positioned very well, it sits b/w the upstream provider giving the inference, and the user/dev who is going to utilize that inference. we can do a lot of great things by just being the middleman. things like, stats, such as token usgae, tps, etc. a lot of opportunities. 
+
+
+note that we wont be making any other repo/app/etc, we will just refactor gunmetal. 
+your thoughts.
+
+---
+
+first, did you check the pi packagae?
+
+---
+
+vision: 
+
+gunmetal: a middleman for your inference usage. 
+- utilize your ai subscriptions as inference via api routing. 
+
+just a first-draft of our core vision/tagline of gunmetal that i could narrow down to. 
+
+
+now, in order to achieve the core goal, the architecture is as:
+upstream provider -> gunmetal (powered by extention store) -> API key
+here extention store is nothing but the extentions based modular design that we implemented for providers. but more tightly packaged. 
+
+the above is our core product, thats the main service we provide to our users, in this case, consumers. 
+
+now, being able to sit between the upstream provider and api key (inference usage), it gives us a ability to build products/services on top of this, just as a toll. but this is not a snadalone different product. its just a benefit or advantage of using gunmetal. it comes with it. 
+
+essentially, this is just a single product. but here comes another thing. i want to give the extention store tech architecture as sdandalone to other devs who might want to integrate this in their own software, so that they can also provide multi-provider support. lets say it extention store sdk. now, the thing is, gunmetal also uses this exact sdk for its architecture. there is nothing different. we are just giving it out as a sdk so others can also implement it in their own apps.
+
+---
+
+great thesis. now you understand my vision. 
+
+i didnt understand your question.
+
+---
+
+Option A all the way. users and devs should love it.
+
+---
+
+okay, but i dont understand why do we have extention runtime and sdk? cant just this be one thing, like gunmetal app uses gunmetal sdk for implementing multi providers.
+
+---
+
+i stiill dont understand the diff bw gunmetal entiontions and sdk.
+
+---
+
+now got it. good. 
+
+any more things to brainstorm or discuss ?
+
+---
+
+1. utilize your ai subscriptions as api key for inference. gunmetal is the middleman inference layer.
+2. dont know
+3. yes. 
+4. yes
+5. dont know
+6. yes, everything which makes ux for a normal user bad. 
+7. if the workflow youre talking about, then most prolly yes. 
+8. initial. we have to do different api compatibility for different providers. like for ex, anthropic api is different, gemini is different, openai now has responses api. so yeah. 
+9. not our first goal. its our second goal to make it public. first is to make it like a proper tightly packed with perfection sdk which poweres gunmetal app.
+
+---
+
+1. connect a provider. for us, providers = extentions. keep things extremly simple in terms of ux for users.
+2. request history (kind of like logs) and token stats (in/out/etc). 
+
+anything else?
+
+---
+
+overall, you have got everything right. you should now go ahead and start the actual refactor implementation: 
+
+- first, update the durable memory based on our discussion and final decisions. 
+- then start implementing on making the internal (sdk) implementation. basically, not publicising the sdk right now, but internally the app should be powered by it right, so do that. 
+- once our sdk implementation is done in gunmetal app. then we will move onto making the usability of gunmetal app, the cli, tui, web. making that perfect.
+
+---
+
+you also might have to refactor the repo sturcture. since we are making the gunmetal sdk standalone that powers the gunmetal app. and since we know that in future we will publish the sdk seperately for other devs to use. you have to change the overall strcuture of the repo accordingly.
+
+---
+
+go ahead

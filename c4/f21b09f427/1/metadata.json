@@ -1,7 +1,9 @@
 {
   "cli_version": "0.5.2",
   "checkpoint_id": "c4f21b09f427",
+  "session_id": "019d8076-5a27-73f2-8b11-ebf5bd656176",
   "strategy": "manual-commit",
+  "created_at": "2026-04-12T12:30:46.483249Z",
   "branch": "refactor/internal-sdk",
   "checkpoints_count": 3,
   "files_touched": [
@@ -62,25 +64,28 @@
     "packages/tui/src/lib.rs",
     "test/repo-structure.test.js"
   ],
-  "sessions": [
-    {
-      "metadata": "/c4/f21b09f427/0/metadata.json",
-      "transcript": "/c4/f21b09f427/0/full.jsonl",
-      "content_hash": "/c4/f21b09f427/0/content_hash.txt",
-      "prompt": ""
-    },
-    {
-      "metadata": "/c4/f21b09f427/1/metadata.json",
-      "transcript": "/c4/f21b09f427/1/full.jsonl",
-      "content_hash": "/c4/f21b09f427/1/content_hash.txt",
-      "prompt": "/c4/f21b09f427/1/prompt.txt"
-    }
-  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "eb509c2ded83",
+  "checkpoint_transcript_start": 201,
+  "transcript_lines_at_start": 201,
   "token_usage": {
     "input_tokens": 25399730,
     "cache_creation_tokens": 0,
     "cache_read_tokens": 24062464,
     "output_tokens": 124089,
     "api_call_count": 205
+  },
+  "session_metrics": {
+    "turn_count": 16
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-12T12:30:45.05726Z",
+    "agent_lines": 15396,
+    "human_added": 291,
+    "human_modified": 71,
+    "human_removed": 0,
+    "total_committed": 15758,
+    "agent_percentage": 97.70275415661887
   }
 }
