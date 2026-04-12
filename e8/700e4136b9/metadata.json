@@ -1,0 +1,21 @@
+{
+  "cli_version": "0.5.2",
+  "checkpoint_id": "e8700e4136b9",
+  "strategy": "manual-commit",
+  "branch": "docs/durable-memory-init",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/implement.md",
+    "docs/plans.md",
+    "docs/prompt.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e8/700e4136b9/0/metadata.json",
+      "transcript": "/e8/700e4136b9/0/full.jsonl",
+      "content_hash": "/e8/700e4136b9/0/content_hash.txt",
+      "prompt": ""
+    }
+  ]
+}
