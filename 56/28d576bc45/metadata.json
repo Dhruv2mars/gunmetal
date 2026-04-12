@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.5.2",
+  "checkpoint_id": "5628d576bc45",
+  "strategy": "manual-commit",
+  "branch": "refactor/internal-sdk",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/plans.md",
+    "docs/prompt.md",
+    "packages/app-daemon/src/browser_app.html",
+    "packages/app-daemon/src/lib.rs"
+  ],
+  "sessions": [
+    {
+      "metadata": "/56/28d576bc45/0/metadata.json",
+      "transcript": "/56/28d576bc45/0/full.jsonl",
+      "content_hash": "/56/28d576bc45/0/content_hash.txt",
+      "prompt": "/56/28d576bc45/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6330085,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6258560,
+    "output_tokens": 18884,
+    "api_call_count": 34
+  }
+}
