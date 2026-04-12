@@ -1,8 +1,8 @@
 # gunmetal
 
-Local-first AI switchboard.
+Local-first inference middle layer.
 
-Connect providers you already use, create local API keys, point your apps at `http://127.0.0.1:4684/v1`.
+Connect providers you already use, create local Gunmetal keys, point your apps at `http://127.0.0.1:4684/v1`, and inspect request history with token usage.
 
 ## Install
 
@@ -21,7 +21,7 @@ gunmetal start
 gunmetal status
 ```
 
-`gunmetal setup` is the golden path. It saves one profile, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
+`gunmetal setup` is the golden path. It connects one provider, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
 
 `gunmetal web` opens the local browser surface at `http://127.0.0.1:4684/app`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
 
@@ -30,7 +30,7 @@ gunmetal status
 1. Install: `npm i -g @dhruv2mars/gunmetal`
 2. Run `gunmetal setup`
 3. Run `gunmetal web` for the local browser UI, or `gunmetal start` for the API only
-4. Open `http://127.0.0.1:4684/app` if you want the local control plane
+4. Open `http://127.0.0.1:4684/app` if you want the local browser UI
 5. Call `GET /v1/models`
 6. Call `POST /v1/chat/completions`
 
@@ -76,7 +76,7 @@ POST /v1/responses
 
 Streaming supported on both POST endpoints.
 
-Gunmetal is a normalized gateway by default.
+Gunmetal is a normalized gateway by default, with local request history and token accounting built into the path.
 
 - normalized mode keeps one clean contract across providers
 - passthrough mode is opt-in through `gunmetal.mode = "passthrough"` plus `provider_options`
@@ -97,8 +97,8 @@ gunmetal web
 gunmetal start
 gunmetal status
 gunmetal profiles list
-gunmetal auth status <profile>
-gunmetal models sync <profile>
+gunmetal auth status <provider>
+gunmetal models sync <provider>
 gunmetal keys list
 gunmetal logs list
 ```
@@ -106,15 +106,16 @@ gunmetal logs list
 ## Structure
 
 ```
-apps/cli/       # native CLI/TUI entrypoint
-apps/web/       # landing page, docs
-packages/cli/   # CLI command layer
-packages/core/  # shared types + contracts
-packages/daemon/# local OpenAI-compatible API server
-packages/npm/   # npm install wrapper for the native binary
-packages/providers/ # upstream provider adapters
-packages/storage/   # sqlite + local state
-packages/tui/       # terminal UI
+apps/gunmetal/      # native CLI/TUI entrypoint
+apps/web/           # landing page, docs
+packages/sdk/       # internal SDK powering provider extensions
+packages/sdk-core/  # shared SDK-facing types + contracts
+packages/extensions/ # first-party provider extensions
+packages/app-cli/   # CLI command layer
+packages/app-daemon/ # local OpenAI-compatible API server
+packages/app-storage/ # sqlite + local state
+packages/app-tui/   # terminal UI
+packages/npm/       # npm install wrapper for the native binary
 ```
 
 ## Development

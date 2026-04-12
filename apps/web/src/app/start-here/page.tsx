@@ -44,9 +44,9 @@ export default function StartHerePage() {
           <p className="section-tag">Install + setup</p>
           <h2>One install. One setup flow.</h2>
           <p>
-            `gunmetal setup` is the default path. It saves one profile, checks
-            auth, syncs models, creates one key, and ends with a working test
-            command.
+            `gunmetal setup` is the default path. It connects one provider,
+            checks auth, syncs models, creates one key, and ends with a
+            working test command.
           </p>
         </div>
         <article className="code-panel">

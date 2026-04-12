@@ -3,68 +3,130 @@
 This document is updated continuously as milestones land so it reflects reality.
 
 ## What This Work Is
-- This pass initializes durable memory for `gunmetal` before any follow-on implementation. It captures the current product shape, repository layout, work-history arc, and the operating rules future tasks should follow.
+- This pass continues the first-principles refactor by improving actual usability on top of the completed copy pass. The repo layout and internal SDK boundary already exist. The current slice is intentionally narrow: improve the local browser UI and its `/app/api/state` payload so setup progress and request/token visibility are clearer.
 
 ## Current Status
-- Durable memory is now initialized at the repo root in `docs/`.
-- The current product is a local-first AI switchboard: one local OpenAI-compatible API, one local browser control plane, one CLI, and one TUI over shared local state.
-- Current branch for this docs work: `docs/durable-memory-init`.
+- Durable memory exists and is updated for the browser-UI usability pass.
+- Product thesis: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.
+- User-facing term is `provider`; internal implementation term is `extension`.
+- Current branch for this refactor: `refactor/internal-sdk`.
+- The internal SDK extraction is already implemented and verified.
+- Repo-structure refactor is implemented and verified.
+- The first UX cleanup pass is implemented and verified.
+- The deeper usability pass is now focused on the local browser UI.
+- The browser-UI/state implementation is in place and verified.
 
 ## Status By Milestone
-- Milestone 1 complete: repo guidance, workspace shape, and git history reviewed.
-- Milestone 2 complete: durable-memory docs created.
-- Milestone 3 complete: docs reviewed for consistency against the inspected repo state.
+- Milestone 1 complete: durable-memory refresh for the browser-UI usability pass.
+- Milestone 2 complete: inspected the local browser UI and the `/app/api/state` payload.
+- Milestone 3 complete: implemented setup-progress and request/token visibility improvements cleanly.
+- Milestone 4 complete: reran verification and prepared the refactor slice for commit.
 
 ## Setup And Verification
 - Repo state:
   - `git status --short --branch`
-  - `git log --oneline --decorate --graph --all -n 80`
-  - `git log --reverse --oneline --no-decorate`
-  - `git rev-list --count --all`
-  - `git tag --sort=creatordate`
-- Workspace inspection:
   - `find apps packages -maxdepth 2 -type f | sort`
-  - targeted `sed -n` reads of `README.md`, workspace manifests, and key source files
-- Durable-memory verification:
-  - `test -f docs/prompt.md && test -f docs/plans.md && test -f docs/implement.md && test -f docs/documentation.md`
-  - direct review of the new docs
+  - targeted `sed -n` reads of docs, manifests, and key source files
+- Validation commands for this pass:
+  - `cargo test -p gunmetal-daemon`
+  - `bun run test`
+  - `cargo test --workspace`
 
 ## Completed Work
-- Captured the current repo organization:
-  - `apps/cli`: Rust entrypoint that boots the daemon for default/TUI usage or dispatches CLI commands.
-  - `apps/web`: Next.js hosted front door with install/docs/changelog/web-ui pages.
-  - `packages/cli`: command parsing and operational flows such as setup, web, start, status, profiles, auth, models, keys, and logs.
-  - `packages/daemon`: local HTTP service exposing `/health`, browser control-plane endpoints under `/app/api/*`, and `/v1/models`, `/v1/chat/completions`, `/v1/responses`.
-  - `packages/providers`: provider adapters and registry/hub logic.
-  - `packages/storage`: local app-path resolution and SQLite-backed persistence.
-  - `packages/core`: shared domain types and API contracts.
-  - `packages/tui`: terminal dashboard/operator surface.
-  - `packages/npm`: npm distribution wrapper that installs the native binary.
-- Captured the visible work-history arc from git:
-  - foundation and bootstrap
-  - provider rollout for codex, copilot, openrouter, zen, and openai
-  - responses API support
-  - first-run and TUI hardening
-  - monorepo restructure
-  - npm packaging and release pipeline
-  - hosted site plus local browser UI
-  - several release/CI/acceptance stabilization cycles
-  - latest visible release tag: `v0.1.8`
+- Established the first-principles product decisions:
+  - Gunmetal is one product, not three.
+  - Gunmetal App is the local-first product for individuals.
+  - An internal Gunmetal SDK powers the app’s multi-provider support.
+  - First-party providers are implemented as extensions on top of that SDK.
+  - The first built-in toll-booth benefits are request history and token stats.
+- Implemented the internal SDK boundary already in the repo:
+  - added `packages/sdk`
+  - moved provider abstraction/runtime into `packages/sdk`
+  - kept first-party provider clients and extension implementations in `packages/extensions`
+  - rewired CLI, daemon, and TUI to use the SDK-backed provider system
+- Restructured the repo layout to match the architecture:
+  - `apps/gunmetal` now holds the native app entrypoint
+  - `packages/extensions` holds first-party provider extensions
+  - `packages/sdk-core` holds shared SDK-facing types
+  - app-only Rust support crates now live under `packages/app-*`
+- Began the UX pass with an audit of the main drift points:
+  - older `switchboard` and `control plane` framing still appears in docs and web copy
+  - `profile` still dominates several user-facing surfaces even though the chosen UX noun is `provider`
+  - the browser UI, CLI, and TUI all need a first cleanup pass before deeper workflow refinement
+- Completed the first UX cleanup pass:
+  - updated `README.md` and the main web/docs copy to present Gunmetal as a local inference middle layer
+  - shifted the browser UI labels and banners toward `provider`, `request history`, and local operation
+  - updated CLI help/setup/output text to match the product thesis while leaving command names stable
+  - updated TUI tabs, prompts, detail panes, and status messages to use provider-first language
+  - updated daemon/API operator-facing error and action messages to remove older profile-centric phrasing where surfaced
+- Current usability focus:
+  - the browser UI should feel like the cleanest operator surface
+  - setup progress should be explicit rather than inferred from raw counts
+  - request history should carry more useful token/traffic context
+- Browser-UI usability implementation:
+  - added compact `setup` and `traffic` summary sections to `/app/api/state`
+  - added per-log input/output token fields to the operator-state response
+  - updated the browser UI to render a four-step setup checklist under the golden path
+  - replaced the old service-only side panel with a traffic snapshot plus service details
+  - updated request-history rows to show token breakdowns and localized timestamps
 
 ## Validation Results
-- The repo was clean before this task except for branch state.
-- The new durable-memory files now exist in `docs/`.
-- The docs match the inspected workspace and history and do not claim unverified roadmap work.
+- The SDK extraction pass was previously verified:
+  - `cargo test -p gunmetal-sdk` passed
+  - `cargo test -p gunmetal-providers` passed
+  - `cargo test -p gunmetal-cli -p gunmetal-daemon -p gunmetal-tui` passed
+  - `cargo test --workspace` passed
+- Repo-structure verification also passed:
+  - `node --test test/repo-structure.test.js` passed
+  - `bun run test` passed
+  - legacy path sweep across `README.md`, `AGENTS.md`, `Cargo.toml`, `test`, `apps`, and `packages` returned no stale old-layout matches
+- UX audit completed by directly reviewing the touched surfaces:
+  - `README.md`
+  - `apps/web/src/app/page.tsx`
+  - `apps/web/src/app/layout.tsx`
+  - `apps/web/src/app/start-here/page.tsx`
+  - `apps/web/src/app/web-ui/page.tsx`
+  - `apps/web/src/components/site-shell.tsx`
+  - `apps/web/src/lib/site-content.ts`
+  - `packages/app-cli/src/lib.rs`
+  - `packages/app-daemon/src/browser_app.html`
+  - `packages/app-tui/src/lib.rs`
+- UX verification completed:
+  - `cargo run -p gunmetal -- --help` passed and showed the updated thesis text
+  - `cargo test -p gunmetal-cli -p gunmetal-daemon -p gunmetal-tui` passed
+  - `bun run test` passed
+  - `cargo test --workspace` passed
+- Usability inspection in progress:
+  - reviewing `packages/app-daemon/src/browser_app.html`
+  - reviewing `packages/app-daemon/src/lib.rs` state-response shaping
+  - identifying the smallest additive payload fields needed for a better UI
+- Focused usability verification completed:
+  - `cargo test -p gunmetal-daemon` passed
+- Repo-wide verification completed:
+  - `bun run test` passed
+  - `cargo test --workspace` passed
 
 ## Decisions
-- Use the durable-memory set for future project work in this repo.
-- Keep the memory anchored to the current task and actual repo state instead of turning it into generic project notes.
-- Treat git history as the source for fine-grained progress details when later work needs subsystem-level context.
+- Product promise: use AI subscriptions and provider accounts through one local middle layer for inference.
+- Gunmetal’s current OpenAI-compatible surface is the initial compatibility layer, not the permanent only abstraction.
+- The SDK stays internal until the app architecture is tightly packed and stable.
+- UX should stay extremely simple for normal users: connect providers, mint a key, make requests.
+- The first UX cleanup pass should emphasize:
+  - one local API
+  - connected providers
+  - request history
+  - token stats
+- Repo layout should communicate architecture directly:
+  - app entrypoint under `apps/gunmetal`
+  - SDK under `packages/sdk`
+  - first-party extensions under `packages/extensions`
+  - app-only Rust support packages under `packages/app-*`
 
 ## Next Steps
-- Start the next requested task using `docs/prompt.md` and `docs/plans.md` as the baseline.
-- Refresh the durable-memory files at the start of the next substantive task so the active scope is explicit.
+- Commit the full refactor worktree.
+- Use this cleaner browser UI as the base for deeper flow work later.
+- Revisit SDK naming and public packaging only when the internal SDK surface is stable enough to publish confidently.
 
 ## Follow-Ups
-- If the next task targets `apps/web`, read `apps/web/AGENTS.md` before making web changes.
-- If the next task depends on a specific regression or release, inspect the relevant commits directly instead of relying only on this summary.
+- Later work should decide how much of the SDK becomes public API and how much remains internal.
+- After this copy-and-surface pass, the next substantive phase should improve the actual usability and flow quality of the CLI, TUI, and web/browser UX instead of just the wording.

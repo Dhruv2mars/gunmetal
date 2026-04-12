@@ -1,12 +1,13 @@
 [workspace]
 members = [
-  "apps/cli",
-  "packages/cli",
-  "packages/core",
-  "packages/daemon",
-  "packages/providers",
-  "packages/storage",
-  "packages/tui"
+  "apps/gunmetal",
+  "packages/app-cli",
+  "packages/app-daemon",
+  "packages/app-storage",
+  "packages/app-tui",
+  "packages/extensions",
+  "packages/sdk",
+  "packages/sdk-core"
 ]
 resolver = "3"
 

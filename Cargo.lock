@@ -921,6 +921,7 @@ dependencies = [
  "gunmetal-core",
  "gunmetal-daemon",
  "gunmetal-providers",
+ "gunmetal-sdk",
  "gunmetal-storage",
  "libc",
  "reqwest",
@@ -953,6 +954,7 @@ dependencies = [
  "futures-util",
  "gunmetal-core",
  "gunmetal-providers",
+ "gunmetal-sdk",
  "gunmetal-storage",
  "serde",
  "serde_json",
@@ -968,6 +970,28 @@ name = "gunmetal-providers"
 version = "0.1.8"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "chrono",
+ "futures-util",
+ "gunmetal-core",
+ "gunmetal-sdk",
+ "gunmetal-storage",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "url",
+ "uuid",
+ "webbrowser",
+ "wiremock",
+]
+
+[[package]]
+name = "gunmetal-sdk"
+version = "0.1.8"
+dependencies = [
+ "anyhow",
  "async-stream",
  "async-trait",
  "chrono",
@@ -979,9 +1003,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
- "url",
  "uuid",
- "webbrowser",
  "wiremock",
 ]
 
@@ -1009,6 +1031,7 @@ dependencies = [
  "crossterm 0.29.0",
  "gunmetal-core",
  "gunmetal-providers",
+ "gunmetal-sdk",
  "gunmetal-storage",
  "ratatui",
  "reqwest",

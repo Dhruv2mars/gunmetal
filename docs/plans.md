@@ -3,65 +3,126 @@
 This document is the execution plan and ongoing notes for the current task. Keep it current as the work moves.
 
 ## Verification Checklist
-- `test -f docs/prompt.md`
-- `test -f docs/plans.md`
-- `test -f docs/implement.md`
-- `test -f docs/documentation.md`
-- Review the new docs with `sed -n '1,220p' docs/*.md`
+- `sed -n '1,220p' docs/prompt.md`
+- `sed -n '1,260p' docs/plans.md`
+- `sed -n '1,260p' docs/documentation.md`
+- `cargo test -p gunmetal-daemon`
+- `bun run test`
+- `cargo test --workspace`
 - Last verified: 2026-04-12
 
 ## Milestones
-- `[done]` Milestone 1: inspect current repo state and history
-  - Scope: repo guidance, workspace shape, product surfaces, and git progress history
-  - Key areas: `README.md`, `AGENTS.md`, root workspace manifests, `apps/cli`, `apps/web`, `packages/*`, git log/tags
-  - Acceptance criteria: current architecture and project arc are understood well enough to write durable memory without guessing
-  - Verification steps: `git status --short --branch`, `git log --reverse --oneline --no-decorate`, targeted file reads
-- `[done]` Milestone 2: create the durable-memory files
-  - Scope: author the required `docs/` set for this prerequisite phase
-  - Key areas: `docs/prompt.md`, `docs/plans.md`, `docs/implement.md`, `docs/documentation.md`
-  - Acceptance criteria: each file is present, concise, and aligned with the current repo state
-  - Verification steps: existence checks plus direct file review
-- `[done]` Milestone 3: verify consistency
-  - Scope: confirm the docs agree with the inspected repo state and task scope
-  - Key areas: all new `docs/*.md`
-  - Acceptance criteria: no missing file, stale placeholder text, or contradiction with the inspected code/history
-  - Verification steps: re-read the files and compare against the gathered repo context
+- `[done]` Milestone 1: refresh durable memory for the browser-UI usability pass
+  - Scope: rewrite the active task around the primary local operator surface
+  - Key areas: `docs/prompt.md`, `docs/plans.md`, `docs/documentation.md`
+  - Acceptance criteria: docs reflect the narrowed browser/UI state scope
+  - Verification steps: direct review of the updated docs
+- `[done]` Milestone 2: inspect the local browser UI and state payload
+  - Scope: identify the smallest changes that materially improve setup progress and traffic visibility
+  - Key areas: `packages/app-daemon/src/browser_app.html`, `packages/app-daemon/src/lib.rs`
+  - Acceptance criteria: a tight implementation target exists before editing
+  - Verification steps: targeted reads of the UI and `/app/api/state` implementation
+- `[done]` Milestone 3: implement the clutter-free browser UI pass
+  - Scope: add setup progress and request/token summary support, then render it cleanly
+  - Key areas: `packages/app-daemon/src/browser_app.html`, `packages/app-daemon/src/lib.rs`
+  - Acceptance criteria: the browser UI is more useful without feeling denser
+  - Verification steps: daemon tests plus local UI source review
+- `[done]` Milestone 4: verify and prepare the commit
+  - Scope: rerun verification and commit the full refactor slice
+  - Key areas: touched daemon/UI files plus the existing refactor worktree
+  - Acceptance criteria: tests pass and the branch has one clean commit
+  - Verification steps: `bun run test`, `cargo test --workspace`, `git status`
 
 ## Acceptance Checks
-- The durable-memory set exists and is readable.
-- The prompt describes this prerequisite task rather than a generic repo summary.
-- The documentation records the current product, repo layout, release/history arc, and next-step posture.
+- Durable memory states the browser-UI usability decisions.
+- The local browser UI shows where the user is in the setup flow.
+- Request history and token usage are easier to inspect at a glance.
+- The workspace still tests green after the pass.
 
 ## Validation
 - `git status --short --branch`
-- `git log --oneline --decorate --graph --all -n 80`
-- `git log --reverse --oneline --no-decorate`
-- `git rev-list --count --all`
-- `git tag --sort=creatordate`
-- `find apps packages -maxdepth 2 -type f | sort`
-- targeted `sed -n` reads across root docs and key source files
-- `test -f docs/prompt.md && test -f docs/plans.md && test -f docs/implement.md && test -f docs/documentation.md`
+- targeted `sed -n` reads across docs and the touched daemon/UI files
+- `cargo test -p gunmetal-daemon`
+- `bun run test`
+- `cargo test --workspace`
+- `git add ... && git commit ...`
 
 ## Decisions
-- Durable memory is initialized around the current prerequisite task: establish project baseline and context before future work.
-- No product code changes are part of this pass.
-- Future tasks in this repo should update these files first when scope changes materially.
+- Product thesis: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.
+- User-facing noun is `provider`; internal implementation noun is `extension`.
+- The app is the product. The SDK is internal first and powers the app.
+- Request history and token stats are the first built-in toll-booth benefits to preserve and strengthen later.
+- The current pass is usability-first on top of the already-finished app/sdk/extensions layout.
+- Users should connect providers, mint a key, make requests, and then inspect request history and token stats.
+- Keep command names and storage contracts stable in this pass unless a small UI/state addition is clearly worth it.
 
 ## Implementation Notes
-- No prior `docs/prompt.md`, `docs/plans.md`, `docs/implement.md`, or `docs/documentation.md` existed at the repo root before this pass.
-- Current branch for this work: `docs/durable-memory-init`.
-- Current visible release line: `v0.1.0` through `v0.1.8`.
-- Current visible commit count across refs: 103.
-- Recent arc after the initial build-out is mostly release hardening, web UI parity, and acceptance-loop stability.
+- Current branch for this work: `refactor/internal-sdk`.
+- The SDK boundary already exists and is green.
+- The repo-structure pass is already done.
+- The wording pass is already done.
+- This pass should stay centered on the local browser UI rather than trying to fix every surface at once.
+- Keep crate names and internal API routes stable where possible to avoid unnecessary churn.
+- Implemented layout remains:
+  - `apps/gunmetal`
+  - `packages/sdk`
+  - `packages/sdk-core`
+  - `packages/extensions`
+  - `packages/app-cli`
+  - `packages/app-daemon`
+  - `packages/app-storage`
+  - `packages/app-tui`
+- Audit findings:
+  - web/docs copy still says `switchboard`, `control plane`, and `profile`
+  - browser UI headings and banners still center `profile`
+  - TUI tabs and details still center `Profiles`
+  - CLI help/setup/output still uses older product wording
+- Implemented in this pass:
+  - web/docs copy now centers the local inference middle-layer thesis
+  - browser UI headings and banners now say `provider` and `request history`
+  - CLI help and setup output now describe connecting providers rather than saving profiles
+  - TUI tabs and detail copy now present `Providers` and `Requests`
+  - daemon/API recovery messages now use provider-first language where surfaced to operators
+- Verification completed:
+  - `cargo run -p gunmetal -- --help`
+  - `cargo test -p gunmetal-cli -p gunmetal-daemon -p gunmetal-tui`
+  - `bun run test`
+  - `cargo test --workspace`
+- Current usability target:
+  - keep the browser UI visually clean
+  - show setup progress without asking the user to infer it from counts alone
+  - expose request/token stats more directly from `/app/api/state`
+- Implemented in this pass:
+  - `/app/api/state` now returns `setup` and `traffic` summary objects
+  - per-request log rows now expose input/output token counts in addition to total tokens
+  - the local browser UI now renders a compact setup checklist under the golden path
+  - the local browser UI now renders a compact traffic snapshot with latency, success/error, and token totals
+  - request-history rows now show token breakdowns and localized timestamps
+- Focused verification completed:
+  - `cargo test -p gunmetal-daemon`
+- Repo-wide verification completed:
+  - `bun run test`
+  - `cargo test --workspace`
 
 ## Risks
-- Risk: the memory set becomes stale after the next task.
-  - Mitigation: update `docs/prompt.md`, `docs/plans.md`, and `docs/documentation.md` before and during follow-on work.
-- Risk: history summary hides nuance from individual fixes.
-  - Mitigation: use git history directly when a later task depends on a specific regression or subsystem.
+- Risk: the browser UI gains too much density while trying to show more state.
+  - Mitigation: prefer one compact progress surface and one compact traffic-summary surface.
+- Risk: UX edits drift away from the product thesis.
+  - Mitigation: keep the docs current and use them as the source of truth during the pass.
+- Risk: small `/app/api/state` changes ripple into tests.
+  - Mitigation: update daemon tests with the new fields and rerun the full workspace checks.
 
 ## Architecture
-- Product: local-first AI switchboard that exposes an OpenAI-compatible local API at `http://127.0.0.1:4684/v1`.
-- Runtime surfaces: Rust CLI, Rust TUI, Rust daemon/browser control plane, Next.js marketing/docs site, npm install wrapper.
-- Core storage: local files under `~/.gunmetal`, with SQLite state, runtime files, helper directory, and logs.
-- Provider model: explicit adapters for `codex`, `copilot`, `openrouter`, `zen`, and `openai`, with additional enum slots for `azure`, `nvidia`, and custom providers.
+- Product: local-first inference middle layer for individuals.
+- Canonical flow: `app/tool -> Gunmetal key -> Gunmetal -> provider extension -> upstream provider`.
+- Core product nouns:
+  - provider accounts
+  - models
+  - Gunmetal keys
+  - requests
+  - usage stats
+- Internal architecture target:
+  - inbound compatibility layer
+  - Gunmetal core request/control layer
+  - Gunmetal SDK for provider extensions
+  - first-party provider extensions

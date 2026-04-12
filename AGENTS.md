@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`apps/cli/` is the native Gunmetal app entrypoint; `apps/web/` holds the Next.js site and docs. Internal Rust modules live in `packages/`: `packages/cli` handles commands, `packages/daemon` serves HTTP, `packages/providers` integrates upstreams, `packages/storage` owns SQLite, `packages/core` shares types, and `packages/tui` renders the terminal UI. `packages/npm/` is the npm distribution wrapper; executable code is in `packages/npm/bin`, tests in `packages/npm/test`.
+`apps/gunmetal/` is the native Gunmetal app entrypoint; `apps/web/` holds the Next.js site and docs. The internal SDK lives in `packages/sdk/`, shared SDK-facing types live in `packages/sdk-core/`, and first-party provider extensions live in `packages/extensions/`. App-only Rust packages live under `packages/app-*`: `packages/app-cli` handles commands, `packages/app-daemon` serves HTTP, `packages/app-storage` owns SQLite/local state, and `packages/app-tui` renders the terminal UI. `packages/npm/` is the npm distribution wrapper; executable code is in `packages/npm/bin`, tests in `packages/npm/test`.
 
 ## Build, Test, and Development Commands
 Use Bun at the repo root.

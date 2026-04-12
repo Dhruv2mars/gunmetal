@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 
 const steps = [
   "Install Gunmetal globally with npm.",
-  "Run `gunmetal setup` once to create a profile and a local key.",
+  "Run `gunmetal setup` once to connect one provider and create a local key.",
   "Run `gunmetal web` to start the local browser surface and open it in your browser.",
-  "Use the same machine-local UI to auth providers, sync models, create keys, and inspect logs.",
+  "Use the same machine-local UI to auth providers, sync models, create keys, and inspect request history with token usage.",
 ];
 
 export default function WebUiPage() {
@@ -23,11 +23,11 @@ export default function WebUiPage() {
       <section className="section-grid">
         <div className="section-head">
           <p className="section-tag">Launch</p>
-          <h2>One command opens the local control plane.</h2>
+          <h2>One command opens your local provider console.</h2>
           <p>
             The Web UI is not a hosted dashboard. It is a local surface, served
-            by Gunmetal itself, so profiles, sessions, keys, and logs stay on
-            the same machine at `127.0.0.1`.
+            by Gunmetal itself, so providers, sessions, keys, request history,
+            and token stats stay on the same machine at `127.0.0.1`.
           </p>
           <ol className="step-list">
             {steps.map((step) => (
@@ -56,12 +56,12 @@ http://127.0.0.1:4684/v1`}</pre>
         <article className="lane-card">
           <p className="panel-kicker">What it does</p>
           <ul className="stack-list">
-            <li>create provider profiles</li>
+            <li>connect providers</li>
             <li>open browser auth for codex and copilot</li>
             <li>save direct API keys for gateway and direct providers</li>
             <li>sync model catalogs</li>
             <li>create, disable, revoke, and delete Gunmetal keys</li>
-            <li>inspect recent request logs</li>
+            <li>inspect request history and token usage</li>
           </ul>
         </article>
         <article className="lane-card">

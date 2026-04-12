@@ -12,7 +12,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-gunmetal-cli = { path = "../../packages/cli" }
-gunmetal-storage = { path = "../../packages/storage" }
-gunmetal-tui = { path = "../../packages/tui" }
+gunmetal-cli = { path = "../../packages/app-cli" }
+gunmetal-storage = { path = "../../packages/app-storage" }
+gunmetal-tui = { path = "../../packages/app-tui" }
 tokio.workspace = true

@@ -18,7 +18,7 @@ export function SiteShell({ eyebrow, title, lede, children }: SiteShellProps) {
           <span className="brand-chip">GM</span>
           <span className="brand-copy">
             <strong>Gunmetal</strong>
-            <span>Local-first AI switchboard</span>
+            <span>Local inference middle layer</span>
           </span>
         </Link>
         <nav className="site-nav" aria-label="Primary">

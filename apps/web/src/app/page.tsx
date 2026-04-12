@@ -7,11 +7,11 @@ const surfaces = [
   },
   {
     title: "Web UI",
-    body: "Run `gunmetal web` to open your local control plane in the browser on the same machine that owns the keys and sessions.",
+    body: "Run `gunmetal web` to open the local browser UI on the same machine that owns the providers, keys, request history, and sessions.",
   },
   {
     title: "CLI + TUI",
-    body: "Use the same profiles, keys, logs, and models from a shell or from the terminal dashboard.",
+    body: "Use the same providers, keys, request history, token stats, and models from a shell or from the terminal dashboard.",
   },
 ];
 
@@ -29,11 +29,11 @@ const providerBands = [
 ];
 
 const operators = [
-  "Create or save provider profiles",
-  "Finish auth flows for browser-login providers",
+  "Connect one provider and finish auth",
   "Sync upstream models into one local registry",
   "Mint scoped Gunmetal keys for real apps",
-  "Inspect request logs and model inventory",
+  "Inspect request history and token usage",
+  "Keep provider/model ids explicit in real apps",
 ];
 
 export default function HomePage() {
@@ -44,7 +44,7 @@ export default function HomePage() {
           <span className="brand-chip">GM</span>
           <span className="brand-copy">
             <strong>Gunmetal</strong>
-            <span>Local-first AI switchboard</span>
+            <span>Local inference middle layer</span>
           </span>
         </Link>
         <nav className="site-nav" aria-label="Primary">
@@ -66,11 +66,12 @@ export default function HomePage() {
         <section className="poster-hero">
           <div className="poster-copy">
             <p className="eyebrow">Gunmetal • gunmetalapp.vercel.app</p>
-            <h1>The local control plane for every AI account you already pay for.</h1>
+            <h1>Use the AI accounts you already pay for through one local API.</h1>
             <p className="lede">
-              Gunmetal puts one fast local API, one browser UI, one TUI, and
-              one CLI in front of subscription providers, gateways, and direct
-              keys without adding a hosted relay in the middle.
+              Gunmetal sits between your apps and your providers with one fast
+              local API, one browser UI, one TUI, and one CLI, then keeps
+              request history and token stats close to the machine that owns the
+              access.
             </p>
             <div className="button-row">
               <Link className="button button-primary" href="/install">
@@ -126,13 +127,14 @@ export default function HomePage() {
           <section className="deep-grid">
             <article className="deep-copy">
               <p className="section-tag">Why this exists</p>
-              <h2>Apps should talk to one local endpoint. Providers stay explicit behind it.</h2>
+              <h2>Apps should talk to one local API. Providers stay explicit behind it.</h2>
               <p>
                 Gunmetal is built for the boring real problem: you already have
                 a mix of Codex, Copilot, OpenRouter, Zen, and direct provider
                 keys, but each app wants a different setup story. Gunmetal
-                gives your machine one consistent front door and keeps the
-                provider choice visible instead of hiding it behind aliases.
+                gives your machine one consistent front door, keeps the
+                provider choice visible, and lets you inspect what happened
+                after the request is done.
               </p>
             </article>
             <div className="deep-stack">

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | Gunmetal",
   },
   description:
-    "Gunmetal is a local-first AI switchboard with a hosted landing page, a local browser UI, a TUI, a CLI, and one fast local API.",
+    "Gunmetal is a local-first inference middle layer with one local API, connected providers, request history, token stats, and matching browser, TUI, and CLI surfaces.",
 };
 
 export default function RootLayout({

@@ -3,15 +3,16 @@ const assert = require("node:assert/strict");
 const { existsSync, readFileSync } = require("node:fs");
 
 const expectedPaths = [
-  "apps/cli/Cargo.toml",
+  "apps/gunmetal/Cargo.toml",
   "apps/web/package.json",
-  "packages/cli/Cargo.toml",
-  "packages/core/Cargo.toml",
-  "packages/daemon/Cargo.toml",
+  "packages/app-cli/Cargo.toml",
+  "packages/app-daemon/Cargo.toml",
+  "packages/app-storage/Cargo.toml",
+  "packages/app-tui/Cargo.toml",
+  "packages/extensions/Cargo.toml",
   "packages/npm/package.json",
-  "packages/providers/Cargo.toml",
-  "packages/storage/Cargo.toml",
-  "packages/tui/Cargo.toml"
+  "packages/sdk/Cargo.toml",
+  "packages/sdk-core/Cargo.toml"
 ];
 
 test("repo uses product-centric app and package roots", () => {
@@ -28,13 +29,14 @@ test("workspace manifests point at the new layout", () => {
   const npmPackageJson = readFileSync("packages/npm/package.json", "utf8");
 
   for (const member of [
-    "apps/cli",
-    "packages/cli",
-    "packages/core",
-    "packages/daemon",
-    "packages/providers",
-    "packages/storage",
-    "packages/tui"
+    "apps/gunmetal",
+    "packages/app-cli",
+    "packages/app-daemon",
+    "packages/app-storage",
+    "packages/app-tui",
+    "packages/extensions",
+    "packages/sdk",
+    "packages/sdk-core"
   ]) {
     assert.match(cargoToml, new RegExp(`"${member}"`));
   }

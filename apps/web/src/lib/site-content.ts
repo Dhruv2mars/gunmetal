@@ -14,11 +14,11 @@ export const moduleCards = [
   },
   {
     title: "CLI",
-    body: "Handles auth, profiles, keys, models, logs, start, stop, and scripted workflows from one binary.",
+    body: "Handles provider auth, keys, models, request history, start, stop, and scripted workflows from one binary.",
   },
   {
     title: "TUI",
-    body: "Runs as a real operator surface: create profiles, auth providers, sync models, mint or revoke keys, inspect snippets, and drill into request logs.",
+    body: "Runs as a real operator surface: connect providers, auth them, sync models, mint or revoke keys, inspect snippets, and drill into request history.",
   },
   {
     title: "Providers",
@@ -77,7 +77,7 @@ export const docsSections = [
 
 export const installSteps = [
   "Install Gunmetal with npm: npm i -g @dhruv2mars/gunmetal.",
-  "Run gunmetal setup. That is the golden path: save one profile, auth it, sync models, create one key.",
+  "Run gunmetal setup. That is the golden path: connect one provider, auth it, sync models, create one key.",
   "Run gunmetal start or open gunmetal. The TUI can drive the same flow if you prefer.",
   "Call GET /v1/models with your Gunmetal key to confirm the local gateway works.",
   "Point your app at http://127.0.0.1:4684/v1 and use a provider/model id like codex/gpt-5.4.",
@@ -97,12 +97,12 @@ export const changelogEntries = [
   {
     date: "March 2026",
     title: "Core provider set",
-    body: "Wired codex, copilot, openrouter, zen, and openai into the same local control plane and inference path.",
+    body: "Wired codex, copilot, openrouter, zen, and openai into the same local inference middle layer and request path.",
   },
   {
     date: "March 2026",
     title: "Foundation",
-    body: "Set the monorepo, local storage, Gunmetal keys, profiles, registry, lightweight telemetry, CLI, and TUI baseline.",
+    body: "Set the monorepo, local storage, Gunmetal keys, provider records, registry, lightweight telemetry, CLI, and TUI baseline.",
   },
 ];
 

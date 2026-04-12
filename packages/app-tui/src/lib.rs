@@ -11,7 +11,7 @@ use gunmetal_core::{
     KeyScope, NewGunmetalKey, NewProviderProfile, ProviderKind, ProviderLoginSession,
     ProviderProfile,
 };
-use gunmetal_providers::ProviderHub;
+use gunmetal_providers::builtin_provider_hub;
 use gunmetal_storage::AppPaths;
 use ratatui::{
     Frame, Terminal,
@@ -128,7 +128,7 @@ fn render(frame: &mut Frame, app: &DashboardApp) {
                 Style::default().fg(service_color),
             ),
             Span::raw(format!(
-                "   Profiles {}   Keys {}   Logs {}",
+                "   Providers {}   Keys {}   Requests {}",
                 app.snapshot.profiles.len(),
                 app.snapshot.keys.len(),
                 app.snapshot.logs.len()
@@ -195,16 +195,14 @@ fn render(frame: &mut Frame, app: &DashboardApp) {
         ];
         let prompt = Paragraph::new(body)
             .wrap(Wrap { trim: false })
-            .block(Block::default().borders(Borders::ALL).title("New Profile"));
+            .block(Block::default().borders(Borders::ALL).title("Connect Provider"));
         frame.render_widget(prompt, area);
     }
 }
 
 fn render_profiles_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let items = if app.snapshot.profiles.is_empty() {
-        vec![ListItem::new(
-            "No profiles yet. Press n here or run `gunmetal setup`.",
-        )]
+        vec![ListItem::new("No providers yet. Press n here or run `gunmetal setup`.")]
     } else {
         app.snapshot
             .profiles
@@ -220,16 +218,14 @@ fn render_profiles_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let mut state = ListState::default();
     state.select(app.selected_profile());
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Profiles"))
+        .block(Block::default().borders(Borders::ALL).title("Providers"))
         .highlight_style(Style::default().bg(Color::DarkGray));
     frame.render_stateful_widget(list, area, &mut state);
 }
 
 fn render_keys_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
-    let items = if app.snapshot.keys.is_empty() {
-        vec![ListItem::new(
-            "No keys yet. Press k on a profile to create one.",
-        )]
+        let items = if app.snapshot.keys.is_empty() {
+        vec![ListItem::new("No keys yet. Press k on a provider to create one.")]
     } else {
         app.snapshot
             .keys
@@ -248,7 +244,7 @@ fn render_keys_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
 fn render_logs_list(frame: &mut Frame, app: &DashboardApp, area: Rect) {
     let items = if app.snapshot.logs.is_empty() {
         vec![ListItem::new(
-            "No logs yet. Start Gunmetal, then make one API call.",
+            "No request history yet. Start Gunmetal, then make one API call.",
         )]
     } else {
         app.snapshot
@@ -390,7 +386,7 @@ impl DashboardApp {
         match key.code {
             KeyCode::Esc => {
                 self.prompt = None;
-                self.status_message = "Cancelled profile creation.".to_owned();
+                self.status_message = "Cancelled provider creation.".to_owned();
             }
             KeyCode::Backspace => {
                 prompt.fields[prompt.index].pop_char();
@@ -435,16 +431,16 @@ impl DashboardApp {
             .iter()
             .position(|item| item.profile.id == profile.id)
             .unwrap_or_default();
-        self.status_message = format!("Created profile {}", profile.name);
+        self.status_message = format!("Connected provider {}", profile.name);
         Ok(())
     }
 
     fn auth_selected_profile(&mut self, runtime: &Runtime, paths: &AppPaths) -> Result<()> {
         let Some(profile) = self.selected_profile_row().map(|item| item.profile.clone()) else {
-            self.status_message = "No profile selected.".to_owned();
+            self.status_message = "No provider selected.".to_owned();
             return Ok(());
         };
-        let providers = ProviderHub::new(paths.clone());
+        let providers = builtin_provider_hub(paths.clone());
         let service_url = self.service.url.clone();
         let message = runtime.block_on(async move {
             match profile.provider {
@@ -474,10 +470,10 @@ impl DashboardApp {
 
     fn sync_selected_profile(&mut self, runtime: &Runtime, paths: &AppPaths) -> Result<()> {
         let Some(profile) = self.selected_profile_row().map(|item| item.profile.clone()) else {
-            self.status_message = "No profile selected.".to_owned();
+            self.status_message = "No provider selected.".to_owned();
             return Ok(());
         };
-        let providers = ProviderHub::new(paths.clone());
+        let providers = builtin_provider_hub(paths.clone());
         let storage = paths.storage_handle()?;
         let models = runtime.block_on(async { providers.sync_models(&profile).await })?;
         let count = models.len();
@@ -489,10 +485,10 @@ impl DashboardApp {
 
     fn logout_selected_profile(&mut self, runtime: &Runtime, paths: &AppPaths) -> Result<()> {
         let Some(profile) = self.selected_profile_row().map(|item| item.profile.clone()) else {
-            self.status_message = "No profile selected.".to_owned();
+            self.status_message = "No provider selected.".to_owned();
             return Ok(());
         };
-        let providers = ProviderHub::new(paths.clone());
+        let providers = builtin_provider_hub(paths.clone());
         runtime.block_on(async { providers.logout(&profile).await })?;
         self.reload(paths)?;
         self.status_message = format!("Logged out {}", profile.name);
@@ -501,7 +497,7 @@ impl DashboardApp {
 
     fn create_key_for_selected_profile(&mut self, paths: &AppPaths) -> Result<()> {
         let Some(profile) = self.selected_profile_row().map(|item| item.profile.clone()) else {
-            self.status_message = "No profile selected.".to_owned();
+            self.status_message = "No provider selected.".to_owned();
             return Ok(());
         };
         let created = paths.storage_handle()?.create_key(NewGunmetalKey {
@@ -549,7 +545,7 @@ impl DashboardApp {
     fn hints(&self) -> String {
         match self.tab {
             Tab::Profiles => {
-                "Tab switch  n new profile  a auth/status  s sync  k create key  o logout  q quit"
+                "Tab switch  n connect provider  a auth/status  s sync  k create key  o logout  q quit"
                     .to_owned()
             }
             Tab::Keys => "Tab switch  d disable  r revoke  x delete  q quit".to_owned(),
@@ -570,7 +566,7 @@ impl DashboardApp {
     fn profile_detail_lines(&self) -> Vec<Line<'static>> {
         let Some(item) = self.selected_profile_row() else {
             return vec![
-                Line::from("Create a profile with n."),
+                Line::from("Connect a provider with n."),
                 Line::from("Then auth, sync, and create a key here."),
             ];
         };
@@ -608,7 +604,7 @@ impl DashboardApp {
 
     fn key_detail_lines(&self) -> Vec<Line<'static>> {
         let Some(key) = self.selected_key_row() else {
-            return vec![Line::from("Create a key from the Profiles tab with k.")];
+            return vec![Line::from("Create a key from the Providers tab with k.")];
         };
         let providers = if key.allowed_providers.is_empty() {
             "all providers".to_owned()
@@ -665,7 +661,7 @@ impl DashboardApp {
             .unwrap_or_else(|| "<missing key>".to_owned());
         vec![
             Line::from(format!("When: {}", log.started_at.to_rfc3339())),
-            Line::from(format!("Profile: {profile_name}")),
+            Line::from(format!("Saved provider: {profile_name}")),
             Line::from(format!("Key: {key_name}")),
             Line::from(format!("Provider: {}", log.provider)),
             Line::from(format!("Model: {}", log.model)),
@@ -875,9 +871,9 @@ enum Tab {
 impl Tab {
     fn titles() -> Vec<Line<'static>> {
         vec![
-            Line::from("Profiles"),
+            Line::from("Providers"),
             Line::from("Keys"),
-            Line::from("Logs"),
+            Line::from("Requests"),
             Line::from("Snippets"),
         ]
     }
@@ -911,7 +907,7 @@ impl Tab {
 
     fn detail_title(self) -> &'static str {
         match self {
-            Self::Profiles => "Profile Detail",
+            Self::Profiles => "Provider Detail",
             Self::Keys => "Key Detail",
             Self::Logs => "Request Drill-Down",
             Self::Snippets => "Copy-Ready Snippet",
@@ -931,7 +927,7 @@ impl Default for NewProfilePrompt {
             index: 0,
             fields: vec![
                 PromptField::new("Provider", "openai"),
-                PromptField::new("Profile name", ""),
+                PromptField::new("Provider name", ""),
                 PromptField::new("Base URL (optional)", ""),
                 PromptField::new("API key (optional)", ""),
             ],
@@ -968,7 +964,7 @@ impl NewProfilePrompt {
     fn name(&self) -> Result<String> {
         let value = self.fields[1].value.trim();
         if value.is_empty() {
-            bail!("profile name cannot be empty");
+            bail!("provider name cannot be empty");
         }
         Ok(value.to_owned())
     }
@@ -1300,7 +1296,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
 
-        assert!(rendered.contains("Profile: dad-openai"));
+        assert!(rendered.contains("Saved provider: dad-openai"));
         assert!(rendered.contains("Key: apps"));
         assert!(rendered.contains("Status: 200"));
     }

@@ -15,7 +15,8 @@ use gunmetal_core::{
     ProviderLoginSession,
 };
 use gunmetal_daemon::DaemonState;
-use gunmetal_providers::{ProviderHub, builtin_providers};
+use gunmetal_providers::{builtin_provider_hub, builtin_providers};
+use gunmetal_sdk::ProviderHub;
 use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -30,12 +31,12 @@ const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
 const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
-const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. create or save one provider profile\n  2. auth that profile\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
+const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 
 #[derive(Debug, Parser)]
 #[command(
     name = "gunmetal",
-    about = "Local-first AI switchboard.",
+    about = "Local inference middle layer.",
     long_about = None,
     after_help = HELP_FOOTER
 )]
@@ -237,7 +238,7 @@ pub enum LogCommand {
 }
 
 pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write) -> Result<()> {
-    let providers = ProviderHub::new(paths.clone());
+    let providers = builtin_provider_hub(paths.clone());
 
     match command {
         Command::Setup(args) => {
@@ -353,7 +354,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 if models.is_empty() {
                     writeln!(
                         output,
-                        "No models synced yet. Run `gunmetal setup` or `gunmetal models sync <profile>`."
+                        "No models synced yet. Run `gunmetal setup` or `gunmetal models sync <saved-provider>`."
                     )?;
                 }
                 for model in models {
@@ -371,7 +372,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 )?;
                 writeln!(
                     output,
-                    "synced {} models for profile {}",
+                    "synced {} models for provider {}",
                     models.len(),
                     profile_record.name
                 )?;
@@ -395,7 +396,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     enabled: true,
                     credentials: profile_credentials(api_key, bin_path, cwd, http_referer, title),
                 })?;
-                writeln!(output, "created profile {}", profile.name)?;
+                writeln!(output, "saved provider {}", profile.name)?;
                 writeln!(output, "id: {}", profile.id)?;
             }
             ProfileCommand::List => {
@@ -403,7 +404,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 if profiles.is_empty() {
                     writeln!(
                         output,
-                        "No profiles yet. Run `gunmetal setup` or `gunmetal profiles create ...`."
+                        "No providers yet. Run `gunmetal setup` or `gunmetal profiles create ...`."
                     )?;
                 }
                 for profile in profiles {
@@ -433,7 +434,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 let status = providers.auth_status(&profile_record).await?;
                 writeln!(
                     output,
-                    "Profile: {} ({})",
+                    "Provider: {} ({})",
                     profile_record.name, profile_record.provider
                 )?;
                 writeln!(output, "Auth: {}", status.label)?;
@@ -896,7 +897,7 @@ async fn setup(
     writeln!(output, "Gunmetal setup")?;
     writeln!(
         output,
-        "This creates one provider profile, checks auth, syncs models, and creates one local key that works across providers."
+        "This connects one provider, checks auth, syncs models, and creates one local key that works across providers."
     )?;
     writeln!(output)?;
     let provider = match args.provider {
@@ -906,7 +907,7 @@ async fn setup(
     let name = prompt_or_value(
         output,
         interactive,
-        "Profile name",
+        "Provider name",
         args.name,
         Some(provider.to_string()),
     )?;
@@ -949,7 +950,7 @@ async fn setup(
     })?;
     writeln!(
         output,
-        "Saved profile {} ({})",
+        "Saved provider {} ({})",
         profile.name, profile.provider
     )?;
 
@@ -1039,7 +1040,7 @@ async fn setup(
     writeln!(output, "What just happened")?;
     writeln!(
         output,
-        "- profile saved: {} ({})",
+        "- provider saved: {} ({})",
         profile.name, profile.provider
     )?;
     if !args.no_sync {
@@ -1088,7 +1089,7 @@ async fn wait_for_provider_auth(
     }
 
     anyhow::bail!(
-        "authentication did not finish in time for profile '{}'. finish in the browser, then run `gunmetal auth status {}` or `gunmetal auth login {}` again",
+        "authentication did not finish in time for provider '{}'. finish in the browser, then run `gunmetal auth status {}` or `gunmetal auth login {}` again",
         profile.name,
         profile.name,
         profile.name
@@ -1117,11 +1118,11 @@ fn require_profile(
     match matches.len() {
         1 => Ok(matches.into_iter().next().expect("single match")),
         0 => anyhow::bail!(
-            "profile '{}' not found. run `gunmetal profiles list` or `gunmetal setup`.",
+            "provider '{}' not found. run `gunmetal profiles list` or `gunmetal setup`.",
             selector
         ),
         _ => anyhow::bail!(
-            "profile '{}' is ambiguous. use the id from `gunmetal profiles list`.",
+            "provider '{}' is ambiguous. use the id from `gunmetal profiles list`.",
             selector
         ),
     }
@@ -1377,9 +1378,9 @@ mod tests {
     use async_trait::async_trait;
     use clap::{CommandFactory, Parser};
     use gunmetal_core::{ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile};
-    use gunmetal_providers::{
-        ProviderAdapter, ProviderAuthResult, ProviderDefinition, ProviderModelSyncResult,
-        ProviderRegistry,
+    use gunmetal_sdk::{
+        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
+        ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
     use gunmetal_storage::AppPaths;
     use tempfile::TempDir;
@@ -1673,7 +1674,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn missing_profile_errors_tell_user_how_to_recover() {
+    async fn missing_provider_errors_tell_user_how_to_recover() {
         let temp = TempDir::new().unwrap();
         let paths =
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
@@ -1692,7 +1693,7 @@ mod tests {
         .unwrap_err();
 
         let message = error.to_string();
-        assert!(message.contains("profile 'missing' not found"));
+        assert!(message.contains("provider 'missing' not found"));
         assert!(message.contains("gunmetal setup"));
         assert!(message.contains("gunmetal profiles list"));
     }
@@ -1768,7 +1769,7 @@ mod tests {
         fn definition(&self) -> ProviderDefinition {
             ProviderDefinition {
                 kind: ProviderKind::OpenRouter,
-                class: gunmetal_providers::ProviderClass::Gateway,
+                class: ProviderClass::Gateway,
                 priority: 1,
             }
         }
@@ -1792,7 +1793,7 @@ mod tests {
             _profile: &ProviderProfile,
             _paths: &AppPaths,
             _open_browser: bool,
-        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
+        ) -> anyhow::Result<ProviderLoginResult> {
             anyhow::bail!("browser login not used in this test")
         }
 
@@ -1818,7 +1819,7 @@ mod tests {
             _profile: &ProviderProfile,
             _paths: &AppPaths,
             _request: &gunmetal_core::ChatCompletionRequest,
-        ) -> anyhow::Result<gunmetal_providers::ProviderChatResult> {
+        ) -> anyhow::Result<ProviderChatResult> {
             anyhow::bail!("chat not used in this test")
         }
     }

@@ -26,9 +26,9 @@ use gunmetal_core::{
     KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry,
     ProviderKind, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
 };
-use gunmetal_providers::{
+use gunmetal_providers::{builtin_provider_hub, builtin_providers};
+use gunmetal_sdk::{
     ProviderByteStream, ProviderClass, ProviderEventStream, ProviderHub, ProviderStreamEvent,
-    builtin_providers,
 };
 use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,7 @@ pub struct DaemonState {
 impl DaemonState {
     pub fn new(paths: AppPaths) -> Result<Self> {
         let storage = paths.storage_handle()?;
-        let providers = ProviderHub::new(paths.clone());
+        let providers = builtin_provider_hub(paths.clone());
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
@@ -187,7 +187,7 @@ async fn create_profile(
         return api_error(
             StatusCode::BAD_REQUEST,
             "invalid_request",
-            "profile name is required".to_owned(),
+            "provider name is required".to_owned(),
         );
     }
 
@@ -204,7 +204,7 @@ async fn create_profile(
     state.request_cache.clear();
 
     Json(OperatorActionResponse::message(format!(
-        "Saved profile {} ({})",
+        "Saved provider {} ({})",
         profile.name, profile.provider
     )))
     .into_response()
@@ -334,7 +334,7 @@ async fn delete_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) 
         Ok(()) => {
             state.request_cache.clear();
             Json(OperatorActionResponse::message(format!(
-                "Deleted profile {}.",
+                "Deleted provider {}.",
                 profile.name
             )))
             .into_response()
@@ -716,6 +716,10 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
     let keys = state.storage.list_keys()?;
     let models = state.storage.list_models()?;
     let logs = state.storage.list_request_logs(24)?;
+    let profile_count = profiles.len();
+    let model_count = models.len();
+    let key_count = keys.len();
+    let log_count = logs.len();
 
     let profile_rows = profiles
         .iter()
@@ -755,7 +759,7 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
         .collect::<Vec<_>>();
 
     let log_rows = logs
-        .into_iter()
+        .iter()
         .map(|log| {
             let profile_name = profile_rows
                 .iter()
@@ -766,15 +770,64 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
                 started_at: log.started_at.to_rfc3339(),
                 provider: log.provider.to_string(),
                 profile_name,
-                model: log.model,
-                endpoint: log.endpoint,
+                model: log.model.clone(),
+                endpoint: log.endpoint.clone(),
                 status_code: log.status_code,
                 duration_ms: log.duration_ms,
+                input_tokens: log.usage.input_tokens,
+                output_tokens: log.usage.output_tokens,
                 total_tokens: log.usage.total_tokens,
-                error_message: log.error_message,
+                error_message: log.error_message.clone(),
             }
         })
         .collect::<Vec<_>>();
+
+    let traffic = OperatorTrafficRow {
+        recent_requests: log_count,
+        success_count: logs
+            .iter()
+            .filter(|log| log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none())
+            .count(),
+        error_count: logs
+            .iter()
+            .filter(|log| log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some())
+            .count(),
+        avg_latency_ms: (!logs.is_empty()).then(|| {
+            logs.iter().map(|log| log.duration_ms).sum::<u64>() / logs.len() as u64
+        }),
+        input_tokens: logs
+            .iter()
+            .map(|log| u64::from(log.usage.input_tokens.unwrap_or_default()))
+            .sum(),
+        output_tokens: logs
+            .iter()
+            .map(|log| u64::from(log.usage.output_tokens.unwrap_or_default()))
+            .sum(),
+        total_tokens: logs
+            .iter()
+            .map(|log| u64::from(log.usage.total_tokens.unwrap_or_default()))
+            .sum(),
+        latest_request_at: logs.first().map(|log| log.started_at.to_rfc3339()),
+    };
+
+    let setup = OperatorSetupRow {
+        provider_ready: profile_count > 0,
+        models_ready: model_count > 0,
+        key_ready: key_count > 0,
+        traffic_ready: log_count > 0,
+        next_step: if profile_count == 0 {
+            "Connect one provider."
+        } else if model_count == 0 {
+            "Sync models for the provider you just connected."
+        } else if key_count == 0 {
+            "Create one Gunmetal key for your apps."
+        } else if log_count == 0 {
+            "Point one app at the local API and send the first request."
+        } else {
+            "Traffic is flowing. Review requests and token usage below."
+        }
+        .to_owned(),
+    };
 
     let provider_rows = builtin_providers()
         .into_iter()
@@ -798,11 +851,13 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             web_url: "/app".to_owned(),
         },
         counts: OperatorCountRow {
-            profiles: profile_rows.len(),
-            models: models.len(),
-            keys: key_rows.len(),
-            logs: log_rows.len(),
+            profiles: profile_count,
+            models: model_count,
+            keys: key_count,
+            logs: log_count,
         },
+        setup,
+        traffic,
         providers: provider_rows,
         profiles: profile_rows,
         models: models.into_iter().map(ModelResponse::from).collect(),
@@ -820,7 +875,7 @@ fn require_profile(state: &DaemonState, id: Uuid) -> Result<ProviderProfile, Api
             ApiError::new(
                 StatusCode::NOT_FOUND,
                 "profile_not_found",
-                "profile not found".to_owned(),
+                "provider not found".to_owned(),
             )
         })
 }
@@ -906,6 +961,8 @@ struct HealthResponse {
 struct OperatorStateResponse {
     service: OperatorServiceRow,
     counts: OperatorCountRow,
+    setup: OperatorSetupRow,
+    traffic: OperatorTrafficRow,
     providers: Vec<OperatorProviderRow>,
     profiles: Vec<OperatorProfileRow>,
     models: Vec<ModelResponse>,
@@ -928,6 +985,27 @@ struct OperatorCountRow {
     models: usize,
     keys: usize,
     logs: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorSetupRow {
+    provider_ready: bool,
+    models_ready: bool,
+    key_ready: bool,
+    traffic_ready: bool,
+    next_step: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorTrafficRow {
+    recent_requests: usize,
+    success_count: usize,
+    error_count: usize,
+    avg_latency_ms: Option<u64>,
+    input_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+    latest_request_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -969,6 +1047,8 @@ struct OperatorLogRow {
     endpoint: String,
     status_code: Option<u16>,
     duration_ms: u64,
+    input_tokens: Option<u32>,
+    output_tokens: Option<u32>,
     total_tokens: Option<u32>,
     error_message: Option<String>,
 }
@@ -1467,10 +1547,10 @@ fn prepare_request(
                 StatusCode::NOT_FOUND,
                 "model_not_found",
                 format!(
-                    "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <profile>` or call `/v1/models`.",
+                    "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <saved-provider>` or call `/v1/models`.",
                     model_id
                 ),
-            ));
+        ));
         };
         state.request_cache.insert_model(model.clone());
         model
@@ -1492,7 +1572,7 @@ fn prepare_request(
             StatusCode::BAD_REQUEST,
             "profile_missing",
             format!(
-                "Model '{}' is not attached to a provider profile. Run `gunmetal models sync <profile>` again.",
+                "Model '{}' is not attached to a saved provider. Run `gunmetal models sync <saved-provider>` again.",
                 model.id
             ),
         ));
@@ -1510,7 +1590,7 @@ fn prepare_request(
                 StatusCode::BAD_REQUEST,
                 "profile_missing",
                 format!(
-                    "Profile '{}' does not exist anymore. Recreate it, then run `gunmetal models sync <profile>`.",
+                    "Saved provider '{}' does not exist anymore. Recreate it, then run `gunmetal models sync <saved-provider>`.",
                     profile_id
                 ),
             ));
@@ -1576,7 +1656,7 @@ async fn invoke_provider(
                 StatusCode::BAD_GATEWAY,
                 "provider_request_failed",
                 format!(
-                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    "Provider request failed for saved provider '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
                     profile.name, profile.name, error
                 ),
             ))
@@ -1698,7 +1778,7 @@ async fn invoke_provider_stream(
                 StatusCode::BAD_GATEWAY,
                 "provider_request_failed",
                 format!(
-                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    "Provider request failed for saved provider '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
                     profile.name, profile.name, error
                 ),
             ))
@@ -1741,7 +1821,7 @@ async fn invoke_provider_raw_stream(
                 StatusCode::BAD_GATEWAY,
                 "provider_request_failed",
                 format!(
-                    "Provider request failed for profile '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
+                    "Provider request failed for saved provider '{}'. Check `gunmetal auth status {}` and retry. Upstream said: {}",
                     profile.name, profile.name, error
                 ),
             ))
@@ -1767,9 +1847,9 @@ mod tests {
         NewProviderProfile, ProviderAuthState, ProviderAuthStatus, ProviderKind,
         ProviderLoginSession, RequestMode, TokenUsage,
     };
-    use gunmetal_providers::{
-        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderDefinition, ProviderHub,
-        ProviderModelSyncResult, ProviderRegistry,
+    use gunmetal_sdk::{
+        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
+        ProviderHub, ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
     use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
@@ -1815,6 +1895,8 @@ mod tests {
         assert!(body.contains("Gunmetal Web"));
         assert!(body.contains("/app/api/state"));
         assert!(body.contains("Loading local state"));
+        assert!(body.contains("setup-grid"));
+        assert!(body.contains("traffic-grid"));
     }
 
     #[tokio::test]
@@ -1859,10 +1941,29 @@ mod tests {
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
         assert_eq!(body["counts"]["logs"], 1);
+        assert_eq!(body["setup"]["provider_ready"], true);
+        assert_eq!(body["setup"]["models_ready"], true);
+        assert_eq!(body["setup"]["key_ready"], true);
+        assert_eq!(body["setup"]["traffic_ready"], true);
+        assert_eq!(
+            body["setup"]["next_step"],
+            "Traffic is flowing. Review requests and token usage below."
+        );
         assert_eq!(body["service"]["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(body["traffic"]["recent_requests"], 1);
+        assert_eq!(body["traffic"]["success_count"], 1);
+        assert_eq!(body["traffic"]["error_count"], 0);
+        assert_eq!(body["traffic"]["avg_latency_ms"], 12);
+        assert_eq!(body["traffic"]["input_tokens"], 2);
+        assert_eq!(body["traffic"]["output_tokens"], 3);
+        assert_eq!(body["traffic"]["total_tokens"], 5);
+        assert!(body["traffic"]["latest_request_at"].is_string());
         assert_eq!(body["profiles"][0]["name"], "default");
         assert_eq!(body["keys"][0]["state"], "active");
         assert_eq!(body["logs"][0]["model"], "codex/gpt-5.4");
+        assert_eq!(body["logs"][0]["input_tokens"], 2);
+        assert_eq!(body["logs"][0]["output_tokens"], 3);
+        assert_eq!(body["logs"][0]["total_tokens"], 5);
     }
 
     #[tokio::test]
@@ -2133,7 +2234,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_json(response).await;
-        assert_eq!(body["message"], "Deleted profile zen.");
+        assert_eq!(body["message"], "Deleted provider zen.");
         assert!(fixture.storage.get_profile(profile.id).unwrap().is_none());
         assert!(fixture.storage.list_models().unwrap().is_empty());
     }
@@ -2668,7 +2769,7 @@ mod tests {
         fn definition(&self) -> ProviderDefinition {
             ProviderDefinition {
                 kind: ProviderKind::Codex,
-                class: gunmetal_providers::ProviderClass::Subscription,
+                class: ProviderClass::Subscription,
                 priority: 1,
             }
         }
@@ -2692,8 +2793,8 @@ mod tests {
             _profile: &gunmetal_core::ProviderProfile,
             _paths: &AppPaths,
             _open_browser: bool,
-        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
-            Ok(gunmetal_providers::ProviderLoginResult {
+        ) -> anyhow::Result<ProviderLoginResult> {
+            Ok(ProviderLoginResult {
                 credentials: None,
                 session: ProviderLoginSession {
                     login_id: "mock".to_owned(),
@@ -2764,7 +2865,7 @@ mod tests {
         fn definition(&self) -> ProviderDefinition {
             ProviderDefinition {
                 kind: ProviderKind::Codex,
-                class: gunmetal_providers::ProviderClass::Subscription,
+                class: ProviderClass::Subscription,
                 priority: 1,
             }
         }
@@ -2788,8 +2889,8 @@ mod tests {
             _profile: &gunmetal_core::ProviderProfile,
             _paths: &AppPaths,
             _open_browser: bool,
-        ) -> anyhow::Result<gunmetal_providers::ProviderLoginResult> {
-            Ok(gunmetal_providers::ProviderLoginResult {
+        ) -> anyhow::Result<ProviderLoginResult> {
+            Ok(ProviderLoginResult {
                 credentials: None,
                 session: ProviderLoginSession {
                     login_id: "mock".to_owned(),

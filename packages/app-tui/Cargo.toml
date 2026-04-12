@@ -9,9 +9,10 @@ version.workspace = true
 arboard.workspace = true
 anyhow.workspace = true
 crossterm.workspace = true
-gunmetal-core = { path = "../core" }
-gunmetal-providers = { path = "../providers" }
-gunmetal-storage = { path = "../storage" }
+gunmetal-core = { path = "../sdk-core" }
+gunmetal-providers = { path = "../extensions" }
+gunmetal-sdk = { path = "../sdk" }
+gunmetal-storage = { path = "../app-storage" }
 ratatui.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true

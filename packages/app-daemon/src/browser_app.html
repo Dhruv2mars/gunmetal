@@ -220,6 +220,59 @@
         overflow: auto;
       }
 
+      .setup-grid,
+      .snapshot-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .setup-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .snapshot-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .setup-step,
+      .snapshot-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .setup-step strong,
+      .snapshot-card strong {
+        display: block;
+      }
+
+      .setup-step span,
+      .snapshot-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .setup-step.done {
+        border-color: rgba(125, 211, 200, 0.32);
+        background: rgba(125, 211, 200, 0.08);
+      }
+
+      .snapshot-value {
+        margin-top: 8px;
+        font-size: 1.55rem;
+        line-height: 1;
+      }
+
+      .service-stack {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
       .section-grid {
         grid-template-columns: minmax(0, 0.86fr) minmax(340px, 0.74fr);
         align-items: start;
@@ -344,11 +397,20 @@
         color: var(--muted);
       }
 
+      .token-breakdown {
+        margin-top: 4px;
+      }
+
       @media (max-width: 1080px) {
         .brand-row,
         .status-row,
         .command-row,
         .section-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .setup-grid,
+        .snapshot-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -360,10 +422,11 @@
         <div class="brand-row">
           <section class="hero">
             <p class="eyebrow">Gunmetal Web</p>
-            <h1>Local control. Browser comfort.</h1>
+            <h1>Local inference. Browser comfort.</h1>
             <p class="lede">
-              Same daemon. Same keys. Same provider state. This is the browser
-              face of Gunmetal, served straight from your local gateway.
+              Same daemon. Same keys. Same providers. This is the browser face
+              of Gunmetal, served straight from your local gateway with request
+              history and token usage close by.
             </p>
             <div class="hero-actions">
               <button class="btn primary" id="refresh-button" type="button">
@@ -379,7 +442,7 @@
             <div class="provider-list" id="provider-strip"></div>
             <div class="banner" id="message-banner">
               <strong>Loading local state...</strong>
-              <span class="subtle">Reading profiles, models, keys, and recent logs from your local Gunmetal home.</span>
+              <span class="subtle">Reading providers, models, keys, and recent request history from your local Gunmetal home.</span>
             </div>
             <div class="banner success" id="secret-banner" hidden></div>
           </aside>
@@ -389,10 +452,12 @@
           <article class="panel">
             <p class="panel-kicker">Golden path</p>
             <div class="command-block mono" id="command-block"></div>
+            <div class="setup-grid" id="setup-grid"></div>
           </article>
           <article class="panel">
-            <p class="panel-kicker">Service</p>
-            <div class="stack" id="service-panel"></div>
+            <p class="panel-kicker">Traffic snapshot</p>
+            <div class="snapshot-grid" id="traffic-grid"></div>
+            <div class="stack service-stack" id="service-panel"></div>
           </article>
         </section>
       </header>
@@ -400,17 +465,17 @@
       <main class="section-grid">
         <section class="stack">
           <article class="panel">
-            <p class="panel-kicker">Profiles</p>
+            <p class="panel-kicker">Providers</p>
             <div id="profiles"></div>
           </article>
           <article class="panel">
-            <p class="panel-kicker">Recent logs</p>
+            <p class="panel-kicker">Request history</p>
             <div id="logs"></div>
           </article>
         </section>
         <section class="stack">
           <article class="panel">
-            <p class="panel-kicker">Create profile</p>
+            <p class="panel-kicker">Connect provider</p>
             <p class="note">
               Start with one provider. Browser-login providers open an auth URL.
               Key-based providers need the upstream API key saved here.
@@ -429,7 +494,7 @@
                 </select>
               </label>
               <label>
-                Profile name
+                Provider name
                 <input name="name" placeholder="work-openai" required />
               </label>
               <label>
@@ -440,7 +505,7 @@
                 API key
                 <input name="api_key" placeholder="optional for browser-login providers" />
               </label>
-              <button class="btn primary" type="submit">Save profile</button>
+              <button class="btn primary" type="submit">Save provider</button>
             </form>
           </article>
           <article class="panel">
@@ -469,6 +534,12 @@
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;");
+      }
+
+      function formatTimestamp(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
       }
 
       function setBanner(message, tone = "default") {
@@ -507,14 +578,14 @@
         if (!data.profiles.length) {
           $("message-banner").className = "banner";
           $("message-banner").innerHTML =
-            "<strong>Ready.</strong><span class=\"subtle\">Create a profile, auth it, sync models, mint a key.</span>";
+            "<strong>Ready.</strong><span class=\"subtle\">Connect a provider, auth it, sync models, mint a key.</span>";
           return;
         }
 
         if (!data.models.length) {
           $("message-banner").className = "banner";
           $("message-banner").innerHTML =
-            "<strong>Profile saved.</strong><span class=\"subtle\">Sync models next so apps can target explicit provider/model ids.</span>";
+            "<strong>Provider connected.</strong><span class=\"subtle\">Sync models next so apps can target explicit provider/model ids.</span>";
           return;
         }
 
@@ -575,10 +646,10 @@
           .join("");
 
         $("count-grid").innerHTML = [
-          ["Profiles", data.counts.profiles],
+          ["Providers", data.counts.profiles],
           ["Models", data.counts.models],
           ["Keys", data.counts.keys],
-          ["Logs", data.counts.logs],
+          ["Requests", data.counts.logs],
         ]
           .map(
             ([label, value]) => `
@@ -601,6 +672,83 @@
             "MODEL=provider/model",
           ].join("\n"),
         );
+
+        const setupSteps = [
+          [
+            "Connect provider",
+            data.setup.provider_ready,
+            data.setup.provider_ready
+              ? `${escapeHtml(data.counts.profiles)} saved`
+              : "Start with one provider.",
+          ],
+          [
+            "Sync models",
+            data.setup.models_ready,
+            data.setup.models_ready
+              ? `${escapeHtml(data.counts.models)} ready`
+              : "Pull models into the local registry.",
+          ],
+          [
+            "Create key",
+            data.setup.key_ready,
+            data.setup.key_ready
+              ? `${escapeHtml(data.counts.keys)} available`
+              : "Mint one Gunmetal key for your app.",
+          ],
+          [
+            "Send request",
+            data.setup.traffic_ready,
+            data.setup.traffic_ready
+              ? escapeHtml(data.setup.next_step)
+              : "Point one app at the local API.",
+          ],
+        ];
+
+        $("setup-grid").innerHTML = setupSteps
+          .map(
+            ([label, done, detail]) => `
+              <article class="setup-step${done ? " done" : ""}">
+                <strong>${escapeHtml(label)}</strong>
+                <span>${detail}</span>
+              </article>
+            `,
+          )
+          .join("");
+
+        $("traffic-grid").innerHTML = [
+          [
+            "Total tokens",
+            data.traffic.total_tokens,
+            `in ${escapeHtml(data.traffic.input_tokens)} · out ${escapeHtml(data.traffic.output_tokens)}`,
+          ],
+          [
+            "Avg latency",
+            data.traffic.avg_latency_ms == null ? "—" : `${escapeHtml(data.traffic.avg_latency_ms)} ms`,
+            data.traffic.latest_request_at
+              ? `latest ${escapeHtml(formatTimestamp(data.traffic.latest_request_at))}`
+              : "No request yet.",
+          ],
+          [
+            "Successes",
+            data.traffic.success_count,
+            `${escapeHtml(data.traffic.error_count)} errors`,
+          ],
+          [
+            "Recent requests",
+            data.traffic.recent_requests,
+            "Last 24 requests stored locally.",
+          ],
+        ]
+          .map(
+            ([label, value, detail]) => `
+              <article class="snapshot-card">
+                <strong>${escapeHtml(label)}</strong>
+                <div class="snapshot-value">${escapeHtml(value)}</div>
+                <span>${detail}</span>
+              </article>
+            `,
+          )
+          .join("");
 
         $("service-panel").innerHTML = `
           <div><strong>Status</strong><div class="subtle">${escapeHtml(data.service.status)}</div></div>
@@ -633,7 +781,7 @@
               `,
               )
               .join("")}</div>`
-          : `<p class="note">No profiles yet. Save one on the right, then auth and sync it here.</p>`;
+          : `<p class="note">No providers yet. Save one on the right, then auth and sync it here.</p>`;
 
         $("keys").innerHTML = data.keys.length
           ? `<table class="table">
@@ -666,7 +814,7 @@
                   .join("")}
               </tbody>
             </table>`
-          : `<p class="note">No keys yet. Create one from a profile card.</p>`;
+          : `<p class="note">No keys yet. Create one from a provider card.</p>`;
 
         $("models").innerHTML = data.models.length
           ? `<table class="table">
@@ -692,7 +840,7 @@
                   .join("")}
               </tbody>
             </table>`
-          : `<p class="note">No models synced yet. Sync at least one profile.</p>`;
+          : `<p class="note">No models synced yet. Sync at least one provider.</p>`;
 
         $("logs").innerHTML = data.logs.length
           ? `<table class="table">
@@ -709,10 +857,10 @@
                   .map(
                     (log) => `
                       <tr>
-                        <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(log.started_at)}</div></td>
+                        <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(formatTimestamp(log.started_at))}</div></td>
                         <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.endpoint)}</div></td>
                         <td>${escapeHtml(log.status_code ?? "pending")}${log.error_message ? `<div class="subtle">${escapeHtml(log.error_message)}</div>` : ""}</td>
-                        <td>${escapeHtml(log.duration_ms)} ms${log.total_tokens ? `<div class="subtle">${escapeHtml(log.total_tokens)} tokens</div>` : ""}</td>
+                        <td>${escapeHtml(log.duration_ms)} ms${log.total_tokens ? `<div class="subtle token-breakdown">in ${escapeHtml(log.input_tokens ?? 0)} · out ${escapeHtml(log.output_tokens ?? 0)} · total ${escapeHtml(log.total_tokens)}</div>` : ""}</td>
                       </tr>
                     `,
                   )
@@ -762,7 +910,7 @@
       }
 
       async function deleteProfile(id) {
-        if (!window.confirm("Delete this profile and its synced models?")) return;
+        if (!window.confirm("Delete this provider and its synced models?")) return;
         await submitAction(`/app/api/profiles/${id}`, { method: "DELETE" });
       }
 

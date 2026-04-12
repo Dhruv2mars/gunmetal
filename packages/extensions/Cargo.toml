@@ -1,27 +1,26 @@
 [package]
-name = "gunmetal-daemon"
+name = "gunmetal-providers"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 version.workspace = true
 
 [dependencies]
-async-stream.workspace = true
+async-trait.workspace = true
 anyhow.workspace = true
-axum.workspace = true
 chrono.workspace = true
 futures-util.workspace = true
-gunmetal-core = { path = "../core" }
-gunmetal-providers = { path = "../providers" }
-gunmetal-storage = { path = "../storage" }
+gunmetal-core = { path = "../sdk-core" }
+gunmetal-sdk = { path = "../sdk" }
+gunmetal-storage = { path = "../app-storage" }
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-tokio-stream.workspace = true
+url = "2.5.7"
 uuid.workspace = true
+webbrowser.workspace = true
 
 [dev-dependencies]
-async-trait.workspace = true
 tempfile.workspace = true
-tokio.workspace = true
-tower.workspace = true
+wiremock = "0.6.5"
