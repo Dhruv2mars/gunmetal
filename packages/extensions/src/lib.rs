@@ -16,10 +16,11 @@ mod zen;
 pub use codex::{CodexClient, CodexClientOptions};
 pub use copilot::{CopilotClient, CopilotClientOptions, CopilotSession};
 pub use gunmetal_sdk::{
-    ModelsDevCatalog, ProviderAdapter, ProviderAuthResult, ProviderByteStream, ProviderChatResult,
-    ProviderClass, ProviderDefinition, ProviderEventStream, ProviderHub, ProviderLoginResult,
-    ProviderModelSyncResult, ProviderRawSseResult, ProviderRegistry, ProviderStreamEvent,
-    ProviderStreamResult, openai_compatible_event_stream, synthetic_chat_sse_stream,
+    ModelsDevCatalog, ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderByteStream,
+    ProviderCapabilities, ProviderChatResult, ProviderClass, ProviderDefinition,
+    ProviderEventStream, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
+    ProviderRawSseResult, ProviderRegistry, ProviderStreamEvent, ProviderStreamResult,
+    ProviderUxHints, openai_compatible_event_stream, synthetic_chat_sse_stream,
 };
 pub use openai::{OpenAiClient, OpenAiClientOptions};
 pub use openrouter::{OpenRouterClient, OpenRouterClientOptions};
@@ -86,8 +87,23 @@ impl ProviderAdapter for CodexAdapter {
     fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Codex,
+            label: "codex",
             class: ProviderClass::Subscription,
             priority: 1,
+            capabilities: ProviderCapabilities {
+                auth_method: ProviderAuthMethod::BrowserSession,
+                supports_base_url: false,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: ProviderUxHints {
+                helper_title: "Browser sign-in provider",
+                helper_body: "Save the provider, then auth it through the browser flow. Base URL and API key are not needed here.",
+                suggested_name: "codex",
+                base_url_placeholder: "not used for this provider",
+            },
         }
     }
 
@@ -164,8 +180,23 @@ impl ProviderAdapter for CopilotAdapter {
     fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Copilot,
+            label: "copilot",
             class: ProviderClass::Subscription,
             priority: 2,
+            capabilities: ProviderCapabilities {
+                auth_method: ProviderAuthMethod::BrowserSession,
+                supports_base_url: false,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: ProviderUxHints {
+                helper_title: "Browser sign-in provider",
+                helper_body: "Save the provider, then auth it through the browser flow. Base URL and API key are not needed here.",
+                suggested_name: "copilot",
+                base_url_placeholder: "not used for this provider",
+            },
         }
     }
 
@@ -237,8 +268,23 @@ impl ProviderAdapter for OpenRouterAdapter {
     fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::OpenRouter,
+            label: "openrouter",
             class: ProviderClass::Gateway,
             priority: 3,
+            capabilities: ProviderCapabilities {
+                auth_method: ProviderAuthMethod::ApiKey,
+                supports_base_url: true,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: ProviderUxHints {
+                helper_title: "Gateway provider",
+                helper_body: "Save your upstream API key here. Base URL usually stays on the default OpenRouter endpoint.",
+                suggested_name: "openrouter",
+                base_url_placeholder: "https://openrouter.ai/api/v1",
+            },
         }
     }
 
@@ -338,8 +384,23 @@ impl ProviderAdapter for ZenAdapter {
     fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::Zen,
+            label: "zen",
             class: ProviderClass::Gateway,
             priority: 4,
+            capabilities: ProviderCapabilities {
+                auth_method: ProviderAuthMethod::ApiKey,
+                supports_base_url: true,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: ProviderUxHints {
+                helper_title: "Gateway provider",
+                helper_body: "Save your upstream API key here. Base URL usually stays on the default Zen endpoint.",
+                suggested_name: "zen",
+                base_url_placeholder: "https://opencode.ai/zen/v1",
+            },
         }
     }
 
@@ -408,8 +469,23 @@ impl ProviderAdapter for OpenAiAdapter {
     fn definition(&self) -> ProviderDefinition {
         ProviderDefinition {
             kind: ProviderKind::OpenAi,
+            label: "openai",
             class: ProviderClass::Direct,
             priority: 5,
+            capabilities: ProviderCapabilities {
+                auth_method: ProviderAuthMethod::ApiKey,
+                supports_base_url: true,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: ProviderUxHints {
+                helper_title: "Direct provider",
+                helper_body: "Save your upstream API key here. Base URL is optional unless you need a custom endpoint.",
+                suggested_name: "openai",
+                base_url_placeholder: "https://api.openai.com/v1",
+            },
         }
     }
 
@@ -512,5 +588,12 @@ mod tests {
         assert_eq!(providers[2].kind, ProviderKind::OpenRouter);
         assert_eq!(providers[3].kind, ProviderKind::Zen);
         assert_eq!(providers[4].kind, ProviderKind::OpenAi);
+        assert!(providers[0].supports_browser_login());
+        assert!(!providers[0].capabilities.supports_base_url);
+        assert!(providers[2].requires_api_key());
+        assert_eq!(
+            providers[2].ux.base_url_placeholder,
+            "https://openrouter.ai/api/v1"
+        );
     }
 }

@@ -22,6 +22,85 @@ use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
+#[cfg(test)]
+fn provider_definition_fixture(
+    kind: ProviderKind,
+    class: gunmetal_sdk::ProviderClass,
+    priority: usize,
+) -> gunmetal_sdk::ProviderDefinition {
+    let (label, auth_method, supports_base_url, helper_title, helper_body, base_url_placeholder) =
+        match kind {
+            ProviderKind::Codex => (
+                "codex",
+                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
+                false,
+                "Browser sign-in provider",
+                "Save the provider, then auth it in the browser.",
+                "not used for this provider",
+            ),
+            ProviderKind::Copilot => (
+                "copilot",
+                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
+                false,
+                "Browser sign-in provider",
+                "Save the provider, then auth it in the browser.",
+                "not used for this provider",
+            ),
+            ProviderKind::OpenRouter => (
+                "openrouter",
+                gunmetal_sdk::ProviderAuthMethod::ApiKey,
+                true,
+                "Gateway provider",
+                "Save the upstream API key here.",
+                "https://openrouter.ai/api/v1",
+            ),
+            ProviderKind::Zen => (
+                "zen",
+                gunmetal_sdk::ProviderAuthMethod::ApiKey,
+                true,
+                "Gateway provider",
+                "Save the upstream API key here.",
+                "https://opencode.ai/zen/v1",
+            ),
+            ProviderKind::OpenAi => (
+                "openai",
+                gunmetal_sdk::ProviderAuthMethod::ApiKey,
+                true,
+                "Direct provider",
+                "Save the upstream API key here.",
+                "https://api.openai.com/v1",
+            ),
+            ProviderKind::Custom(_) | ProviderKind::Azure | ProviderKind::Nvidia => (
+                "custom",
+                gunmetal_sdk::ProviderAuthMethod::ApiKey,
+                true,
+                "Direct provider",
+                "Save the upstream API key here.",
+                "optional override",
+            ),
+        };
+    gunmetal_sdk::ProviderDefinition {
+        kind,
+        label,
+        class,
+        priority,
+        capabilities: gunmetal_sdk::ProviderCapabilities {
+            auth_method,
+            supports_base_url,
+            supports_model_sync: true,
+            supports_chat_completions: true,
+            supports_responses_api: true,
+            supports_streaming: true,
+        },
+        ux: gunmetal_sdk::ProviderUxHints {
+            helper_title,
+            helper_body,
+            suggested_name: label,
+            base_url_placeholder,
+        },
+    }
+}
+
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 #[cfg(windows)]
@@ -265,6 +344,8 @@ pub enum LogCommand {
         provider: Option<String>,
         #[arg(long)]
         model: Option<String>,
+        #[arg(long)]
+        query: Option<String>,
         #[arg(long, value_enum)]
         status: Option<LogStatus>,
     },
@@ -461,8 +542,34 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 for provider in builtin_providers() {
                     writeln!(
                         output,
-                        "{} {:?} priority={}",
-                        provider.kind, provider.class, provider.priority
+                        "{} {:?} auth={} modes={}{} priority={}",
+                        provider.kind,
+                        provider.class,
+                        if provider.supports_browser_login() {
+                            "browser"
+                        } else {
+                            "api_key"
+                        },
+                        [
+                            provider
+                                .capabilities
+                                .supports_chat_completions
+                                .then_some("chat/completions"),
+                            provider
+                                .capabilities
+                                .supports_responses_api
+                                .then_some("responses"),
+                        ]
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<_>>()
+                        .join("+"),
+                        if provider.capabilities.supports_base_url {
+                            " base_url"
+                        } else {
+                            ""
+                        },
+                        provider.priority
                     )?;
                 }
             }
@@ -561,14 +668,25 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 limit,
                 provider,
                 model,
+                query,
                 status,
             } => {
-                let logs = paths
-                    .storage_handle()?
+                let storage = paths.storage_handle()?;
+                let profiles = storage.list_profiles()?;
+                let keys = storage.list_keys()?;
+                let logs = storage
                     .list_request_logs(limit)?
                     .into_iter()
                     .filter(|log| {
-                        log_matches_filters(log, provider.as_deref(), model.as_deref(), status)
+                        log_matches_filters(
+                            log,
+                            provider.as_deref(),
+                            model.as_deref(),
+                            query.as_deref(),
+                            status,
+                            &profiles,
+                            &keys,
+                        )
                     })
                     .collect::<Vec<_>>();
                 if logs.is_empty() {
@@ -578,11 +696,24 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     )?;
                 }
                 for log in logs {
+                    let profile_name = profiles
+                        .iter()
+                        .find(|profile| Some(profile.id) == log.profile_id)
+                        .map(|profile| profile.name.as_str())
+                        .unwrap_or("-");
+                    let key_name = keys
+                        .iter()
+                        .find(|key| Some(key.id) == log.key_id)
+                        .map(|key| key.name.as_str())
+                        .unwrap_or("-");
                     writeln!(
                         output,
-                        "{} {} {} {} {} {}ms in={} out={} total={}",
+                        "{} {} {} {} {} {} {} {} {}ms in={} out={} total={}",
                         log.started_at,
                         log.provider,
+                        request_mode_label(&log.endpoint),
+                        profile_name,
+                        key_name,
                         log.model,
                         log.endpoint,
                         log.status_code.unwrap_or_default(),
@@ -1499,7 +1630,10 @@ fn log_matches_filters(
     log: &RequestLogEntry,
     provider: Option<&str>,
     model: Option<&str>,
+    query: Option<&str>,
     status: Option<LogStatus>,
+    profiles: &[gunmetal_core::ProviderProfile],
+    keys: &[gunmetal_core::GunmetalKey],
 ) -> bool {
     let provider_matches = provider
         .map(|value| {
@@ -1521,7 +1655,34 @@ fn log_matches_filters(
         Some(LogStatus::Error) => log_failed(log),
         None => true,
     };
-    provider_matches && model_matches && status_matches
+    let profile_name = profiles
+        .iter()
+        .find(|profile| Some(profile.id) == log.profile_id)
+        .map(|profile| profile.name.as_str())
+        .unwrap_or("");
+    let key_name = keys
+        .iter()
+        .find(|key| Some(key.id) == log.key_id)
+        .map(|key| key.name.as_str())
+        .unwrap_or("");
+    let query_matches = query
+        .map(|value| {
+            let query = value.trim().to_ascii_lowercase();
+            [
+                log.provider.to_string(),
+                profile_name.to_owned(),
+                key_name.to_owned(),
+                log.model.clone(),
+                log.endpoint.clone(),
+                request_mode_label(&log.endpoint).to_owned(),
+                log.error_message.clone().unwrap_or_default(),
+            ]
+            .join(" ")
+            .to_ascii_lowercase()
+            .contains(&query)
+        })
+        .unwrap_or(true);
+    provider_matches && model_matches && query_matches && status_matches
 }
 
 fn log_succeeded(log: &RequestLogEntry) -> bool {
@@ -1530,6 +1691,16 @@ fn log_succeeded(log: &RequestLogEntry) -> bool {
 
 fn log_failed(log: &RequestLogEntry) -> bool {
     log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some()
+}
+
+fn request_mode_label(endpoint: &str) -> &'static str {
+    if endpoint.contains("/responses") {
+        "responses"
+    } else if endpoint.contains("/chat/completions") {
+        "chat/completions"
+    } else {
+        "request"
+    }
 }
 
 fn write_log_summary(output: &mut impl Write, logs: &[RequestLogEntry]) -> Result<()> {
@@ -1712,29 +1883,22 @@ fn auth_state_is_connected(state: &ProviderAuthState) -> bool {
 }
 
 fn supports_browser_login(provider: &ProviderKind) -> bool {
-    matches!(provider, ProviderKind::Codex | ProviderKind::Copilot)
+    provider_definition(provider).is_some_and(|definition| definition.supports_browser_login())
 }
 
 fn needs_api_key(provider: &ProviderKind) -> bool {
-    matches!(
-        provider,
-        ProviderKind::OpenRouter
-            | ProviderKind::Zen
-            | ProviderKind::OpenAi
-            | ProviderKind::Azure
-            | ProviderKind::Nvidia
-    )
+    provider_definition(provider).is_some_and(|definition| definition.requires_api_key())
 }
 
 fn supports_base_url(provider: &ProviderKind) -> bool {
-    matches!(
-        provider,
-        ProviderKind::OpenRouter
-            | ProviderKind::Zen
-            | ProviderKind::OpenAi
-            | ProviderKind::Azure
-            | ProviderKind::Nvidia
-    )
+    provider_definition(provider)
+        .is_some_and(|definition| definition.capabilities.supports_base_url)
+}
+
+fn provider_definition(provider: &ProviderKind) -> Option<gunmetal_sdk::ProviderDefinition> {
+    builtin_providers()
+        .into_iter()
+        .find(|definition| &definition.kind == provider)
 }
 
 fn default_base_url(provider: &ProviderKind) -> Option<&'static str> {
@@ -1923,7 +2087,7 @@ mod tests {
 
     use super::{
         AuthCommand, ChatArgs, ChatMode, Cli, Command, KeyCommand, LogCommand, ModelCommand,
-        ProfileCommand, SetupArgs, StatusArgs, execute,
+        ProfileCommand, SetupArgs, StatusArgs, execute, provider_definition_fixture,
     };
 
     #[test]
@@ -2039,6 +2203,8 @@ mod tests {
             "codex",
             "--model",
             "gpt-5",
+            "--query",
+            "timeout",
             "--status",
             "error",
         ]);
@@ -2050,12 +2216,14 @@ mod tests {
                         limit,
                         provider,
                         model,
+                        query,
                         status,
                     },
             } => {
                 assert_eq!(limit, 12);
                 assert_eq!(provider.as_deref(), Some("codex"));
                 assert_eq!(model.as_deref(), Some("gpt-5"));
+                assert_eq!(query.as_deref(), Some("timeout"));
                 assert_eq!(status, Some(super::LogStatus::Error));
             }
             _ => panic!("unexpected command"),
@@ -2271,6 +2439,7 @@ mod tests {
                     limit: 20,
                     provider: None,
                     model: None,
+                    query: None,
                     status: None,
                 },
             },
@@ -2376,11 +2545,7 @@ mod tests {
     #[async_trait]
     impl ProviderAdapter for SetupAuthGateAdapter {
         fn definition(&self) -> ProviderDefinition {
-            ProviderDefinition {
-                kind: ProviderKind::OpenRouter,
-                class: ProviderClass::Gateway,
-                priority: 1,
-            }
+            provider_definition_fixture(ProviderKind::OpenRouter, ProviderClass::Gateway, 1)
         }
 
         async fn auth_status(

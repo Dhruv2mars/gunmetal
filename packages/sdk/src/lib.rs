@@ -23,11 +23,58 @@ pub enum ProviderClass {
     Direct,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProviderAuthMethod {
+    BrowserSession,
+    ApiKey,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderCapabilities {
+    pub auth_method: ProviderAuthMethod,
+    pub supports_base_url: bool,
+    pub supports_model_sync: bool,
+    pub supports_chat_completions: bool,
+    pub supports_responses_api: bool,
+    pub supports_streaming: bool,
+}
+
+impl ProviderCapabilities {
+    pub fn supports_browser_login(&self) -> bool {
+        matches!(self.auth_method, ProviderAuthMethod::BrowserSession)
+    }
+
+    pub fn requires_api_key(&self) -> bool {
+        matches!(self.auth_method, ProviderAuthMethod::ApiKey)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderUxHints {
+    pub helper_title: &'static str,
+    pub helper_body: &'static str,
+    pub suggested_name: &'static str,
+    pub base_url_placeholder: &'static str,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProviderDefinition {
     pub kind: ProviderKind,
+    pub label: &'static str,
     pub class: ProviderClass,
     pub priority: usize,
+    pub capabilities: ProviderCapabilities,
+    pub ux: ProviderUxHints,
+}
+
+impl ProviderDefinition {
+    pub fn supports_browser_login(&self) -> bool {
+        self.capabilities.supports_browser_login()
+    }
+
+    pub fn requires_api_key(&self) -> bool {
+        self.capabilities.requires_api_key()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -155,6 +202,10 @@ impl ProviderRegistry {
         self.adapters.get(kind).cloned()
     }
 
+    pub fn definition(&self, kind: &ProviderKind) -> Option<ProviderDefinition> {
+        self.adapters.get(kind).map(|adapter| adapter.definition())
+    }
+
     pub fn definitions(&self) -> Vec<ProviderDefinition> {
         let mut definitions = self
             .adapters
@@ -269,6 +320,14 @@ impl ProviderHub {
             .await?;
         self.persist_credentials(profile.id, result.credentials)?;
         Ok(result.stream)
+    }
+
+    pub fn definitions(&self) -> Vec<ProviderDefinition> {
+        self.registry.definitions()
+    }
+
+    pub fn definition(&self, kind: &ProviderKind) -> Option<ProviderDefinition> {
+        self.registry.definition(kind)
     }
 
     fn adapter(&self, kind: &ProviderKind) -> Result<Arc<dyn ProviderAdapter>> {
@@ -825,6 +884,22 @@ mod tests {
         );
     }
 
+    #[test]
+    fn provider_hub_exposes_definition_metadata() {
+        let temp = TempDir::new().unwrap();
+        let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let mut registry = ProviderRegistry::default();
+        registry.register(MockAdapter);
+        let hub = ProviderHub::new(paths, registry);
+
+        let definition = hub
+            .definition(&ProviderKind::Custom("mock".to_owned()))
+            .unwrap();
+        assert_eq!(definition.label, "mock");
+        assert!(definition.requires_api_key());
+        assert!(definition.capabilities.supports_responses_api);
+    }
+
     #[derive(Default)]
     struct MockAdapter;
 
@@ -833,8 +908,23 @@ mod tests {
         fn definition(&self) -> ProviderDefinition {
             ProviderDefinition {
                 kind: ProviderKind::Custom("mock".to_owned()),
+                label: "mock",
                 class: ProviderClass::Direct,
                 priority: 99,
+                capabilities: ProviderCapabilities {
+                    auth_method: ProviderAuthMethod::ApiKey,
+                    supports_base_url: true,
+                    supports_model_sync: true,
+                    supports_chat_completions: true,
+                    supports_responses_api: true,
+                    supports_streaming: true,
+                },
+                ux: ProviderUxHints {
+                    helper_title: "Direct provider",
+                    helper_body: "Save the upstream API key here.",
+                    suggested_name: "mock",
+                    base_url_placeholder: "optional override",
+                },
             }
         }
 
@@ -919,8 +1009,23 @@ mod tests {
         fn definition(&self) -> ProviderDefinition {
             ProviderDefinition {
                 kind: ProviderKind::Codex,
+                label: "codex",
                 class: ProviderClass::Subscription,
                 priority: 1,
+                capabilities: ProviderCapabilities {
+                    auth_method: ProviderAuthMethod::BrowserSession,
+                    supports_base_url: false,
+                    supports_model_sync: true,
+                    supports_chat_completions: true,
+                    supports_responses_api: true,
+                    supports_streaming: true,
+                },
+                ux: ProviderUxHints {
+                    helper_title: "Browser sign-in provider",
+                    helper_body: "Save the provider, then finish auth in the browser.",
+                    suggested_name: "codex",
+                    base_url_placeholder: "not used for this provider",
+                },
             }
         }
 

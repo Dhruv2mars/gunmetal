@@ -1,59 +1,50 @@
 # Prompt
 
 ## Task
-- Continue after Phase 1 by deepening Gunmetal's built-in toll-booth value: richer request inspection and usage summaries across the existing Web UI, CLI, and OpenTUI surfaces.
+- Execute Phase 2 of the refactor: improve real-world superapp usability while hardening the internal architecture and extension SDK that power it.
 
 ## Core Goal
-- Keep the completed Phase 1 flow intact, then make traffic inspection materially more useful: answer what provider or model is being used, how requests are performing, where tokens are going, and which requests need attention.
+- Make Gunmetal feel better in actual use, not just in demos: the super app should guide users through the right providers, explain traffic clearly, and stay backed by cleaner internal contracts that can later be exposed as public developer products.
 
-## Goals
-- Refresh durable memory to the actual active phase and product taxonomy.
-- Preserve the completed Phase 1 golden path without reopening its architecture.
-- Add provider- and model-level traffic summaries on top of existing request history.
-- Make request history more navigable with lightweight filtering.
-- Keep Web UI, CLI, and OpenTUI aligned around the same traffic concepts.
-- Keep the SDK internal and the product local-first.
+## Tracks
+- Track A: superapp usability
+  - remove unsupported provider affordances
+  - make provider setup guided by real provider metadata
+  - improve request inspection with better filtering and drill-down context
+- Track B: internal architecture and system design
+  - replace hardcoded provider behavior branches with shared provider definitions
+  - keep daemon/operator state as the source of truth for Web UI and OpenTUI
+  - tighten the boundary between product UI logic and internal provider/runtime logic
+- Track C: extension SDK hardening
+  - make provider capabilities explicit in the SDK
+  - expose provider definitions through the internal hub/registry
+  - prepare the internal extension layer for future publication without publishing yet
 
 ## Non-Goals
-- Do not publish the SDK yet.
-- Do not split the repo or product.
+- Do not publish SDK packages yet.
 - Do not add team or multi-tenant concepts.
-- Do not broaden the playground into a full chat product.
-- Do not add a second architecture for traffic data; reuse daemon-backed state.
+- Do not split the repo into separate products.
+- Do not broaden the playground into a full chat app.
 
 ## Constraints
 - Be concise.
 - Verify work before reporting back when possible.
 - Use the durable-memory files as the source of truth.
 - Keep user-facing terminology simple: `provider`, `model`, `key`, `request`.
-- Product is local-first and individual-first.
-- Gunmetal now has two top-level mental buckets:
-  - `Products`: consumer-facing Gunmetal apps and services, with the current super app as the active product
-  - `Developer`: internal engines that later become public developer products, starting with the provider/extension SDK that powers the super app
-- Web UI and OpenTUI should consume daemon/operator endpoints rather than duplicating business logic.
-- CLI can use Rust service/core paths directly, but behavior should stay aligned with the daemon-backed surfaces.
-- Keep the app powered by the internal SDK and first-party provider extensions.
+- Product is still local-first and individual-first.
+- Product taxonomy remains:
+  - `Products`: consumer-facing Gunmetal products, with the super app as the current product
+  - `Developer`: internal engines that later become developer products, starting with the provider/extension SDK
 
 ## Deliverables
-- Updated durable-memory docs for the post-Phase-1 slice
-- Provider/model traffic summaries in operator state and user surfaces
-- Better request-history navigation
-- CLI traffic inspection improvements
-- Verification notes for the new slice
-
-## Process Requirements
-- Update durable memory before broad implementation.
-- Work in ordered milestones:
-  - milestone 1: refresh durable memory for the post-Phase-1 traffic-inspection phase
-  - milestone 2: audit current traffic/request surfaces and define the additive data model
-  - milestone 3: implement daemon-backed provider/model summaries
-  - milestone 4: expose the new traffic intelligence in Web UI and OpenTUI
-  - milestone 5: improve CLI traffic inspection
-  - milestone 6: verification, cleanup, and push checkpoints when ready
-- Keep the docs current as decisions land.
+- Updated durable memory for Phase 2
+- Shared provider capability metadata in the internal SDK
+- Web UI, OpenTUI, and CLI behavior driven by the same provider metadata
+- Better request inspection and filtering in the super app
+- Verification notes for all three tracks
 
 ## Done When
-- Traffic summaries answer where requests and tokens are going by provider and by model.
-- Request history is easier to inspect without adding surface clutter.
-- Web UI, CLI, and OpenTUI stay aligned around the same traffic concepts.
-- The product/developer split is captured in durable memory without changing the current repo split or product scope.
+- The super app no longer exposes unsupported provider paths.
+- Provider setup guidance comes from shared provider metadata rather than hardcoded UI branches.
+- Request inspection is materially more useful in Web UI, OpenTUI, and CLI.
+- The internal SDK/provider contracts are more explicit and more publication-ready than before.

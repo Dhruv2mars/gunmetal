@@ -502,7 +502,7 @@
 
       .request-filter-bar {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
         margin-top: 14px;
       }
@@ -691,13 +691,7 @@
               <label>
                 Provider
                 <select name="provider">
-                  <option value="codex">codex</option>
-                  <option value="copilot">copilot</option>
-                  <option value="openrouter">openrouter</option>
-                  <option value="zen">zen</option>
-                  <option value="openai">openai</option>
-                  <option value="azure">azure</option>
-                  <option value="nvidia">nvidia</option>
+                  <option value="">loading providers...</option>
                 </select>
               </label>
               <label>
@@ -791,6 +785,7 @@
         requestFilters: {
           provider: "all",
           status: "all",
+          query: "",
         },
       };
 
@@ -823,7 +818,22 @@
           (appState.requestFilters.status === "success"
             ? (log.status_code ?? 0) < 400 && !log.error_message
             : (log.status_code ?? 0) >= 400 || Boolean(log.error_message));
-        return providerMatches && statusMatches;
+        const query = appState.requestFilters.query.trim().toLowerCase();
+        const queryMatches =
+          !query ||
+          [
+            log.provider,
+            log.profile_name || "",
+            log.model,
+            log.endpoint,
+            log.key_name || "",
+            log.request_mode || "",
+            log.error_message || "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(query);
+        return providerMatches && statusMatches && queryMatches;
       }
 
       function updateRequestFilter(name, value) {
@@ -862,64 +872,30 @@
       }
 
       function providerUiConfig(kind) {
-        switch (kind) {
-          case "codex":
-          case "copilot":
-            return {
-              helperTitle: "Browser sign-in provider",
-              helperBody: "Gunmetal opens a browser flow for auth. API key and base URL are not needed here.",
-              requiresApiKey: false,
-              supportsBaseUrl: false,
-              baseUrlPlaceholder: "not used for this provider",
-              suggestedName: kind,
-            };
-          case "openrouter":
-            return {
-              helperTitle: "Gateway provider",
-              helperBody: "Save your upstream API key here. Base URL usually stays on the default OpenRouter endpoint.",
-              requiresApiKey: true,
-              supportsBaseUrl: true,
-              baseUrlPlaceholder: "https://openrouter.ai/api/v1",
-              suggestedName: kind,
-            };
-          case "zen":
-            return {
-              helperTitle: "Gateway provider",
-              helperBody: "Save your upstream API key here. Base URL usually stays on the default Zen endpoint.",
-              requiresApiKey: true,
-              supportsBaseUrl: true,
-              baseUrlPlaceholder: "https://opencode.ai/zen/v1",
-              suggestedName: kind,
-            };
-          case "openai":
-            return {
-              helperTitle: "Direct provider",
-              helperBody: "Save your upstream API key here. Base URL is optional unless you need a custom endpoint.",
-              requiresApiKey: true,
-              supportsBaseUrl: true,
-              baseUrlPlaceholder: "https://api.openai.com/v1",
-              suggestedName: kind,
-            };
-          case "azure":
-          case "nvidia":
-            return {
-              helperTitle: "Direct provider",
-              helperBody: "Save your upstream API key here. Use base URL only if your endpoint is custom.",
-              requiresApiKey: true,
-              supportsBaseUrl: true,
-              baseUrlPlaceholder: "optional override",
-              suggestedName: kind,
-            };
-          default:
-            return {
-              helperTitle: "Provider",
-              helperBody: "Save one provider first, then auth it, sync models, and create one key.",
-              requiresApiKey: true,
-              supportsBaseUrl: true,
-              baseUrlPlaceholder: "optional override",
-              suggestedName: kind || "provider",
-            };
+        const provider = appState.data?.providers?.find((item) => item.kind === kind);
+        if (provider) {
+          const requestModes =
+            [provider.supports_chat_completions ? "chat/completions" : null, provider.supports_responses_api ? "responses" : null]
+              .filter(Boolean)
+              .join(" + ") || "request";
+          return {
+            helperTitle: provider.helper_title || provider.label || provider.kind || "Provider",
+            helperBody: `${provider.helper_body || "Save one provider first, then auth it, sync models, and create one key."} Request modes: ${requestModes}.`,
+            requiresApiKey: provider.auth_method === "api_key",
+            supportsBaseUrl: Boolean(provider.supports_base_url),
+            baseUrlPlaceholder: provider.base_url_placeholder || "optional base URL",
+            suggestedName: provider.suggested_name || provider.kind || "provider",
+          };
         }
+
+        return {
+          helperTitle: "Provider",
+          helperBody: "Save one provider first, then auth it, sync models, and create one key.",
+          requiresApiKey: true,
+          supportsBaseUrl: true,
+          baseUrlPlaceholder: "optional override",
+          suggestedName: kind || "provider",
+        };
       }
 
       function syncProviderForm() {
@@ -1232,9 +1208,24 @@
         $("provider-strip").innerHTML = data.providers
           .map(
             (provider) =>
-              `<span class="pill">${escapeHtml(provider.kind)} · ${escapeHtml(provider.class)}</span>`,
+              `<span class="pill">${escapeHtml(provider.kind)} · ${escapeHtml(provider.class)} · ${escapeHtml(provider.auth_method === "browser_session" ? "browser auth" : "api key")}</span>`,
           )
           .join("");
+
+        const providerSelect = $("profile-form").elements.namedItem("provider");
+        const selectedProvider =
+          providerSelect.value && data.providers.some((provider) => provider.kind === providerSelect.value)
+            ? providerSelect.value
+            : data.providers[0]?.kind || "";
+        providerSelect.innerHTML = data.providers.length
+          ? data.providers
+              .map(
+                (provider) =>
+                  `<option value="${escapeHtml(provider.kind)}"${provider.kind === selectedProvider ? " selected" : ""}>${escapeHtml(provider.kind)}</option>`,
+              )
+              .join("")
+          : `<option value="">no providers available</option>`;
+        providerSelect.value = selectedProvider;
 
         $("count-grid").innerHTML = [
           ["Providers", data.counts.profiles],
@@ -1263,6 +1254,7 @@
             "MODEL=provider/model",
           ].join("\n"),
         );
+        syncProviderForm();
 
         const setupSteps = [
           [
@@ -1418,6 +1410,10 @@
               <option value="error"${appState.requestFilters.status === "error" ? " selected" : ""}>errors only</option>
             </select>
           </label>
+          <label>
+            Search
+            <input value="${escapeHtml(appState.requestFilters.query)}" placeholder="model, key, endpoint, error" oninput="updateRequestFilter('query', this.value)" />
+          </label>
         `;
 
         $("service-panel").innerHTML = `
@@ -1440,6 +1436,16 @@
                     <span class="pill">${escapeHtml(profile.model_count)} models</span>
                   </div>
                   <p class="note mono">${escapeHtml(profile.selector)}${profile.base_url ? ` · ${escapeHtml(profile.base_url)}` : ""}</p>
+                  <p class="note">${
+                    (() => {
+                      const provider = data.providers.find((item) => item.kind === profile.provider);
+                      if (!provider) return "";
+                      const modes = [provider.supports_chat_completions ? "chat/completions" : null, provider.supports_responses_api ? "responses" : null]
+                        .filter(Boolean)
+                        .join(" + ");
+                      return escapeHtml(`${provider.auth_method === "browser_session" ? "browser auth" : "api key"} · ${modes || "request"} · ${provider.supports_streaming ? "streaming" : "non-streaming"}`);
+                    })()
+                  }</p>
                   <div class="profile-actions">
                     <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'auth')">Auth / Check</button>
                     <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'sync')">Sync models</button>
@@ -1532,7 +1538,7 @@
                     (log) => `
                       <tr class="request-row${appState.selectedLogId === log.id ? " request-row-active" : ""}" onclick="selectLog('${log.id}')">
                         <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(formatTimestamp(log.started_at))}</div></td>
-                        <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.endpoint)}</div></td>
+                        <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.request_mode || log.endpoint)} · ${escapeHtml(log.key_name || "unknown key")}</div></td>
                         <td>${escapeHtml(log.status_code ?? "pending")}${log.error_message ? `<div class="subtle">${escapeHtml(log.error_message)}</div>` : ""}</td>
                         <td>${escapeHtml(log.duration_ms)} ms${log.total_tokens ? `<div class="subtle token-breakdown">in ${escapeHtml(log.input_tokens ?? 0)} · out ${escapeHtml(log.output_tokens ?? 0)} · total ${escapeHtml(log.total_tokens)}</div>` : ""}</td>
                       </tr>
@@ -1569,6 +1575,10 @@
                 <article class="request-detail-card">
                   <strong>Tokens</strong>
                   <span>in ${escapeHtml(selectedLog.input_tokens ?? 0)} · out ${escapeHtml(selectedLog.output_tokens ?? 0)} · total ${escapeHtml(selectedLog.total_tokens ?? 0)}</span>
+                </article>
+                <article class="request-detail-card">
+                  <strong>Key</strong>
+                  <span>${escapeHtml(selectedLog.key_name || "unknown")} · ${escapeHtml(selectedLog.request_mode || "request")}</span>
                 </article>
                 <article class="request-detail-card">
                   <strong>Endpoint</strong>

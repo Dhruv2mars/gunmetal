@@ -32,6 +32,7 @@ class GunmetalTuiApp {
     this.requestFilters = {
       provider: "all",
       status: "all",
+      query: "",
     };
     this.lastSecret = null;
     this.rendering = false;
@@ -491,6 +492,21 @@ class GunmetalTuiApp {
     });
     filterRow.add(this.ui.requestStatusFilter);
 
+    this.ui.requestQueryInput = new InputRenderable(renderer, {
+      width: "100%",
+      border: true,
+      borderStyle: "rounded",
+      borderColor: "#24303a",
+      focusedBorderColor: "#7dd3c8",
+      placeholder: "search model, key, endpoint, error",
+    });
+    this.ui.requestQueryInput.on("change", () => {
+      if (this.rendering) return;
+      this.requestFilters.query = this.ui.requestQueryInput.value.trim();
+      this.renderAll();
+    });
+    detailColumn.add(this.ui.requestQueryInput);
+
     this.ui.requestTraffic = new TextRenderable(renderer, {
       width: "100%",
       content: "No traffic yet.",
@@ -600,7 +616,12 @@ class GunmetalTuiApp {
       ];
     }
     if (this.selectedTab === "requests") {
-      return [this.ui.requestList, this.ui.requestProviderFilter, this.ui.requestStatusFilter];
+      return [
+        this.ui.requestList,
+        this.ui.requestProviderFilter,
+        this.ui.requestStatusFilter,
+        this.ui.requestQueryInput,
+      ];
     }
 
     const focusables = [
@@ -701,7 +722,7 @@ class GunmetalTuiApp {
   }
 
   renderSetupFormMeta() {
-    const config = providerUiConfig(this.selectedProviderKind());
+    const config = providerUiConfig(this.selectedProviderKind(), this.data?.providers || []);
     this.ui.providerNameInput.placeholder = `work-${config.suggestedName}`;
     this.ui.providerBaseUrlInput.placeholder = config.baseUrlPlaceholder;
     this.ui.providerBaseUrlInput.visible = config.supportsBaseUrl;
@@ -732,7 +753,7 @@ class GunmetalTuiApp {
 
     const providerOptions = (this.data?.providers || []).map((provider) => ({
       name: provider.kind,
-      description: provider.class,
+      description: `${provider.class} · ${provider.auth_method === "browser_session" ? "browser auth" : "api key"}`,
       value: provider.kind,
     }));
     this.ui.providerKindSelect.options = providerOptions.length
@@ -753,11 +774,17 @@ class GunmetalTuiApp {
       (model) => model.provider === selectedProfile?.provider,
     );
     const keys = this.data?.keys || [];
+    const selectedProviderDefinition = (this.data?.providers || []).find(
+      (provider) => provider.kind === selectedProfile?.provider,
+    );
     this.ui.providerDetails.content = selectedProfile
       ? [
           `${selectedProfile.name} (${selectedProfile.provider})`,
           `${selectedProfile.auth_label} · ${selectedProfile.model_count} synced models`,
           selectedProfile.base_url ? `Base URL ${selectedProfile.base_url}` : "Base URL default",
+          selectedProviderDefinition
+            ? `Modes ${(selectedProviderDefinition.supports_chat_completions ? "chat/completions " : "")}${selectedProviderDefinition.supports_responses_api ? "responses" : ""}`.trim()
+            : null,
           "",
           `Keys available ${keys.length}`,
           models.length ? `First model ${models[0].id}` : "Sync models to register provider/model ids.",
@@ -843,6 +870,7 @@ class GunmetalTuiApp {
   }
 
   renderRequestsView() {
+    this.ui.requestQueryInput.value = this.requestFilters.query;
     const logs = (this.data?.logs || []).filter((log) => this.logMatchesRequestFilters(log));
     const providerOptions = [
       { name: "all providers", value: "all" },
@@ -866,7 +894,7 @@ class GunmetalTuiApp {
     const requestOptions = logs.length
       ? logs.map((log) => ({
           name: `${log.profile_name || log.provider} · ${log.status_code ?? "pending"}`,
-          description: `${log.model} · ${log.duration_ms}ms`,
+          description: `${log.model} · ${log.request_mode || "request"} · ${log.duration_ms}ms`,
           value: log.id,
         }))
       : [{ name: "No requests yet", description: "Use the playground or any compatible app.", value: "empty" }];
@@ -913,6 +941,7 @@ class GunmetalTuiApp {
           `via ${selectedLog.profile_name || selectedLog.provider}`,
           `status ${selectedLog.status_code ?? "pending"} · ${selectedLog.duration_ms} ms`,
           `tokens in ${selectedLog.input_tokens ?? 0} · out ${selectedLog.output_tokens ?? 0} · total ${selectedLog.total_tokens ?? 0}`,
+          `key ${selectedLog.key_name || "unknown"} · mode ${selectedLog.request_mode || "request"}`,
           `${selectedLog.endpoint} · ${selectedLog.started_at}`,
           selectedLog.error_message ? `error ${selectedLog.error_message}` : "request completed without recorded provider error",
         ].join("\n")
@@ -934,7 +963,22 @@ class GunmetalTuiApp {
       (this.requestFilters.status === "success"
         ? (log.status_code ?? 0) < 400 && !log.error_message
         : (log.status_code ?? 0) >= 400 || Boolean(log.error_message));
-    return providerMatches && statusMatches;
+    const query = this.requestFilters.query.trim().toLowerCase();
+    const queryMatches =
+      !query ||
+      [
+        log.provider,
+        log.profile_name || "",
+        log.model,
+        log.endpoint,
+        log.key_name || "",
+        log.request_mode || "",
+        log.error_message || "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    return providerMatches && statusMatches && queryMatches;
   }
 
   selectedProviderKind() {
@@ -1122,55 +1166,31 @@ async function parseResponse(response) {
   return body;
 }
 
-function providerUiConfig(kind) {
-  switch (kind) {
-    case "codex":
-    case "copilot":
-      return {
-        helperTitle: "Browser sign-in provider",
-        helperBody: "Save the provider, then auth it through the browser flow. Base URL and API key stay empty.",
-        requiresApiKey: false,
-        supportsBaseUrl: false,
-        baseUrlPlaceholder: "not used for this provider",
-        suggestedName: kind,
-      };
-    case "openrouter":
-      return {
-        helperTitle: "Gateway provider",
-        helperBody: "Save the upstream API key here. Base URL usually stays on the default OpenRouter endpoint.",
-        requiresApiKey: true,
-        supportsBaseUrl: true,
-        baseUrlPlaceholder: "https://openrouter.ai/api/v1",
-        suggestedName: kind,
-      };
-    case "zen":
-      return {
-        helperTitle: "Gateway provider",
-        helperBody: "Save the upstream API key here. Base URL usually stays on the default Zen endpoint.",
-        requiresApiKey: true,
-        supportsBaseUrl: true,
-        baseUrlPlaceholder: "https://opencode.ai/zen/v1",
-        suggestedName: kind,
-      };
-    case "openai":
-      return {
-        helperTitle: "Direct provider",
-        helperBody: "Save the upstream API key here. Base URL is optional unless the endpoint is custom.",
-        requiresApiKey: true,
-        supportsBaseUrl: true,
-        baseUrlPlaceholder: "https://api.openai.com/v1",
-        suggestedName: kind,
-      };
-    default:
-      return {
-        helperTitle: "Direct provider",
-        helperBody: "Save the upstream API key here. Use base URL only if your endpoint is custom.",
-        requiresApiKey: true,
-        supportsBaseUrl: true,
-        baseUrlPlaceholder: "optional override",
-        suggestedName: kind || "provider",
-      };
+function providerUiConfig(kind, providers) {
+  const provider = providers.find((item) => item.kind === kind);
+  if (provider) {
+    const requestModes =
+      [provider.supports_chat_completions ? "chat/completions" : null, provider.supports_responses_api ? "responses" : null]
+        .filter(Boolean)
+        .join(" + ") || "request";
+    return {
+      helperTitle: provider.helper_title || provider.label || provider.kind || "Provider",
+      helperBody: `${provider.helper_body || "Save one provider first, then auth it, sync models, and create one key."} Request modes: ${requestModes}.`,
+      requiresApiKey: provider.auth_method === "api_key",
+      supportsBaseUrl: Boolean(provider.supports_base_url),
+      baseUrlPlaceholder: provider.base_url_placeholder || "optional base URL",
+      suggestedName: provider.suggested_name || provider.kind || "provider",
+    };
   }
+
+  return {
+    helperTitle: "Provider",
+    helperBody: "Save one provider first, then auth it, sync models, and create one key.",
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    baseUrlPlaceholder: "optional override",
+    suggestedName: kind || "provider",
+  };
 }
 
 function playgroundPayload(mode, model, messages) {

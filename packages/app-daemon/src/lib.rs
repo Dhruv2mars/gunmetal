@@ -26,9 +26,10 @@ use gunmetal_core::{
     KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry,
     ProviderKind, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
 };
-use gunmetal_providers::{builtin_provider_hub, builtin_providers};
+use gunmetal_providers::builtin_provider_hub;
 use gunmetal_sdk::{
-    ProviderByteStream, ProviderClass, ProviderEventStream, ProviderHub, ProviderStreamEvent,
+    ProviderAuthMethod, ProviderByteStream, ProviderClass, ProviderDefinition, ProviderEventStream,
+    ProviderHub, ProviderStreamEvent,
 };
 use gunmetal_storage::{AppPaths, StorageHandle};
 use serde::{Deserialize, Serialize};
@@ -196,7 +197,7 @@ async fn create_profile(
         name: name.to_owned(),
         base_url: payload.base_url.and_then(trimmed_or_none),
         enabled: true,
-        credentials: operator_profile_credentials(&provider, payload.api_key),
+        credentials: operator_profile_credentials(&state, &provider, payload.api_key),
     }) {
         Ok(profile) => profile,
         Err(error) => return internal_error(error),
@@ -216,7 +217,9 @@ async fn auth_profile(State(state): State<DaemonState>, Path(id): Path<Uuid>) ->
         Err(error) => return error.into_response(),
     };
 
-    if supports_browser_login(&profile.provider) {
+    if provider_definition(&state, &profile.provider)
+        .is_some_and(|definition| definition.supports_browser_login())
+    {
         match state.providers.login(&profile, false).await {
             Ok(session) => {
                 state.request_cache.clear();
@@ -729,7 +732,7 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             name: profile.name.clone(),
             selector: format!("{}:{}", profile.provider, profile.name),
             base_url: profile.base_url.clone(),
-            auth_label: operator_profile_auth_label(profile),
+            auth_label: operator_profile_auth_label(state, profile),
             model_count: models
                 .iter()
                 .filter(|model| model.profile_id == Some(profile.id))
@@ -774,9 +777,14 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
                 endpoint: log.endpoint.clone(),
                 status_code: log.status_code,
                 duration_ms: log.duration_ms,
+                key_name: key_rows
+                    .iter()
+                    .find(|key| Some(key.id) == log.key_id)
+                    .map(|key| key.name.clone()),
                 input_tokens: log.usage.input_tokens,
                 output_tokens: log.usage.output_tokens,
                 total_tokens: log.usage.total_tokens,
+                request_mode: request_mode_label(&log.endpoint).to_owned(),
                 error_message: log.error_message.clone(),
             }
         })
@@ -824,16 +832,32 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
         .to_owned(),
     };
 
-    let provider_rows = builtin_providers()
+    let provider_rows = state
+        .providers
+        .definitions()
         .into_iter()
         .map(|provider| OperatorProviderRow {
             kind: provider.kind.to_string(),
+            label: provider.label.to_owned(),
             class: match provider.class {
                 ProviderClass::Subscription => "subscription",
                 ProviderClass::Gateway => "gateway",
                 ProviderClass::Direct => "direct",
             },
             priority: provider.priority,
+            auth_method: match provider.capabilities.auth_method {
+                ProviderAuthMethod::BrowserSession => "browser_session",
+                ProviderAuthMethod::ApiKey => "api_key",
+            },
+            supports_base_url: provider.capabilities.supports_base_url,
+            supports_model_sync: provider.capabilities.supports_model_sync,
+            supports_chat_completions: provider.capabilities.supports_chat_completions,
+            supports_responses_api: provider.capabilities.supports_responses_api,
+            supports_streaming: provider.capabilities.supports_streaming,
+            helper_title: provider.ux.helper_title.to_owned(),
+            helper_body: provider.ux.helper_body.to_owned(),
+            suggested_name: provider.ux.suggested_name.to_owned(),
+            base_url_placeholder: provider.ux.base_url_placeholder.to_owned(),
         })
         .collect::<Vec<_>>();
 
@@ -891,8 +915,10 @@ fn require_key(state: &DaemonState, id: Uuid) -> Result<GunmetalKey, ApiError> {
         })
 }
 
-fn operator_profile_auth_label(profile: &ProviderProfile) -> String {
-    if supports_browser_login(&profile.provider) {
+fn operator_profile_auth_label(state: &DaemonState, profile: &ProviderProfile) -> String {
+    if provider_definition(state, &profile.provider)
+        .is_some_and(|definition| definition.supports_browser_login())
+    {
         if profile.credentials.is_some() {
             "session saved".to_owned()
         } else {
@@ -914,28 +940,41 @@ fn profile_has_api_key(profile: &ProviderProfile) -> bool {
         .is_some_and(|value| !value.trim().is_empty())
 }
 
-fn operator_profile_credentials(provider: &ProviderKind, api_key: Option<String>) -> Option<Value> {
+fn operator_profile_credentials(
+    state: &DaemonState,
+    provider: &ProviderKind,
+    api_key: Option<String>,
+) -> Option<Value> {
     let api_key = api_key.and_then(trimmed_or_none);
-    if needs_api_key(provider) {
+    if provider_definition(state, provider).is_some_and(|definition| definition.requires_api_key())
+    {
         api_key.map(|value| json!({ "api_key": value }))
     } else {
         None
     }
 }
 
-fn supports_browser_login(provider: &ProviderKind) -> bool {
-    matches!(provider, ProviderKind::Codex | ProviderKind::Copilot)
+fn provider_definition(state: &DaemonState, provider: &ProviderKind) -> Option<ProviderDefinition> {
+    state
+        .providers
+        .definition(provider)
+        .or_else(|| builtin_provider_definition(provider))
 }
 
-fn needs_api_key(provider: &ProviderKind) -> bool {
-    matches!(
-        provider,
-        ProviderKind::OpenRouter
-            | ProviderKind::Zen
-            | ProviderKind::OpenAi
-            | ProviderKind::Azure
-            | ProviderKind::Nvidia
-    )
+fn builtin_provider_definition(provider: &ProviderKind) -> Option<ProviderDefinition> {
+    gunmetal_providers::builtin_providers()
+        .into_iter()
+        .find(|definition| &definition.kind == provider)
+}
+
+fn request_mode_label(endpoint: &str) -> &'static str {
+    if endpoint.contains("/responses") {
+        "responses"
+    } else if endpoint.contains("/chat/completions") {
+        "chat/completions"
+    } else {
+        "request"
+    }
 }
 
 fn operator_default_scopes() -> Vec<KeyScope> {
@@ -1039,8 +1078,19 @@ struct OperatorModelSummaryRow {
 #[derive(Debug, Serialize)]
 struct OperatorProviderRow {
     kind: String,
+    label: String,
     class: &'static str,
     priority: usize,
+    auth_method: &'static str,
+    supports_base_url: bool,
+    supports_model_sync: bool,
+    supports_chat_completions: bool,
+    supports_responses_api: bool,
+    supports_streaming: bool,
+    helper_title: String,
+    helper_body: String,
+    suggested_name: String,
+    base_url_placeholder: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1075,9 +1125,11 @@ struct OperatorLogRow {
     endpoint: String,
     status_code: Option<u16>,
     duration_ms: u64,
+    key_name: Option<String>,
     input_tokens: Option<u32>,
     output_tokens: Option<u32>,
     total_tokens: Option<u32>,
+    request_mode: String,
     error_message: Option<String>,
 }
 
@@ -2005,8 +2057,9 @@ mod tests {
         ProviderLoginSession, RequestMode, TokenUsage,
     };
     use gunmetal_sdk::{
-        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
-        ProviderHub, ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
+        ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderChatResult, ProviderClass,
+        ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
+        ProviderRegistry,
     };
     use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
@@ -2014,6 +2067,65 @@ mod tests {
     use tower::util::ServiceExt;
 
     use super::{DaemonState, app};
+
+    fn provider_definition_fixture(
+        kind: ProviderKind,
+        class: ProviderClass,
+        priority: usize,
+    ) -> ProviderDefinition {
+        let (
+            label,
+            auth_method,
+            supports_base_url,
+            helper_title,
+            helper_body,
+            base_url_placeholder,
+        ) = match kind {
+            ProviderKind::Codex => (
+                "codex",
+                ProviderAuthMethod::BrowserSession,
+                false,
+                "Browser sign-in provider",
+                "Save the provider, then auth it in the browser.",
+                "not used for this provider",
+            ),
+            ProviderKind::Custom(_)
+            | ProviderKind::OpenRouter
+            | ProviderKind::Zen
+            | ProviderKind::OpenAi
+            | ProviderKind::Azure
+            | ProviderKind::Nvidia
+            | ProviderKind::Copilot => (
+                "custom",
+                ProviderAuthMethod::ApiKey,
+                true,
+                "Direct provider",
+                "Save the upstream API key here.",
+                "optional override",
+            ),
+        };
+
+        ProviderDefinition {
+            kind,
+            label,
+            class,
+            priority,
+            capabilities: gunmetal_sdk::ProviderCapabilities {
+                auth_method,
+                supports_base_url,
+                supports_model_sync: true,
+                supports_chat_completions: true,
+                supports_responses_api: true,
+                supports_streaming: true,
+            },
+            ux: gunmetal_sdk::ProviderUxHints {
+                helper_title,
+                helper_body,
+                suggested_name: label,
+                base_url_placeholder,
+            },
+        }
+    }
 
     #[tokio::test]
     async fn health_endpoint_is_live() {
@@ -2147,6 +2259,8 @@ mod tests {
         assert_eq!(body["model_summaries"][0]["model"], "codex/gpt-5.4");
         assert_eq!(body["model_summaries"][0]["requests"], 1);
         assert_eq!(body["profiles"][0]["name"], "default");
+        assert_eq!(body["providers"][0]["auth_method"], "browser_session");
+        assert_eq!(body["providers"][0]["supports_responses_api"], true);
         assert_eq!(body["keys"][0]["state"], "active");
         let log_models = body["logs"]
             .as_array()
@@ -2156,6 +2270,20 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(log_models.contains(&"codex/gpt-5.4".to_owned()));
         assert!(log_models.contains(&"codex/gpt-5.4-mini".to_owned()));
+        assert!(
+            body["logs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["key_name"] == "test")
+        );
+        assert!(
+            body["logs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["request_mode"] == "chat/completions")
+        );
     }
 
     #[tokio::test]
@@ -2959,11 +3087,7 @@ mod tests {
     #[async_trait]
     impl ProviderAdapter for MockCodexAdapter {
         fn definition(&self) -> ProviderDefinition {
-            ProviderDefinition {
-                kind: ProviderKind::Codex,
-                class: ProviderClass::Subscription,
-                priority: 1,
-            }
+            provider_definition_fixture(ProviderKind::Codex, ProviderClass::Subscription, 1)
         }
 
         async fn auth_status(
@@ -3055,11 +3179,7 @@ mod tests {
     #[async_trait]
     impl ProviderAdapter for SpyCodexAdapter {
         fn definition(&self) -> ProviderDefinition {
-            ProviderDefinition {
-                kind: ProviderKind::Codex,
-                class: ProviderClass::Subscription,
-                priority: 1,
-            }
+            provider_definition_fixture(ProviderKind::Codex, ProviderClass::Subscription, 1)
         }
 
         async fn auth_status(
