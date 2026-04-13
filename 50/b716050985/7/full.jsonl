@@ -1,0 +1,590 @@
+{
+  "info": {
+    "id": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+    "slug": "clever-river",
+    "projectID": "8fef4893dd40e310fb32463686a2ceacbf08b622",
+    "directory": "/Users/dhruv2mars/dev/github/gunmetal",
+    "parentID": "ses_2798173e3ffeSGcEdsQihtiW7n",
+    "title": "Explore design.md system (@docs subagent)",
+    "version": "1.4.3",
+    "summary": {
+      "additions": 0,
+      "deletions": 0,
+      "files": 0
+    },
+    "permission": [
+      {
+        "permission": "todowrite",
+        "action": "deny",
+        "pattern": "*"
+      },
+      {
+        "permission": "task",
+        "action": "deny",
+        "pattern": "*"
+      }
+    ],
+    "time": {
+      "created": 1776078500347,
+      "updated": 1776078548154
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1776078500353
+        },
+        "tools": {
+          "todowrite": false,
+          "task": false
+        },
+        "agent": "docs",
+        "model": {
+          "providerID": "minimax-coding-plan",
+          "modelID": "MiniMax-M2.7"
+        },
+        "summary": {
+          "diffs": []
+        },
+        "id": "msg_d86873200002CDjsFj1FWBzHj6",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "Research the design.md system from https://github.com/VoltAgent/awesome-design-md\n\nI need to understand:\n1. What is design.md? How does it work?\n2. How do you use it with npx?\n3. What does the design.md file format look like?\n4. How is it meant to guide frontend development?\n\nPlease fetch the README and any relevant documentation to explain this system thoroughly.",
+          "id": "prt_d86873201001UJaDB9Hm0wve5j",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873200002CDjsFj1FWBzHj6"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873200002CDjsFj1FWBzHj6",
+        "role": "assistant",
+        "mode": "docs",
+        "agent": "docs",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 7031,
+          "input": 6898,
+          "output": 133,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 0
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078500358,
+          "completed": 1776078510753
+        },
+        "finish": "tool-calls",
+        "id": "msg_d86873206001et6R0iiEOGchnm",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d8687446a0013vM8S420P6Tw5z",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873206001et6R0iiEOGchnm"
+        },
+        {
+          "type": "reasoning",
+          "text": "The user wants me to research the design.md system from a GitHub repository. They want to understand what it is, how it works with npx, what the file format looks like, and how it's meant to guide frontend development.\n\nI should fetch the README and relevant documentation from that GitHub repository. Let me use the agent-browser skill to navigate to the page and extract information.\n\nActually, I should use the skill tool to load the agent-browser skill since this involves navigating websites.",
+          "time": {
+            "start": 1776078506797,
+            "end": 1776078510148
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "aa012a221348acb55d0358516b4d5802e41fbe1a669b5e9733c03febe9ce2e97"
+            }
+          },
+          "id": "prt_d86874b2d001s5wvZxSjdI7EDl",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873206001et6R0iiEOGchnm"
+        },
+        {
+          "type": "text",
+          "text": "\n\nI'll load the browser skill to research this repository.",
+          "time": {
+            "start": 1776078510149,
+            "end": 1776078510149
+          },
+          "id": "prt_d868758450019rY1oxqhLNpnFQ",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873206001et6R0iiEOGchnm"
+        },
+        {
+          "type": "tool",
+          "tool": "skill",
+          "callID": "call_function_a76f8dwbtuyz_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "name": "agent-browser"
+            },
+            "output": "<skill_content name=\"agent-browser\">\n# Skill: agent-browser\n\n# Browser Automation with agent-browser\n\nThe CLI uses Chrome/Chromium via CDP directly. Install via `npm i -g agent-browser`, `brew install agent-browser`, or `cargo install agent-browser`. Run `agent-browser install` to download Chrome. Existing Chrome, Brave, Playwright, and Puppeteer installations are detected automatically. Run `agent-browser upgrade` to update to the latest version.\n\n## Core Workflow\n\nEvery browser automation follows this pattern:\n\n1. **Navigate**: `agent-browser open <url>`\n2. **Snapshot**: `agent-browser snapshot -i` (get element refs like `@e1`, `@e2`)\n3. **Interact**: Use refs to click, fill, select\n4. **Re-snapshot**: After navigation or DOM changes, get fresh refs\n\n```bash\nagent-browser open https://example.com/form\nagent-browser snapshot -i\n# Output: @e1 [input type=\"email\"], @e2 [input type=\"password\"], @e3 [button] \"Submit\"\n\nagent-browser fill @e1 \"user@example.com\"\nagent-browser fill @e2 \"password123\"\nagent-browser click @e3\nagent-browser wait 2000\nagent-browser snapshot -i  # Check result\n```\n\n## Command Chaining\n\nCommands can be chained with `&&` in a single shell invocation. The browser persists between commands via a background daemon, so chaining is safe and more efficient than separate calls.\n\n```bash\n# Chain open + snapshot in one call (open already waits for page load)\nagent-browser open https://example.com && agent-browser snapshot -i\n\n# Chain multiple interactions\nagent-browser fill @e1 \"user@example.com\" && agent-browser fill @e2 \"password123\" && agent-browser click @e3\n\n# Navigate and capture\nagent-browser open https://example.com && agent-browser screenshot\n```\n\n**When to chain:** Use `&&` when you don't need to read the output of an intermediate command before proceeding (e.g., open + wait + screenshot). Run commands separately when you need to parse the output first (e.g., snapshot to discover refs, then interact using those refs).\n\n## Handling Authentication\n\nWhen automating a site that requires login, choose the approach that fits:\n\n**Option 1: Import auth from the user's browser (fastest for one-off tasks)**\n\n```bash\n# Connect to the user's running Chrome (they're already logged in)\nagent-browser --auto-connect state save ./auth.json\n# Use that auth state\nagent-browser --state ./auth.json open https://app.example.com/dashboard\n```\n\nState files contain session tokens in plaintext -- add to `.gitignore` and delete when no longer needed. Set `AGENT_BROWSER_ENCRYPTION_KEY` for encryption at rest.\n\n**Option 2: Chrome profile reuse (zero setup)**\n\n```bash\n# List available Chrome profiles\nagent-browser profiles\n\n# Reuse the user's existing Chrome login state\nagent-browser --profile Default open https://gmail.com\n```\n\n**Option 3: Persistent profile (for recurring tasks)**\n\n```bash\n# First run: login manually or via automation\nagent-browser --profile ~/.myapp open https://app.example.com/login\n# ... fill credentials, submit ...\n\n# All future runs: already authenticated\nagent-browser --profile ~/.myapp open https://app.example.com/dashboard\n```\n\n**Option 4: Session name (auto-save/restore cookies + localStorage)**\n\n```bash\nagent-browser --session-name myapp open https://app.example.com/login\n# ... login flow ...\nagent-browser close  # State auto-saved\n\n# Next time: state auto-restored\nagent-browser --session-name myapp open https://app.example.com/dashboard\n```\n\n**Option 5: Auth vault (credentials stored encrypted, login by name)**\n\n```bash\necho \"$PASSWORD\" | agent-browser auth save myapp --url https://app.example.com/login --username user --password-stdin\nagent-browser auth login myapp\n```\n\n`auth login` navigates with `load` and then waits for login form selectors to appear before filling/clicking, which is more reliable on delayed SPA login screens.\n\n**Option 6: State file (manual save/load)**\n\n```bash\n# After logging in:\nagent-browser state save ./auth.json\n# In a future session:\nagent-browser state load ./auth.json\nagent-browser open https://app.example.com/dashboard\n```\n\nSee [references/authentication.md](references/authentication.md) for OAuth, 2FA, cookie-based auth, and token refresh patterns.\n\n## Essential Commands\n\n```bash\n# Batch: ALWAYS use batch for 2+ sequential commands. Commands run in order.\nagent-browser batch \"open https://example.com\" \"snapshot -i\"\nagent-browser batch \"open https://example.com\" \"screenshot\"\nagent-browser batch \"click @e1\" \"wait 1000\" \"screenshot\"\n\n# Navigation\nagent-browser open <url>              # Navigate (aliases: goto, navigate)\nagent-browser close                   # Close browser\nagent-browser close --all             # Close all active sessions\n\n# Snapshot\nagent-browser snapshot -i             # Interactive elements with refs (recommended)\nagent-browser snapshot -i --urls      # Include href URLs for links\nagent-browser snapshot -s \"#selector\" # Scope to CSS selector\n\n# Interaction (use @refs from snapshot)\nagent-browser click @e1               # Click element\nagent-browser click @e1 --new-tab     # Click and open in new tab\nagent-browser fill @e2 \"text\"         # Clear and type text\nagent-browser type @e2 \"text\"         # Type without clearing\nagent-browser select @e1 \"option\"     # Select dropdown option\nagent-browser check @e1               # Check checkbox\nagent-browser press Enter             # Press key\nagent-browser keyboard type \"text\"    # Type at current focus (no selector)\nagent-browser keyboard inserttext \"text\"  # Insert without key events\nagent-browser scroll down 500         # Scroll page\nagent-browser scroll down 500 --selector \"div.content\"  # Scroll within a specific container\n\n# Get information\nagent-browser get text @e1            # Get element text\nagent-browser get url                 # Get current URL\nagent-browser get title               # Get page title\nagent-browser get cdp-url             # Get CDP WebSocket URL\n\n# Wait\nagent-browser wait @e1                # Wait for element\nagent-browser wait 2000               # Wait milliseconds\nagent-browser wait --url \"**/page\"    # Wait for URL pattern\nagent-browser wait --text \"Welcome\"   # Wait for text to appear (substring match)\nagent-browser wait --load networkidle # Wait for network idle (caution: see Pitfalls)\nagent-browser wait --fn \"!document.body.innerText.includes('Loading...')\"  # Wait for text to disappear\nagent-browser wait \"#spinner\" --state hidden  # Wait for element to disappear\n\n# Downloads\nagent-browser download @e1 ./file.pdf          # Click element to trigger download\nagent-browser wait --download ./output.zip     # Wait for any download to complete\nagent-browser --download-path ./downloads open <url>  # Set default download directory\n\n# Tab management\nagent-browser tab list                         # List all open tabs\nagent-browser tab new                          # Open a blank new tab\nagent-browser tab new https://example.com      # Open URL in a new tab\nagent-browser tab 2                            # Switch to tab by index (0-based)\nagent-browser tab close                        # Close the current tab\nagent-browser tab close 2                      # Close tab by index\n\n# Network\nagent-browser network requests                 # Inspect tracked requests\nagent-browser network requests --type xhr,fetch  # Filter by resource type\nagent-browser network requests --method POST   # Filter by HTTP method\nagent-browser network requests --status 2xx    # Filter by status (200, 2xx, 400-499)\nagent-browser network request <requestId>      # View full request/response detail\nagent-browser network route \"**/api/*\" --abort  # Block matching requests\nagent-browser network har start                # Start HAR recording\nagent-browser network har stop ./capture.har   # Stop and save HAR file\n\n# Viewport & Device Emulation\nagent-browser set viewport 1920 1080          # Set viewport size (default: 1280x720)\nagent-browser set viewport 1920 1080 2        # 2x retina (same CSS size, higher res screenshots)\nagent-browser set device \"iPhone 14\"          # Emulate device (viewport + user agent)\n\n# Capture\nagent-browser screenshot              # Screenshot to temp dir\nagent-browser screenshot --full       # Full page screenshot\nagent-browser screenshot --annotate   # Annotated screenshot with numbered element labels\nagent-browser screenshot --screenshot-dir ./shots  # Save to custom directory\nagent-browser screenshot --screenshot-format jpeg --screenshot-quality 80\nagent-browser pdf output.pdf          # Save as PDF\n\n# Live preview / streaming\nagent-browser stream enable           # Start runtime WebSocket streaming on an auto-selected port\nagent-browser stream enable --port 9223  # Bind a specific localhost port\nagent-browser stream status           # Inspect enabled state, port, connection, and screencasting\nagent-browser stream disable          # Stop runtime streaming and remove the .stream metadata file\n\n# Clipboard\nagent-browser clipboard read                      # Read text from clipboard\nagent-browser clipboard write \"Hello, World!\"     # Write text to clipboard\nagent-browser clipboard copy                      # Copy current selection\nagent-browser clipboard paste                     # Paste from clipboard\n\n# Dialogs (alert, confirm, prompt, beforeunload)\n# By default, alert and beforeunload dialogs are auto-accepted so they never block the agent.\n# confirm and prompt dialogs still require explicit handling.\n# Use --no-auto-dialog (or AGENT_BROWSER_NO_AUTO_DIALOG=1) to disable automatic handling.\nagent-browser dialog accept              # Accept dialog\nagent-browser dialog accept \"my input\"   # Accept prompt dialog with text\nagent-browser dialog dismiss             # Dismiss/cancel dialog\nagent-browser dialog status              # Check if a dialog is currently open\n\n# Diff (compare page states)\nagent-browser diff snapshot                          # Compare current vs last snapshot\nagent-browser diff snapshot --baseline before.txt    # Compare current vs saved file\nagent-browser diff screenshot --baseline before.png  # Visual pixel diff\nagent-browser diff url <url1> <url2>                 # Compare two pages\nagent-browser diff url <url1> <url2> --wait-until networkidle  # Custom wait strategy\nagent-browser diff url <url1> <url2> --selector \"#main\"  # Scope to element\n\n# Chat (AI natural language control)\nagent-browser chat \"open google.com and search for cats\"  # Single-shot instruction\nagent-browser chat                                        # Interactive REPL mode\nagent-browser -q chat \"summarize this page\"               # Quiet (text only, no tool calls)\nagent-browser -v chat \"fill in the login form\"            # Verbose (show command output)\nagent-browser --model openai/gpt-4o chat \"take a screenshot\"  # Override model\n```\n\n## Streaming\n\nEvery session automatically starts a WebSocket stream server on an OS-assigned port. Use `agent-browser stream status` to see the bound port and connection state. Use `stream disable` to tear it down, and `stream enable --port <port>` to re-enable on a specific port.\n\n## Batch Execution\n\nALWAYS use `batch` when running 2+ commands in sequence. Batch executes commands in order, so dependent commands (like navigate then screenshot) work correctly. Each quoted argument is a separate command.\n\n```bash\n# Navigate and take a snapshot\nagent-browser batch \"open https://example.com\" \"snapshot -i\"\n\n# Navigate, snapshot, and screenshot in one call\nagent-browser batch \"open https://example.com\" \"snapshot -i\" \"screenshot\"\n\n# Click, wait, then screenshot\nagent-browser batch \"click @e1\" \"wait 1000\" \"screenshot\"\n\n# With --bail to stop on first error\nagent-browser batch --bail \"open https://example.com\" \"click @e1\" \"screenshot\"\n```\n\nOnly use a single command (not batch) when you need to read the output before deciding the next command. For example, you must run `snapshot -i` as a single command when you need to read the refs to decide what to click. After reading the snapshot, batch the remaining steps.\n\nStdin mode is also supported for programmatic use:\n\n```bash\necho '[[\"open\",\"https://example.com\"],[\"screenshot\"]]' | agent-browser batch --json\nagent-browser batch --bail < commands.json\n```\n\n## Efficiency Strategies\n\nThese patterns minimize tool calls and token usage.\n\n**Use `--urls` to avoid re-navigation.** When you need to visit links from a page, use `snapshot -i --urls` to get all href URLs upfront. Then `open` each URL directly instead of clicking refs and navigating back.\n\n**Snapshot once, act many times.** Never re-snapshot the same page. Extract all needed info (refs, URLs, text) from a single snapshot, then batch the remaining actions.\n\n**Multi-page workflow (e.g. \"visit N sites and screenshot each\"):**\n\n```bash\n# 1. Get all URLs in one call\nagent-browser batch \"open https://news.ycombinator.com\" \"snapshot -i --urls\"\n# Read output to extract URLs, then visit each directly:\n# 2. One batch per target site\nagent-browser batch \"open https://github.com/example/repo\" \"screenshot\"\nagent-browser batch \"open https://example.com/article\" \"screenshot\"\nagent-browser batch \"open https://other.com/page\" \"screenshot\"\n```\n\nThis approach uses 4 tool calls instead of 14+. Never go back to the listing page between visits.\n\n## Common Patterns\n\n### Form Submission\n\n```bash\n# Navigate and get the form structure\nagent-browser batch \"open https://example.com/signup\" \"snapshot -i\"\n# Read the snapshot output to identify form refs, then fill and submit\nagent-browser batch \"fill @e1 \\\"Jane Doe\\\"\" \"fill @e2 \\\"jane@example.com\\\"\" \"select @e3 \\\"California\\\"\" \"check @e4\" \"click @e5\" \"wait 2000\"\n```\n\n### Authentication with Auth Vault (Recommended)\n\n```bash\n# Save credentials once (encrypted with AGENT_BROWSER_ENCRYPTION_KEY)\n# Recommended: pipe password via stdin to avoid shell history exposure\necho \"pass\" | agent-browser auth save github --url https://github.com/login --username user --password-stdin\n\n# Login using saved profile (LLM never sees password)\nagent-browser auth login github\n\n# List/show/delete profiles\nagent-browser auth list\nagent-browser auth show github\nagent-browser auth delete github\n```\n\n`auth login` waits for username/password/submit selectors before interacting, with a timeout tied to the default action timeout.\n\n### Authentication with State Persistence\n\n```bash\n# Login once and save state\nagent-browser batch \"open https://app.example.com/login\" \"snapshot -i\"\n# Read snapshot to find form refs, then fill and submit\nagent-browser batch \"fill @e1 \\\"$USERNAME\\\"\" \"fill @e2 \\\"$PASSWORD\\\"\" \"click @e3\" \"wait --url **/dashboard\" \"state save auth.json\"\n\n# Reuse in future sessions\nagent-browser batch \"state load auth.json\" \"open https://app.example.com/dashboard\"\n```\n\n### Session Persistence\n\n```bash\n# Auto-save/restore cookies and localStorage across browser restarts\nagent-browser --session-name myapp open https://app.example.com/login\n# ... login flow ...\nagent-browser close  # State auto-saved to ~/.agent-browser/sessions/\n\n# Next time, state is auto-loaded\nagent-browser --session-name myapp open https://app.example.com/dashboard\n\n# Encrypt state at rest\nexport AGENT_BROWSER_ENCRYPTION_KEY=$(openssl rand -hex 32)\nagent-browser --session-name secure open https://app.example.com\n\n# Manage saved states\nagent-browser state list\nagent-browser state show myapp-default.json\nagent-browser state clear myapp\nagent-browser state clean --older-than 7\n```\n\n### Working with Iframes\n\nIframe content is automatically inlined in snapshots. Refs inside iframes carry frame context, so you can interact with them directly.\n\n```bash\nagent-browser batch \"open https://example.com/checkout\" \"snapshot -i\"\n# @e1 [heading] \"Checkout\"\n# @e2 [Iframe] \"payment-frame\"\n#   @e3 [input] \"Card number\"\n#   @e4 [input] \"Expiry\"\n#   @e5 [button] \"Pay\"\n\n# Interact directly — no frame switch needed\nagent-browser batch \"fill @e3 \\\"4111111111111111\\\"\" \"fill @e4 \\\"12/28\\\"\" \"click @e5\"\n\n# To scope a snapshot to one iframe:\nagent-browser batch \"frame @e2\" \"snapshot -i\"\nagent-browser frame main          # Return to main frame\n```\n\n### Data Extraction\n\n```bash\nagent-browser batch \"open https://example.com/products\" \"snapshot -i\"\n# Read snapshot to find element refs, then extract\nagent-browser get text @e5           # Get specific element text\n\n# JSON output for parsing\nagent-browser snapshot -i --json\nagent-browser get text @e1 --json\n```\n\n### Parallel Sessions\n\n```bash\nagent-browser --session site1 open https://site-a.com\nagent-browser --session site2 open https://site-b.com\n\nagent-browser --session site1 snapshot -i\nagent-browser --session site2 snapshot -i\n\nagent-browser session list\n```\n\n### Connect to Existing Chrome\n\n```bash\n# Auto-discover running Chrome with remote debugging enabled\nagent-browser --auto-connect open https://example.com\nagent-browser --auto-connect snapshot\n\n# Or with explicit CDP port\nagent-browser --cdp 9222 snapshot\n```\n\nAuto-connect discovers Chrome via `DevToolsActivePort`, common debugging ports (9222, 9229), and falls back to a direct WebSocket connection if HTTP-based CDP discovery fails.\n\n### Color Scheme (Dark Mode)\n\n```bash\n# Persistent dark mode via flag (applies to all pages and new tabs)\nagent-browser --color-scheme dark open https://example.com\n\n# Or via environment variable\nAGENT_BROWSER_COLOR_SCHEME=dark agent-browser open https://example.com\n\n# Or set during session (persists for subsequent commands)\nagent-browser set media dark\n```\n\n### Viewport & Responsive Testing\n\n```bash\n# Set a custom viewport size (default is 1280x720)\nagent-browser set viewport 1920 1080\nagent-browser screenshot desktop.png\n\n# Test mobile-width layout\nagent-browser set viewport 375 812\nagent-browser screenshot mobile.png\n\n# Retina/HiDPI: same CSS layout at 2x pixel density\n# Screenshots stay at logical viewport size, but content renders at higher DPI\nagent-browser set viewport 1920 1080 2\nagent-browser screenshot retina.png\n\n# Device emulation (sets viewport + user agent in one step)\nagent-browser set device \"iPhone 14\"\nagent-browser screenshot device.png\n```\n\nThe `scale` parameter (3rd argument) sets `window.devicePixelRatio` without changing CSS layout. Use it when testing retina rendering or capturing higher-resolution screenshots.\n\n### Visual Browser (Debugging)\n\n```bash\nagent-browser --headed open https://example.com\nagent-browser highlight @e1          # Highlight element\nagent-browser inspect                # Open Chrome DevTools for the active page\nagent-browser record start demo.webm # Record session\nagent-browser profiler start         # Start Chrome DevTools profiling\nagent-browser profiler stop trace.json # Stop and save profile (path optional)\n```\n\nUse `AGENT_BROWSER_HEADED=1` to enable headed mode via environment variable. Browser extensions work in both headed and headless mode.\n\n### Local Files (PDFs, HTML)\n\n```bash\n# Open local files with file:// URLs\nagent-browser --allow-file-access open file:///path/to/document.pdf\nagent-browser --allow-file-access open file:///path/to/page.html\nagent-browser screenshot output.png\n```\n\n### iOS Simulator (Mobile Safari)\n\n```bash\n# List available iOS simulators\nagent-browser device list\n\n# Launch Safari on a specific device\nagent-browser -p ios --device \"iPhone 16 Pro\" open https://example.com\n\n# Same workflow as desktop - snapshot, interact, re-snapshot\nagent-browser -p ios snapshot -i\nagent-browser -p ios tap @e1          # Tap (alias for click)\nagent-browser -p ios fill @e2 \"text\"\nagent-browser -p ios swipe up         # Mobile-specific gesture\n\n# Take screenshot\nagent-browser -p ios screenshot mobile.png\n\n# Close session (shuts down simulator)\nagent-browser -p ios close\n```\n\n**Requirements:** macOS with Xcode, Appium (`npm install -g appium && appium driver install xcuitest`)\n\n**Real devices:** Works with physical iOS devices if pre-configured. Use `--device \"<UDID>\"` where UDID is from `xcrun xctrace list devices`.\n\n## Security\n\nAll security features are opt-in. By default, agent-browser imposes no restrictions on navigation, actions, or output.\n\n### Content Boundaries (Recommended for AI Agents)\n\nEnable `--content-boundaries` to wrap page-sourced output in markers that help LLMs distinguish tool output from untrusted page content:\n\n```bash\nexport AGENT_BROWSER_CONTENT_BOUNDARIES=1\nagent-browser snapshot\n# Output:\n# --- AGENT_BROWSER_PAGE_CONTENT nonce=<hex> origin=https://example.com ---\n# [accessibility tree]\n# --- END_AGENT_BROWSER_PAGE_CONTENT nonce=<hex> ---\n```\n\n### Domain Allowlist\n\nRestrict navigation to trusted domains. Wildcards like `*.example.com` also match the bare domain `example.com`. Sub-resource requests, WebSocket, and EventSource connections to non-allowed domains are also blocked. Include CDN domains your target pages depend on:\n\n```bash\nexport AGENT_BROWSER_ALLOWED_DOMAINS=\"example.com,*.example.com\"\nagent-browser open https://example.com        # OK\nagent-browser open https://malicious.com       # Blocked\n```\n\n### Action Policy\n\nUse a policy file to gate destructive actions:\n\n```bash\nexport AGENT_BROWSER_ACTION_POLICY=./policy.json\n```\n\nExample `policy.json`:\n\n```json\n{ \"default\": \"deny\", \"allow\": [\"navigate\", \"snapshot\", \"click\", \"scroll\", \"wait\", \"get\"] }\n```\n\nAuth vault operations (`auth login`, etc.) bypass action policy but domain allowlist still applies.\n\n### Output Limits\n\nPrevent context flooding from large pages:\n\n```bash\nexport AGENT_BROWSER_MAX_OUTPUT=50000\n```\n\n## Diffing (Verifying Changes)\n\nUse `diff snapshot` after performing an action to verify it had the intended effect. This compares the current accessibility tree against the last snapshot taken in the session.\n\n```bash\n# Typical workflow: snapshot -> action -> diff\nagent-browser snapshot -i          # Take baseline snapshot\nagent-browser click @e2            # Perform action\nagent-browser diff snapshot        # See what changed (auto-compares to last snapshot)\n```\n\nFor visual regression testing or monitoring:\n\n```bash\n# Save a baseline screenshot, then compare later\nagent-browser screenshot baseline.png\n# ... time passes or changes are made ...\nagent-browser diff screenshot --baseline baseline.png\n\n# Compare staging vs production\nagent-browser diff url https://staging.example.com https://prod.example.com --screenshot\n```\n\n`diff snapshot` output uses `+` for additions and `-` for removals, similar to git diff. `diff screenshot` produces a diff image with changed pixels highlighted in red, plus a mismatch percentage.\n\n## Timeouts and Slow Pages\n\nThe default timeout is 25 seconds. This can be overridden with the `AGENT_BROWSER_DEFAULT_TIMEOUT` environment variable (value in milliseconds).\n\n**Important:** `open` already waits for the page `load` event before returning. In most cases, no additional wait is needed before taking a snapshot or screenshot. Only add an explicit wait when content loads asynchronously after the initial page load.\n\n```bash\n# Wait for a specific element to appear (preferred for dynamic content)\nagent-browser wait \"#content\"\nagent-browser wait @e1\n\n# Wait a fixed duration (good default for slow SPAs)\nagent-browser wait 2000\n\n# Wait for a specific URL pattern (useful after redirects)\nagent-browser wait --url \"**/dashboard\"\n\n# Wait for text to appear on the page\nagent-browser wait --text \"Results loaded\"\n\n# Wait for a JavaScript condition\nagent-browser wait --fn \"document.querySelectorAll('.item').length > 0\"\n```\n\n**Avoid `wait --load networkidle`** unless you are certain the site has no persistent network activity. Ad-heavy sites, sites with analytics/tracking, and sites with websockets will cause `networkidle` to hang indefinitely. Prefer `wait 2000` or `wait <selector>` instead.\n\n## JavaScript Dialogs (alert / confirm / prompt)\n\nWhen a page opens a JavaScript dialog (`alert()`, `confirm()`, or `prompt()`), it blocks all other browser commands (snapshot, screenshot, click, etc.) until the dialog is dismissed. If commands start timing out unexpectedly, check for a pending dialog:\n\n```bash\n# Check if a dialog is blocking\nagent-browser dialog status\n\n# Accept the dialog (dismiss the alert / click OK)\nagent-browser dialog accept\n\n# Accept a prompt dialog with input text\nagent-browser dialog accept \"my input\"\n\n# Dismiss the dialog (click Cancel)\nagent-browser dialog dismiss\n```\n\nWhen a dialog is pending, all command responses include a `warning` field indicating the dialog type and message. In `--json` mode this appears as a `\"warning\"` key in the response object.\n\n## Session Management and Cleanup\n\nWhen running multiple agents or automations concurrently, always use named sessions to avoid conflicts:\n\n```bash\n# Each agent gets its own isolated session\nagent-browser --session agent1 open site-a.com\nagent-browser --session agent2 open site-b.com\n\n# Check active sessions\nagent-browser session list\n```\n\nAlways close your browser session when done to avoid leaked processes:\n\n```bash\nagent-browser close                    # Close default session\nagent-browser --session agent1 close   # Close specific session\nagent-browser close --all              # Close all active sessions\n```\n\nIf a previous session was not closed properly, the daemon may still be running. Use `agent-browser close` to clean it up, or `agent-browser close --all` to shut down every session at once.\n\nTo auto-shutdown the daemon after a period of inactivity (useful for ephemeral/CI environments):\n\n```bash\nAGENT_BROWSER_IDLE_TIMEOUT_MS=60000 agent-browser open example.com\n```\n\n## Ref Lifecycle (Important)\n\nRefs (`@e1`, `@e2`, etc.) are invalidated when the page changes. Always re-snapshot after:\n\n- Clicking links or buttons that navigate\n- Form submissions\n- Dynamic content loading (dropdowns, modals)\n\n```bash\nagent-browser click @e5              # Navigates to new page\nagent-browser snapshot -i            # MUST re-snapshot\nagent-browser click @e1              # Use new refs\n```\n\n## Annotated Screenshots (Vision Mode)\n\nUse `--annotate` to take a screenshot with numbered labels overlaid on interactive elements. Each label `[N]` maps to ref `@eN`. This also caches refs, so you can interact with elements immediately without a separate snapshot.\n\n```bash\nagent-browser screenshot --annotate\n# Output includes the image path and a legend:\n#   [1] @e1 button \"Submit\"\n#   [2] @e2 link \"Home\"\n#   [3] @e3 textbox \"Email\"\nagent-browser click @e2              # Click using ref from annotated screenshot\n```\n\nUse annotated screenshots when:\n\n- The page has unlabeled icon buttons or visual-only elements\n- You need to verify visual layout or styling\n- Canvas or chart elements are present (invisible to text snapshots)\n- You need spatial reasoning about element positions\n\n## Semantic Locators (Alternative to Refs)\n\nWhen refs are unavailable or unreliable, use semantic locators:\n\n```bash\nagent-browser find text \"Sign In\" click\nagent-browser find label \"Email\" fill \"user@test.com\"\nagent-browser find role button click --name \"Submit\"\nagent-browser find placeholder \"Search\" type \"query\"\nagent-browser find testid \"submit-btn\" click\n```\n\n## JavaScript Evaluation (eval)\n\nUse `eval` to run JavaScript in the browser context. **Shell quoting can corrupt complex expressions** -- use `--stdin` or `-b` to avoid issues.\n\n```bash\n# Simple expressions work with regular quoting\nagent-browser eval 'document.title'\nagent-browser eval 'document.querySelectorAll(\"img\").length'\n\n# Complex JS: use --stdin with heredoc (RECOMMENDED)\nagent-browser eval --stdin <<'EVALEOF'\nJSON.stringify(\n  Array.from(document.querySelectorAll(\"img\"))\n    .filter(i => !i.alt)\n    .map(i => ({ src: i.src.split(\"/\").pop(), width: i.width }))\n)\nEVALEOF\n\n# Alternative: base64 encoding (avoids all shell escaping issues)\nagent-browser eval -b \"$(echo -n 'Array.from(document.querySelectorAll(\"a\")).map(a => a.href)' | base64)\"\n```\n\n**Why this matters:** When the shell processes your command, inner double quotes, `!` characters (history expansion), backticks, and `$()` can all corrupt the JavaScript before it reaches agent-browser. The `--stdin` and `-b` flags bypass shell interpretation entirely.\n\n**Rules of thumb:**\n\n- Single-line, no nested quotes -> regular `eval 'expression'` with single quotes is fine\n- Nested quotes, arrow functions, template literals, or multiline -> use `eval --stdin <<'EVALEOF'`\n- Programmatic/generated scripts -> use `eval -b` with base64\n\n## Configuration File\n\nCreate `agent-browser.json` in the project root for persistent settings:\n\n```json\n{\n  \"headed\": true,\n  \"proxy\": \"http://localhost:8080\",\n  \"profile\": \"./browser-data\"\n}\n```\n\nPriority (lowest to highest): `~/.agent-browser/config.json` < `./agent-browser.json` < env vars < CLI flags. Use `--config <path>` or `AGENT_BROWSER_CONFIG` env var for a custom config file (exits with error if missing/invalid). All CLI options map to camelCase keys (e.g., `--executable-path` -> `\"executablePath\"`). Boolean flags accept `true`/`false` values (e.g., `--headed false` overrides config). Extensions from user and project configs are merged, not replaced.\n\n## Deep-Dive Documentation\n\n| Reference                                                            | When to Use                                               |\n| -------------------------------------------------------------------- | --------------------------------------------------------- |\n| [references/commands.md](references/commands.md)                     | Full command reference with all options                   |\n| [references/snapshot-refs.md](references/snapshot-refs.md)           | Ref lifecycle, invalidation rules, troubleshooting        |\n| [references/session-management.md](references/session-management.md) | Parallel sessions, state persistence, concurrent scraping |\n| [references/authentication.md](references/authentication.md)         | Login flows, OAuth, 2FA handling, state reuse             |\n| [references/video-recording.md](references/video-recording.md)       | Recording workflows for debugging and documentation       |\n| [references/profiling.md](references/profiling.md)                   | Chrome DevTools profiling for performance analysis        |\n| [references/proxy-support.md](references/proxy-support.md)           | Proxy configuration, geo-testing, rotating proxies        |\n\n## Cloud Providers\n\nUse `-p <provider>` (or `AGENT_BROWSER_PROVIDER`) to run against a cloud browser instead of launching a local Chrome instance. Supported providers: `agentcore`, `browserbase`, `browserless`, `browseruse`, `kernel`.\n\n### AgentCore (AWS Bedrock)\n\n```bash\n# Credentials auto-resolved from env vars or AWS CLI (SSO, IAM roles, etc.)\nagent-browser -p agentcore open https://example.com\n\n# With persistent browser profile\nREDACTED agent-browser -p agentcore open https://example.com\n\n# With explicit region\nAGENTCORE_REGION=eu-west-1 agent-browser -p agentcore open https://example.com\n```\n\nSet `AWS_PROFILE` to select a named AWS profile.\n\n## Browser Engine Selection\n\nUse `--engine` to choose a local browser engine. The default is `chrome`.\n\n```bash\n# Use Lightpanda (fast headless browser, requires separate install)\nagent-browser --engine lightpanda open example.com\n\n# Via environment variable\nexport AGENT_BROWSER_ENGINE=lightpanda\nagent-browser open example.com\n\n# With custom binary path\nagent-browser --engine lightpanda --executable-path /path/to/lightpanda open example.com\n```\n\nSupported engines:\n- `chrome` (default) -- Chrome/Chromium via CDP\n- `lightpanda` -- Lightpanda headless browser via CDP (10x faster, 10x less memory than Chrome)\n\nLightpanda does not support `--extension`, `--profile`, `--state`, or `--allow-file-access`. Install Lightpanda from https://lightpanda.io/docs/open-source/installation.\n\n## Observability Dashboard\n\nThe dashboard is a standalone background server that shows live browser viewports, command activity, and console output for all sessions.\n\n```bash\n# Start the dashboard server (background, port 4848)\nagent-browser dashboard start\n\n# All sessions are automatically visible in the dashboard\nagent-browser open example.com\n\n# Stop the dashboard\nagent-browser dashboard stop\n```\n\nThe dashboard runs independently of browser sessions on port 4848 (configurable with `--port`). All sessions automatically stream to the dashboard. Sessions can also be created from the dashboard UI with local engines or cloud providers.\n\n### Dashboard AI Chat\n\nThe dashboard has an optional AI chat tab powered by the Vercel AI Gateway. Enable it by setting:\n\n```bash\nexport AI_GATEWAY_API_KEY=gw_your_key_here\nexport AI_GATEWAY_MODEL=anthropic/claude-sonnet-4.6           # optional default\nexport AI_GATEWAY_URL=https://ai-gateway.vercel.sh           # optional default\n```\n\nThe Chat tab is always visible in the dashboard. Set `AI_GATEWAY_API_KEY` to enable AI responses.\n\n## Ready-to-Use Templates\n\n| Template                                                                 | Description                         |\n| ------------------------------------------------------------------------ | ----------------------------------- |\n| [templates/form-automation.sh](templates/form-automation.sh)             | Form filling with validation        |\n| [templates/authenticated-session.sh](templates/authenticated-session.sh) | Login once, reuse state             |\n| [templates/capture-workflow.sh](templates/capture-workflow.sh)           | Content extraction with screenshots |\n\n```bash\n./templates/form-automation.sh https://example.com/form\n./templates/authenticated-session.sh https://app.example.com/login\n./templates/capture-workflow.sh https://example.com ./output\n```\n\nBase directory for this skill: file:///Users/dhruv2mars/.config/opencode/skills/agent-browser\nRelative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.\nNote: file list is sampled.\n\n<skill_files>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/templates/authenticated-session.sh</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/templates/form-automation.sh</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/templates/capture-workflow.sh</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/session-management.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/snapshot-refs.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/video-recording.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/profiling.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/commands.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/proxy-support.md</file>\n<file>/Users/dhruv2mars/.config/opencode/skills/agent-browser/references/authentication.md</file>\n</skill_files>\n</skill_content>",
+            "metadata": {
+              "name": "agent-browser",
+              "dir": "/Users/dhruv2mars/.config/opencode/skills/agent-browser",
+              "truncated": false
+            },
+            "title": "Loaded skill: agent-browser",
+            "time": {
+              "start": 1776078510690,
+              "end": 1776078510700
+            }
+          },
+          "id": "prt_d86875846001TL2F9z6VBLx90e",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873206001et6R0iiEOGchnm"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 7031,
+            "input": 6898,
+            "output": 133,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 0
+            }
+          },
+          "cost": 0,
+          "id": "prt_d86875a6d001AHuncbMFZPmGcE",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86873206001et6R0iiEOGchnm"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873200002CDjsFj1FWBzHj6",
+        "role": "assistant",
+        "mode": "docs",
+        "agent": "docs",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 14770,
+          "input": 7858,
+          "output": 64,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 6848
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078510754,
+          "completed": 1776078517626
+        },
+        "finish": "tool-calls",
+        "id": "msg_d86875aa2001Sw07bJN9Btemfp",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d86876ac8001uzlTToOevxS3X9",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86875aa2001Sw07bJN9Btemfp"
+        },
+        {
+          "type": "reasoning",
+          "text": "Now I have the agent-browser skill loaded. Let me browse to the VoltAgent awesome-design-md repo to understand the design.md system.",
+          "time": {
+            "start": 1776078516730,
+            "end": 1776078516734
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "03740fdfc99748a1a26a10c7883823513143832324a0679abbcd9ffc2eec3fb5"
+            }
+          },
+          "id": "prt_d868771fa001QaQTEiDvotObYd",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86875aa2001Sw07bJN9Btemfp"
+        },
+        {
+          "type": "tool",
+          "tool": "invalid",
+          "callID": "call_function_onchx4tz58oz_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "tool": "agent-browser",
+              "error": "Model tried to call unavailable tool 'agent-browser'. Available tools: invalid, read, glob, grep, skill."
+            },
+            "output": "The arguments provided to the tool are invalid: Model tried to call unavailable tool 'agent-browser'. Available tools: invalid, read, glob, grep, skill.",
+            "metadata": {
+              "truncated": false
+            },
+            "title": "Invalid Tool",
+            "time": {
+              "start": 1776078517555,
+              "end": 1776078517557
+            }
+          },
+          "id": "prt_d86877200001y8PXxQGwhLF2CX",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86875aa2001Sw07bJN9Btemfp"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 14770,
+            "input": 7858,
+            "output": 64,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 6848
+            }
+          },
+          "cost": 0,
+          "id": "prt_d86877536001laOV9vAWrPAlXF",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86875aa2001Sw07bJN9Btemfp"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873200002CDjsFj1FWBzHj6",
+        "role": "assistant",
+        "mode": "docs",
+        "agent": "docs",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 14977,
+          "input": 150,
+          "output": 171,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 14656
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078517627,
+          "completed": 1776078528377
+        },
+        "finish": "tool-calls",
+        "id": "msg_d8687757b001O7nPMCxaVOORY6",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d868780620015Ntvz8uw5pKuA3",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687757b001O7nPMCxaVOORY6"
+        },
+        {
+          "type": "reasoning",
+          "text": "The skill tool loaded agent-browser but that's for browser automation, not for fetching GitHub content. Let me directly use the browser to fetch the VoltAgent/awesome-design-md README and relevant documentation.\n\nActually, I don't have a direct web fetch tool. Let me check what tools I have available. I have: invalid, read, glob, grep, skill. I don't have a direct HTTP client.\n\nBut wait - I could use the browser skill to navigate to the GitHub page. Let me use agent-browser to open the GitHub page and take a snapshot.",
+          "time": {
+            "start": 1776078521850,
+            "end": 1776078526255
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "613b5253477c957de41b8e4eabe3ab2af3aa174b55d90f629b03baa0915e2dba"
+            }
+          },
+          "id": "prt_d868785fa001sBz1notTew75tR",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687757b001O7nPMCxaVOORY6"
+        },
+        {
+          "type": "tool",
+          "tool": "glob",
+          "callID": "call_function_qsea60nmx1ty_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "pattern": "docs/**/*.md"
+            },
+            "output": "/Users/dhruv2mars/dev/github/gunmetal/docs/documentation.md\n/Users/dhruv2mars/dev/github/gunmetal/docs/prompt.md\n/Users/dhruv2mars/dev/github/gunmetal/docs/plans.md\n/Users/dhruv2mars/dev/github/gunmetal/docs/implement.md",
+            "metadata": {
+              "count": 4,
+              "truncated": false
+            },
+            "title": "",
+            "time": {
+              "start": 1776078527178,
+              "end": 1776078527193
+            }
+          },
+          "id": "prt_d86879730001VWlx7PEXnnSr97",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687757b001O7nPMCxaVOORY6"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_function_qsea60nmx1ty_2",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/dhruv2mars/dev/github/gunmetal"
+            },
+            "output": "<path>/Users/dhruv2mars/dev/github/gunmetal</path>\n<type>directory</type>\n<entries>\n.codex/\n.entire/\n.git/\n.github/\n.gitignore\n.vercel/\nAGENTS.md\napps/\nbun.lock\nbunfig.toml\nCargo.lock\nCargo.toml\ndhruv2mars-gunmetal-0.1.0.tgz\ndhruv2mars-gunmetal-0.1.1.tgz\ndhruv2mars-gunmetal-0.1.4.tgz\ndocs/\nnode_modules/\npackage.json\npackages/\nREADME.md\nscripts/\ntarget/\ntest/\n\n(23 entries)\n</entries>",
+            "metadata": {
+              "preview": ".codex/\n.entire/\n.git/\n.github/\n.gitignore\n.vercel/\nAGENTS.md\napps/\nbun.lock\nbunfig.toml\nCargo.lock\nCargo.toml\ndhruv2mars-gunmetal-0.1.0.tgz\ndhruv2mars-gunmetal-0.1.1.tgz\ndhruv2mars-gunmetal-0.1.4.tgz\ndocs/\nnode_modules/\npackage.json\npackages/\nREADME.md",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "",
+            "time": {
+              "start": 1776078528303,
+              "end": 1776078528307
+            }
+          },
+          "id": "prt_d86879acb001C4R1YeyqgH5p30",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687757b001O7nPMCxaVOORY6"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 14977,
+            "input": 150,
+            "output": 171,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 14656
+            }
+          },
+          "cost": 0,
+          "id": "prt_d86879f34001NaKqZwVCBCrEeG",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687757b001O7nPMCxaVOORY6"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873200002CDjsFj1FWBzHj6",
+        "role": "assistant",
+        "mode": "docs",
+        "agent": "docs",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 15431,
+          "input": 295,
+          "output": 352,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 14784
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078528378,
+          "completed": 1776078548139
+        },
+        "finish": "tool-calls",
+        "id": "msg_d86879f7a00151qsZegxf23GnP",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d8687af5c001DE4aycCxDgALsh",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86879f7a00151qsZegxf23GnP"
+        },
+        {
+          "type": "reasoning",
+          "text": "The agent-browser skill was loaded but I can't actually use it as a tool. Let me check if there's any documentation about design.md in the local project. But the user wants me to research the VoltAgent/awesome-design-md system, which is a GitHub repo. I need to access that via the web. \n\nWait, I don't have a web browsing tool. The agent-browser skill was loaded but it seems to be a skill definition, not a tool I can invoke. Let me re-read - the skill tool loads specialized instructions into context, but I still need to actually use a browser tool.\n\nLooking at the available tools: invalid, read, glob, grep, skill. There's no browser tool listed. But the skill content mentions `agent-browser` as a CLI tool. \n\nI'm confused about how to actually use the browser here. Let me re-read the skill - it describes commands like `agent-browser open <url>` but that's meant to be run in a shell. But I don't have a shell/bash tool either in my available tools.\n\nHmm, let me look at the documentation files in the project to understand the context better, and then clarify to the user what I can and cannot do. The user wants me to research a GitHub repo, but I don't have a web browsing capability in this environment. I could try using the grep/read tools to find local docs, but that won't help for external GitHub content.\n\nLet me check the project's own docs to see if there's any relevant info, and then explain the limitation to the user.",
+          "time": {
+            "start": 1776078534041,
+            "end": 1776078547205
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "c52d91ca69dcda68850fcd6c0b5a0162c200aa311219e8f48597d32d02a44c16"
+            }
+          },
+          "id": "prt_d8687b599001DwkuDLlIIzOSwu",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86879f7a00151qsZegxf23GnP"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_function_z1t914iq8mqf_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/dhruv2mars/dev/github/gunmetal/docs/documentation.md"
+            },
+            "output": "<path>/Users/dhruv2mars/dev/github/gunmetal/docs/documentation.md</path>\n<type>file</type>\n<content>\n1: # Documentation\n2: \n3: This document is updated continuously as milestones land so it reflects reality.\n4: \n5: ## What This Work Is\n6: - This is the GA shipping pass for the Gunmetal super app.\n7: - The focus is now public readiness of the product surfaces, not broadening scope.\n8: \n9: ## Current Status\n10: - Durable memory exists and is updated for the GA shipping pass.\n11: - Product thesis remains: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.\n12: - Product taxonomy remains explicit:\n13:   - `Products`: consumer-facing Gunmetal products, with the super app as the current product\n14:   - `Developer`: internal engines that later become public developer products, starting with the provider/extension SDK\n15: - The current public-shipping order is fixed:\n16:   - landing page\n17:   - CLI\n18:   - TUI\n19:   - Web UI\n20: - Hosted truth is now explicit:\n21:   - canonical public host is `gunmetalapp.vercel.app`\n22:   - public Web UI marketing route is `/webui`\n23:   - `gunmetal.vercel.app` belongs to an unrelated old site and must not be used\n24: - The current active milestone is complete for this shipping pass.\n25: \n26: ## Status By Milestone\n27: - Milestone 1 complete: durable-memory refresh and shipping branch.\n28: - Milestone 2 complete: public landing page polish.\n29: - Milestone 3 complete: CLI shipping polish.\n30: - Milestone 4 complete: TUI shipping polish.\n31: - Milestone 5 complete: Web UI shipping polish.\n32: - Milestone 6 complete: final GA verification and release cleanup.\n33: \n34: ## Current Implementation Focus\n35: - The foundation from earlier phases remains in place:\n36:   - shared provider metadata\n37:   - aligned daemon, CLI, and OpenTUI provider behavior\n38:   - stronger request inspection\n39: - Shipping work completed so far in this pass:\n40:   - landing page rewritten around the real super-app story\n41:   - canonical public host corrected to `gunmetalapp.vercel.app`\n42:   - public Web UI route moved to `/webui` with a redirect from `/web-ui`\n43:   - CLI help and recovery paths tightened for first-time public users\n44:   - OpenTUI tightened for public use, including clearer setup-to-playground flow and narrower 80-column terminal copy\n45:   - browser Web UI tightened around the real golden path:\n46:     - Gunmetal-key-only playground copy\n47:     - provider-scoped playground model selection\n48:     - calmer request-history range controls\n49:     - narrower models-in-view presentation\n50:     - streamed playground requests now persist into request history correctly\n51: - The current task is the final GA verification pass.\n52: \n53: ## Why This Matters\n54: - The public front door needs to explain the product cleanly before broader launch.\n55: - The later CLI, TUI, and Web UI passes should inherit one clear product story rather than drifting.\n56: - Public readiness depends on both presentation quality and real usability.\n57: \n58: ## Validation Results\n59: - Last completed full-repo verification before this shipping pass:\n60:   - `bun run test`\n61:   - `bun run check`\n62:   - `cargo test --workspace`\n63: - Landing page verification completed:\n64:   - `bun run --filter @gunmetal/web test`\n65:   - `bun run --filter @gunmetal/web lint`\n66:   - live browser checks on desktop and mobile with agent-browser\n67:   - route verification for `/install`, `/start-here`, `/docs`, `/webui`, and redirect from `/web-ui`\n68: - CLI verification completed:\n69:   - `cargo test -p gunmetal-cli`\n70:   - command help smokes for root, setup, web, start, status, logs list, providers list, and chat\n71:   - live command smokes for `gunmetal status`, `gunmetal profiles list`, and `gunmetal providers list`\n72: - TUI verification completed:\n73:   - `cargo test -p gunmetal-tui`\n74:   - live `gunmetal tui` launcher smokes, including a constrained `80x24` terminal check\n75: - Web UI verification completed:\n76:   - `cargo test -p gunmetal-daemon`\n77:   - desktop and mobile screenshot captures against `/app`\n78:   - live browser interaction against `/app` using a Gunmetal key\n79:   - live browser verification of the current Codex upstream failure path and request-detail update\n80: - Final GA verification completed:\n81:   - `bun run test`\n82:   - `bun run check`\n83:   - `cargo run -p gunmetal -- status`\n84:   - `cargo run -p gunmetal -- logs list`\n85: \n86: ## Decisions\n87: - The Gunmetal super app is the only product in scope for this pass.\n88: - Surface order is fixed and should not be skipped.\n89: - Public polish should improve the real golden path, not just copy or visuals.\n90: \n91: ## Next Steps\n92: - Clean the repo, commit, and move the checkpoint to `main`.\n\n(End of file - total 92 lines)\n</content>",
+            "metadata": {
+              "preview": "# Documentation\n\nThis document is updated continuously as milestones land so it reflects reality.\n\n## What This Work Is\n- This is the GA shipping pass for the Gunmetal super app.\n- The focus is now public readiness of the product surfaces, not broadening scope.\n\n## Current Status\n- Durable memory exists and is updated for the GA shipping pass.\n- Product thesis remains: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.\n- Product taxonomy remains explicit:\n  - `Products`: consumer-facing Gunmetal products, with the super app as the current product\n  - `Developer`: internal engines that later become public developer products, starting with the provider/extension SDK\n- The current public-shipping order is fixed:\n  - landing page\n  - CLI\n  - TUI\n  - Web UI\n- Hosted truth is now explicit:",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "docs/documentation.md",
+            "time": {
+              "start": 1776078548066,
+              "end": 1776078548071
+            }
+          },
+          "id": "prt_d8687e907001eVq0RyX85IePUv",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86879f7a00151qsZegxf23GnP"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 15431,
+            "input": 295,
+            "output": 352,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 14784
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8687ec68001m1dxFGTiLeiy1b",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d86879f7a00151qsZegxf23GnP"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873200002CDjsFj1FWBzHj6",
+        "role": "assistant",
+        "mode": "docs",
+        "agent": "docs",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 16772,
+          "input": 1292,
+          "output": 440,
+          "reasoning": 0,
+          "cache": {
+            "write": 0,
+            "read": 15040
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078548140,
+          "completed": 1776078575966
+        },
+        "finish": "stop",
+        "id": "msg_d8687ecac001ezylj3Gk67jjQc",
+        "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d868807c00010hlZtdGstaW4Cu",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687ecac001ezylj3Gk67jjQc"
+        },
+        {
+          "type": "reasoning",
+          "text": "The user wants me to research the design.md system from the VoltAgent/awesome-design-md GitHub repository. They want to understand:\n1. What is design.md? How does it work?\n2. How do you use it with npx?\n3. What does the design.md file format look like?\n4. How is it meant to guide frontend development?\n\nThe AGENTS.md mentions that if the user explicitly asks to create durable memory, I should create or refresh files in the docs/ folder. But the user is explicitly asking me to research the design.md system from an external GitHub repository.\n\nI don't have direct network access to browse websites. The read tool reads local files, not URLs. I also don't have a browser tool available despite loading the skill (the agent-browser skill just provided instructions but didn't actually enable a browser tool).\n\nLet me try the glob and grep tools to look for any local references to design.md, and also check if there's any documentation about it in this repo.\n\nActually, I should be clear with the user - I cannot browse external URLs. I can only read local files. The agent-browser skill I loaded just provides instructions for using the agent-browser CLI tool if you had it installed, but it doesn't give me the ability to browse the web.\n\nI should explain this limitation to the user and ask if they have any local copies of the documentation, or if there's something else I can help with.",
+          "time": {
+            "start": 1776078556769,
+            "end": 1776078569691
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "6edfefb63e8f05697bb87d6984edaafb8825661374e4cb2693a6889707b36c8a"
+            }
+          },
+          "id": "prt_d86880e61001A3o4vYMXKFrhx0",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687ecac001ezylj3Gk67jjQc"
+        },
+        {
+          "type": "text",
+          "text": "\n\nI don't have the ability to browse external websites or fetch remote URLs — I can only read local files in the repository.\n\nTo research `awesome-design-md` from `github.com/VoltAgent/`, I would need one of:\n\n1. **You have a local copy** — If you've already cloned or downloaded that repo, point me to the path and I'll read it.\n2. **Paste the docs** — Copy/paste the README or relevant content here and I'll analyze it.\n3. **Install a browsing tool** — The `agent-browser` skill I loaded provides CLI-based browser automation, but you'd need to invoke it yourself via shell to fetch the page, then share the results.\n\nWould you like to proceed with any of those options?",
+          "time": {
+            "start": 1776078569692,
+            "end": 1776078575918
+          },
+          "id": "prt_d868840dc001gIeyhySb3dIYbr",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687ecac001ezylj3Gk67jjQc"
+        },
+        {
+          "reason": "stop",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 16772,
+            "input": 1292,
+            "output": 440,
+            "reasoning": 0,
+            "cache": {
+              "write": 0,
+              "read": 15040
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8688592f001k1jOWy6R2ozFUJ",
+          "sessionID": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+          "messageID": "msg_d8687ecac001ezylj3Gk67jjQc"
+        }
+      ]
+    }
+  ]
+}

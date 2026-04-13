@@ -1,0 +1,58 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "50b716050985",
+  "session_id": "ses_27978ce04ffe2zQEW6pPt4fbhV",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-13T13:44:32.510323Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/page.tsx"
+  ],
+  "agent": "OpenCode",
+  "model": "MiniMax-M2.7",
+  "turn_id": "9b449785be82",
+  "token_usage": {
+    "input_tokens": 16493,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 51328,
+    "output_tokens": 1160,
+    "api_call_count": 5
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-13T13:44:32.455807Z",
+    "agent_lines": 0,
+    "agent_removed": 71,
+    "human_added": 1274,
+    "human_modified": 854,
+    "human_removed": 0,
+    "total_committed": 1359,
+    "total_lines_changed": 2210,
+    "agent_percentage": 3.2126696832579182,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 292,
+      "user_lines_removed": 854,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/src/app/globals.css": 188,
+        "apps/web/src/app/layout.tsx": 5,
+        "apps/web/src/app/page.tsx": 99
+      },
+      "user_removed_per_file": {
+        "apps/web/src/app/globals.css": 681,
+        "apps/web/src/app/layout.tsx": 13,
+        "apps/web/src/app/page.tsx": 160
+      }
+    }
+  ]
+}

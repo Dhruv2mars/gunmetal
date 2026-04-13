@@ -1,0 +1,9 @@
+Research the design.md system from https://github.com/VoltAgent/awesome-design-md
+
+I need to understand:
+1. What is design.md? How does it work?
+2. How do you use it with npx?
+3. What does the design.md file format look like?
+4. How is it meant to guide frontend development?
+
+Please fetch the README and any relevant documentation to explain this system thoroughly.
