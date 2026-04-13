@@ -1,0 +1,137 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "320ceacc10d5",
+  "session_id": "019d8076-5a27-73f2-8b11-ebf5bd656176",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-13T08:04:13.082377Z",
+  "branch": "feat/ga-shipping-polish",
+  "checkpoints_count": 9,
+  "files_touched": [
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/page.tsx",
+    "apps/web/src/app/web-ui/page.tsx",
+    "apps/web/src/app/webui/page.tsx",
+    "apps/web/src/lib/site-content.ts",
+    "docs/documentation.md",
+    "docs/plans.md",
+    "docs/prompt.md",
+    "packages/app-cli/src/lib.rs"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "c544481c342d",
+  "checkpoint_transcript_start": 3951,
+  "transcript_lines_at_start": 3951,
+  "token_usage": {
+    "input_tokens": 38164729,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 36443776,
+    "output_tokens": 116952,
+    "api_call_count": 260
+  },
+  "session_metrics": {
+    "turn_count": 19
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-13T08:03:17.728264Z",
+    "agent_lines": 37,
+    "agent_removed": 130,
+    "human_added": 229,
+    "human_modified": 246,
+    "human_removed": 0,
+    "total_committed": 502,
+    "total_lines_changed": 711,
+    "agent_percentage": 23.488045007032348,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 240,
+      "user_lines_removed": 210,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/src/app/globals.css": 23,
+        "apps/web/src/app/page.test.tsx": 8,
+        "apps/web/src/app/page.tsx": 84,
+        "apps/web/src/lib/site-content.ts": 1,
+        "docs/documentation.md": 34,
+        "docs/plans.md": 50,
+        "docs/prompt.md": 40
+      },
+      "user_removed_per_file": {
+        "apps/web/src/app/page.test.tsx": 3,
+        "apps/web/src/app/page.tsx": 70,
+        "apps/web/src/lib/site-content.ts": 1,
+        "docs/documentation.md": 57,
+        "docs/plans.md": 55,
+        "docs/prompt.md": 24
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 326,
+      "agent_lines_removed": 290
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 326,
+      "agent_lines_removed": 290
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 323,
+      "agent_lines_removed": 287
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 513,
+      "agent_lines_removed": 340
+    }
+  ]
+}
