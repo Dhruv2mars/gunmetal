@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "5ae8062a81b8",
+  "strategy": "manual-commit",
+  "branch": "feat/phase2-superapp-hardening",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/plans.md",
+    "docs/prompt.md",
+    "packages/app-cli/src/lib.rs",
+    "packages/app-daemon/src/browser_app.html",
+    "packages/app-daemon/src/lib.rs",
+    "packages/app-tui/src/opentui.js",
+    "packages/extensions/src/lib.rs",
+    "packages/sdk/src/lib.rs"
+  ],
+  "sessions": [
+    {
+      "metadata": "/5a/e8062a81b8/0/metadata.json",
+      "transcript": "/5a/e8062a81b8/0/full.jsonl",
+      "content_hash": "/5a/e8062a81b8/0/content_hash.txt",
+      "prompt": "/5a/e8062a81b8/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 22549240,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 22364160,
+    "output_tokens": 47412,
+    "api_call_count": 129
+  }
+}
