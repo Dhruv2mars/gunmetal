@@ -1,0 +1,889 @@
+{
+  "info": {
+    "id": "ses_27978c420ffeW6qLuitiyQr8ME",
+    "slug": "lucky-cactus",
+    "projectID": "8fef4893dd40e310fb32463686a2ceacbf08b622",
+    "directory": "/Users/dhruv2mars/dev/github/gunmetal",
+    "parentID": "ses_2798173e3ffeSGcEdsQihtiW7n",
+    "title": "Explore Expo design.md (@explore subagent)",
+    "version": "1.4.3",
+    "summary": {
+      "additions": 0,
+      "deletions": 0,
+      "files": 0
+    },
+    "permission": [
+      {
+        "permission": "todowrite",
+        "action": "deny",
+        "pattern": "*"
+      },
+      {
+        "permission": "task",
+        "action": "deny",
+        "pattern": "*"
+      }
+    ],
+    "time": {
+      "created": 1776078502879,
+      "updated": 1776078554637
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "role": "user",
+        "time": {
+          "created": 1776078502883
+        },
+        "tools": {
+          "todowrite": false,
+          "task": false
+        },
+        "agent": "explore",
+        "model": {
+          "providerID": "minimax-coding-plan",
+          "modelID": "MiniMax-M2.7"
+        },
+        "summary": {
+          "diffs": []
+        },
+        "id": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "type": "text",
+          "text": "Go to https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/expo and explore the Expo design specifically.\n\nI need to understand:\n1. What design.md files exist for Expo?\n2. What is the design language, visual style, colors, typography, components?\n3. What makes it distinctive/beautiful?\n4. How is the design structured?\n\nPlease fetch the actual design.md content and any related files to understand the design fully.",
+          "id": "prt_d86873be3001s7JVWFXEp1bV71",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be1002Zm3pQdZi9Bmxha"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 5234,
+          "input": 20,
+          "output": 409,
+          "reasoning": 0,
+          "cache": {
+            "write": 4805,
+            "read": 0
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078502887,
+          "completed": 1776078520535
+        },
+        "finish": "tool-calls",
+        "id": "msg_d86873be70021xoUNadX6cASvi",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d868749930010OAeroxPE6P9hU",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be70021xoUNadX6cASvi"
+        },
+        {
+          "type": "reasoning",
+          "text": "The user wants me to explore a GitHub repository to understand the Expo design. They're asking me to look at a specific path in the VoltAgent/awesome-design-md repository. Let me start by exploring what exists at that URL.\n\nHowever, I notice that I'm being asked to fetch content from an external GitHub URL. I have tools for git operations and local file operations, but I don't have a tool to directly fetch web content from arbitrary URLs. \n\nLet me think about what I can do:\n1. I could try to clone the repository if it's a git repo\n2. I could use gh (GitHub CLI) to interact with GitHub if available\n3. I could search locally if they've already cloned it\n\nWait - I'm looking at a workspace root at /Users/dhruv2mars/dev/github/gunmetal. Let me check if this repository might already contain the design-md content, or if I need to fetch it.\n\nActually, looking at the URL structure `https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/expo`, this is a GitHub repository. I should try to use git or gh to fetch this content.\n\nLet me first check if this repo is already cloned locally, or if I need to clone it. I'll start by looking at what's in the current workspace and try to understand if this is related.\n\nActually, I should try to clone the awesome-design-md repository to explore it. Let me do that.",
+          "time": {
+            "start": 1776078506388,
+            "end": 1776078513351
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "f3d1458deb5ce7fe444ed0311f5450bb1db53eb3b0cc526f3684bab63f9fcb46"
+            }
+          },
+          "id": "prt_d86874994001L1dCufYiqhoGVf",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be70021xoUNadX6cASvi"
+        },
+        {
+          "type": "text",
+          "text": "I'll fetch the Expo design content from that GitHub repository. Let me start by cloning it and exploring the structure.",
+          "time": {
+            "start": 1776078513353,
+            "end": 1776078514477
+          },
+          "id": "prt_d868764c90011TUV9R9cjmaU5A",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be70021xoUNadX6cASvi"
+        },
+        {
+          "type": "tool",
+          "tool": "bash",
+          "callID": "call_function_e6la6r93tjgp_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "cd /Users/dhruv2mars/dev/github && git clone https://github.com/VoltAgent/awesome-design-md.git --depth 1 2>&1 || echo \"Repo may already exist\"",
+              "timeout": 60000,
+              "description": "Clone the design-md repository"
+            },
+            "output": "Cloning into 'awesome-design-md'...\n",
+            "metadata": {
+              "output": "Cloning into 'awesome-design-md'...\n",
+              "exit": 0,
+              "description": "Clone the design-md repository",
+              "truncated": false
+            },
+            "title": "Clone the design-md repository",
+            "time": {
+              "start": 1776078519088,
+              "end": 1776078520487
+            }
+          },
+          "id": "prt_d8687692f001UnWlP2I6j0ajHA",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be70021xoUNadX6cASvi"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 5234,
+            "input": 20,
+            "output": 409,
+            "reasoning": 0,
+            "cache": {
+              "write": 4805,
+              "read": 0
+            }
+          },
+          "cost": 0,
+          "id": "prt_d868780a8002ir0mxqG50N2XE5",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86873be70021xoUNadX6cASvi"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 5340,
+          "input": 39,
+          "output": 82,
+          "reasoning": 0,
+          "cache": {
+            "write": 511,
+            "read": 4708
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078520536,
+          "completed": 1776078525009
+        },
+        "finish": "tool-calls",
+        "id": "msg_d868780d80028wJpIJLwPliDrT",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d86878d94001w8gQgxoHHrX3pC",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868780d80028wJpIJLwPliDrT"
+        },
+        {
+          "type": "reasoning",
+          "text": "Good, the clone seems to have worked. Now let me explore the design-md/expo directory to find the design.md files and related content.",
+          "time": {
+            "start": 1776078523798,
+            "end": 1776078524391
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "3ce201ab074edd31803ea5a41c83361147c98e74157d295778a4aae6674fb018"
+            }
+          },
+          "id": "prt_d86878d96001zoaZ4lZq4b6jdZ",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868780d80028wJpIJLwPliDrT"
+        },
+        {
+          "type": "tool",
+          "tool": "glob",
+          "callID": "call_function_wz8tsrb9vkx2_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "pattern": "design-md/expo/**/*",
+              "path": "/Users/dhruv2mars/dev/github/awesome-design-md"
+            },
+            "output": "/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo/README.md",
+            "metadata": {
+              "count": 1,
+              "truncated": false
+            },
+            "title": "../awesome-design-md",
+            "time": {
+              "start": 1776078524933,
+              "end": 1776078524949
+            }
+          },
+          "id": "prt_d86878fe8001S8bwPQ487Jiirm",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868780d80028wJpIJLwPliDrT"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 5340,
+            "input": 39,
+            "output": 82,
+            "reasoning": 0,
+            "cache": {
+              "write": 511,
+              "read": 4708
+            }
+          },
+          "cost": 0,
+          "id": "prt_d86879216001fFr3QZz2CH7nFG",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868780d80028wJpIJLwPliDrT"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 5522,
+          "input": 49,
+          "output": 148,
+          "reasoning": 0,
+          "cache": {
+            "write": 520,
+            "read": 4805
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078525009,
+          "completed": 1776078529316
+        },
+        "finish": "tool-calls",
+        "id": "msg_d86879251002Zt3fgXZ3MCiZ85",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d86879861001VGE4RR89Ihvnku",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86879251002Zt3fgXZ3MCiZ85"
+        },
+        {
+          "type": "reasoning",
+          "text": "There's only a README.md in the expo folder. Let me read it to understand the Expo design. But wait, the user asked specifically about design.md files - let me check if there are any other related files in the parent directory or if design.md might be at a different location.",
+          "time": {
+            "start": 1776078526562,
+            "end": 1776078528559
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "df5a960ee65f92505477c3f54ee23bd21ce42ae533686058940390136d7e80c1"
+            }
+          },
+          "id": "prt_d86879862001WcTiKnHlfsxBuQ",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86879251002Zt3fgXZ3MCiZ85"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_function_pm4rgl84fkj6_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo/README.md"
+            },
+            "output": "<path>/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo/README.md</path>\n<type>file</type>\n<content>\n1: # Expo Inspired Design System\n2: \n3: Design system details have been moved to: https://getdesign.md/expo/design-md\n\n(End of file - total 3 lines)\n</content>",
+            "metadata": {
+              "preview": "# Expo Inspired Design System\n\nDesign system details have been moved to: https://getdesign.md/expo/design-md",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "../awesome-design-md/design-md/expo/README.md",
+            "time": {
+              "start": 1776078529087,
+              "end": 1776078529091
+            }
+          },
+          "id": "prt_d8687a030001NN3zWJtP4t3ioA",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86879251002Zt3fgXZ3MCiZ85"
+        },
+        {
+          "type": "tool",
+          "tool": "glob",
+          "callID": "call_function_pm4rgl84fkj6_2",
+          "state": {
+            "status": "completed",
+            "input": {
+              "pattern": "design-md/**/design.md",
+              "path": "/Users/dhruv2mars/dev/github/awesome-design-md"
+            },
+            "output": "No files found",
+            "metadata": {
+              "count": 0,
+              "truncated": false
+            },
+            "title": "../awesome-design-md",
+            "time": {
+              "start": 1776078529236,
+              "end": 1776078529252
+            }
+          },
+          "id": "prt_d8687a240001MxvyO7U9idtHOW",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86879251002Zt3fgXZ3MCiZ85"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 5522,
+            "input": 49,
+            "output": 148,
+            "reasoning": 0,
+            "cache": {
+              "write": 520,
+              "read": 4805
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8687a2e5001wwU9zX4N1IN1sa",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d86879251002Zt3fgXZ3MCiZ85"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 5802,
+          "input": 111,
+          "output": 184,
+          "reasoning": 0,
+          "cache": {
+            "write": 269,
+            "read": 5238
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078529317,
+          "completed": 1776078534521
+        },
+        "finish": "tool-calls",
+        "id": "msg_d8687a3250013I1LqUbEKmXkQ9",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d8687a9fb001vvaL8yHHX6M7vf",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        },
+        {
+          "type": "reasoning",
+          "text": "Interesting - the design.md files for Expo have been moved to an external site `https://getdesign.md/expo/design-md`. I don't have a tool to directly fetch arbitrary web content. Let me check if there are any other design.md files in the repository that might give context, or if there are any other useful files in the expo folder or parent directories.",
+          "time": {
+            "start": 1776078531069,
+            "end": 1776078533524
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "6045187f3d21998476c1b031f7655ecf4a7f1319f81a87cea6b4dc3fbb9cbe7a"
+            }
+          },
+          "id": "prt_d8687a9fd0014jNTYRUg5sLBGy",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        },
+        {
+          "type": "text",
+          "text": "The Expo design has been moved to an external site. Let me explore what's available in the broader repository structure:",
+          "time": {
+            "start": 1776078533526,
+            "end": 1776078533527
+          },
+          "id": "prt_d8687b396001QD9sE3H2ye6EoO",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        },
+        {
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_function_hp9zlpi6msvu_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo"
+            },
+            "output": "<path>/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo</path>\n<type>directory</type>\n<entries>\nREADME.md\n\n(1 entries)\n</entries>",
+            "metadata": {
+              "preview": "README.md",
+              "truncated": false,
+              "loaded": []
+            },
+            "title": "../awesome-design-md/design-md/expo",
+            "time": {
+              "start": 1776078534038,
+              "end": 1776078534043
+            }
+          },
+          "id": "prt_d8687b398001iPL7OwhaF5bcSD",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        },
+        {
+          "type": "tool",
+          "tool": "glob",
+          "callID": "call_function_hp9zlpi6msvu_2",
+          "state": {
+            "status": "completed",
+            "input": {
+              "pattern": "design-md/**/README.md",
+              "path": "/Users/dhruv2mars/dev/github/awesome-design-md"
+            },
+            "output": "/Users/dhruv2mars/dev/github/awesome-design-md/design-md/x.ai/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/warp/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/wise/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/webflow/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/zapier/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/voltagent/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/superhuman/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/together.ai/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/supabase/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/tesla/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/vercel/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/uber/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/spacex/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/stripe/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/sentry/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/semrush/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/sanity/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/spotify/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/resend/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/revolut/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/replicate/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/raycast/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/runwayml/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/renault/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/ollama/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/nvidia/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/notion/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/posthog/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/opencode.ai/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/mongodb/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/pinterest/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/minimax/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/mistral.ai/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/linear.app/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/miro/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/lovable/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/mintlify/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/kraken/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/ibm/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/lamborghini/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/framer/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/intercom/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/hashicorp/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/composio/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/figma/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/expo/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/elevenlabs/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/cursor/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/ferrari/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/cal/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/clay/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/cohere/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/coinbase/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/claude/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/clickhouse/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/bmw/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/airtable/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/airbnb/README.md\n/Users/dhruv2mars/dev/github/awesome-design-md/design-md/apple/README.md",
+            "metadata": {
+              "count": 59,
+              "truncated": false
+            },
+            "title": "../awesome-design-md",
+            "time": {
+              "start": 1776078534447,
+              "end": 1776078534462
+            }
+          },
+          "id": "prt_d8687b598001pLlbnNwiOpT13U",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 5802,
+            "input": 111,
+            "output": 184,
+            "reasoning": 0,
+            "cache": {
+              "write": 269,
+              "read": 5238
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8687b73f001tEKomZOGIFZ9Rp",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687a3250013I1LqUbEKmXkQ9"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 7335,
+          "input": 1280,
+          "output": 268,
+          "reasoning": 0,
+          "cache": {
+            "write": 433,
+            "read": 5354
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078534522,
+          "completed": 1776078544994
+        },
+        "finish": "tool-calls",
+        "id": "msg_d8687b77a001Jf5L7JWZd78dlT",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d8687c6610016dg2CvhGIuJ918",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687b77a001Jf5L7JWZd78dlT"
+        },
+        {
+          "type": "reasoning",
+          "text": "So all the design information for Expo has been moved to an external site `https://getdesign.md/expo/design-md`. The local repository only contains a redirect/README file. \n\nI don't have a direct tool to fetch web content from arbitrary URLs. Let me check if there's any way to get this content - perhaps via the gh CLI or git archive functionality. Actually, let me see if the site might have raw content available.\n\nActually, wait - I should try using gh (GitHub CLI) to see if it can help me get content, or I could try curl/wget via bash. Let me try to use the GitHub CLI to explore the repository and see if I can get more information about the expo design. But actually looking at the URL structure, the content might be hosted separately.\n\nLet me try curl to fetch the content from the external site.",
+          "time": {
+            "start": 1776078538339,
+            "end": 1776078542703
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "f27ede7ad03c0347d118df1c0e4b178af25c8cae2df8632a672e8648d5f2c9b9"
+            }
+          },
+          "id": "prt_d8687c663001YGT2P7HfufHxoE",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687b77a001Jf5L7JWZd78dlT"
+        },
+        {
+          "type": "text",
+          "text": "The Expo design details have been moved to an external site. Let me try to fetch that content:",
+          "time": {
+            "start": 1776078542704,
+            "end": 1776078543434
+          },
+          "id": "prt_d8687d770001lgeFh61nJY9m9V",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687b77a001Jf5L7JWZd78dlT"
+        },
+        {
+          "type": "tool",
+          "tool": "bash",
+          "callID": "call_function_6q3poezmuulx_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "curl -sL \"https://getdesign.md/expo/design-md\" 2>&1 | head -200",
+              "timeout": 30000,
+              "description": "Fetch Expo design from external site"
+            },
+            "output": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preload\" as=\"image\" href=\"https://github.com/VoltAgent.png?size=32\"/><script async=\"\" src=\"https://www.googletagmanager.com/gtag/js?id=G-FFCDX6VFEW\"></script><link rel=\"preload\" href=\"/fonts/Geist-Variable.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"preload\" href=\"/fonts/GeistMono-Variable.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"preload\" href=\"/fonts/GeistPixel-Line.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><title>Design System Inspired by Expo</title><meta name=\"description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta property=\"og:title\" content=\"Design System Inspired by Expo\"/><meta property=\"og:description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta property=\"og:type\" content=\"article\"/><meta property=\"og:image\" content=\"https://getdesign.md/api/og/expo/design-md\"/><meta name=\"twitter:card\" content=\"summary_large_image\"/><meta name=\"twitter:title\" content=\"Design System Inspired by Expo\"/><meta name=\"twitter:description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta name=\"twitter:image\" content=\"https://getdesign.md/api/og/expo/design-md\"/><link rel=\"modulepreload\" href=\"/assets/main-BrkQg8yh.js\"/><link rel=\"modulepreload\" href=\"/assets/_owner.design-md-FJaEi25f.js\"/><link rel=\"modulepreload\" href=\"/assets/Footer-B7DT6WgM.js\"/><link rel=\"modulepreload\" href=\"/assets/Header-DU7XfwFi.js\"/><link rel=\"modulepreload\" href=\"/assets/design-stars-BSIHiuJs.js\"/><link rel=\"modulepreload\" href=\"/assets/index-VVd_15QY.js\"/><link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\"/><link rel=\"icon\" type=\"image/png\" href=\"/favicon-32.png\" sizes=\"32x32\"/><link rel=\"icon\" type=\"image/png\" href=\"/favicon-16.png\" sizes=\"16x16\"/><link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" sizes=\"180x180\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"stylesheet\" href=\"/assets/styles-B-ma8uNi.css\"/><script>window.dataLayer = window.dataLayer || [];\nwindow.gtag = window.gtag || function gtag(){window.dataLayer.push(arguments);};\nwindow.gtag('js', new Date());\nwindow.gtag('config', 'G-FFCDX6VFEW', { send_page_view: false });;document.currentScript.remove()</script></head><body class=\"bg-white text-gray-900 antialiased\"><!--$--><div style=\"background:var(--color-background);min-height:100vh\"><header style=\"border-bottom:1px solid var(--color-border);background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)\" class=\"sticky top-0 z-50\"><div class=\"min-[2200px]:max-w-[2000px] min-[2200px]:mx-auto w-full px-4 sm:px-6 lg:px-16 h-12 sm:h-14 flex items-center justify-between\"><div class=\"flex items-center gap-4 sm:gap-6\"><a href=\"/\" style=\"font-family:&#x27;GeistPixel-Square&#x27;, monospace;color:var(--color-gray-1000);letter-spacing:0.12em;font-weight:600;line-height:1\" class=\"text-[16px] sm:text-[20px] lg:text-[24px] tracking-widest\">get<span style=\"color:var(--color-accent)\">design</span>.md</a><a href=\"/request\" style=\"background:#ffb1ee;border:1px solid #ffb1ee;color:#000000;font-weight:600\" class=\"hidden sm:inline-flex items-center rounded-md px-3 py-1.5 text-label-13 transition-colors duration-150 cursor-pointer\">Request DESIGN.md</a></div><div class=\"flex items-center gap-3\"><a href=\"/what-is-design-md\" style=\"color:#ededed;font-family:var(--font-sans);letter-spacing:0.1em;font-weight:600\" class=\"hidden sm:inline-flex text-label-12 px-2 sm:px-3 py-1.5 tracking-widest  rounded-lg transition-colors duration-100\">What is DESIGN.md?</a><a href=\"/about\" style=\"color:#ededed;font-family:var(--font-sans);letter-spacing:0.1em;font-weight:600\" class=\"hidden sm:inline-flex text-label-12 px-2 sm:px-3 py-1.5 tracking-widest  rounded-lg transition-colors duration-100\">About</a><a href=\"https://github.com/VoltAgent/awesome-design-md\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"flex items-center rounded-full overflow-hidden transition-opacity duration-150 hover:opacity-90\" style=\"border:1px solid var(--color-border)\"><span class=\"flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5\" style=\"background:var(--color-gray-100);color:var(--color-gray-900)\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z\"></path></svg><span class=\"hidden sm:inline text-label-12\">Star</span></span><span class=\"flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5\" style=\"background:var(--color-background);color:var(--color-gray-800);border-left:1px solid var(--color-border)\"><svg width=\"11\" height=\"11\" viewBox=\"0 0 16 16\" fill=\"#F5A623\" style=\"flex-shrink:0\"><path d=\"M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z\"></path></svg><span class=\"text-label-12\" style=\"font-family:var(--font-mono);min-width:32px;text-align:center\">...</span></span></a><div class=\"hidden sm:flex items-center gap-3\"><a href=\"/auth\" style=\"background:#ffffff;border:1px solid #ffffff;color:#000000\" class=\"inline-flex items-center rounded-md px-3 py-1.5 text-label-13 transition-colors duration-150 cursor-pointer\">Sign in</a></div><button type=\"button\" class=\"sm:hidden flex items-center justify-center size-8 rounded-lg transition-colors duration-100\" style=\"color:var(--color-gray-700)\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"></line><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"></line><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"></line></svg></button></div></div></header><div style=\"border-bottom:1px solid var(--color-border)\"><div class=\"max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8\"><div><a href=\"/\" style=\"color:#a0a0a0\" class=\"inline-flex items-center gap-1.5 text-[12px] sm:text-label-13 mb-3 transition-colors duration-150 hover:text-[var(--color-gray-700)]\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 18-6-6 6-6\"></path></svg>Back to designs</a><h1 class=\"text-[22px] sm:text-heading-32 mb-3 flex items-center gap-3\" style=\"font-family:var(--font-mono);color:var(--color-gray-1000)\"><img src=\"https://github.com/expo.png?size=64\" alt=\"Expo\" width=\"32\" height=\"32\" loading=\"lazy\" style=\"border-radius:25%;display:inline-block;vertical-align:middle;flex-shrink:0\"/><span>Design System inspired by <!-- -->Expo</span></h1><p class=\"text-[14px] sm:text-[16px]  lg:max-w-[65%]\" style=\"color:#a0a0a0\">React Native platform. Dark theme, tight letter-spacing, code-centric.</p></div></div></div><div class=\"max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8\"><div class=\"grid grid-cols-1 gap-8\"><main class=\"min-w-0\"><section class=\"mb-8\"><h2 class=\"text-heading-20 mb-4\" style=\"color:var(--color-gray-1000)\">Usage</h2><div class=\"flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-4\"><div class=\"rounded-xl p-5 w-full lg:w-[56%]\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><div class=\"flex items-center gap-2 rounded-md px-4 py-3 mb-4\" style=\"background:#0a0a0a;border:1px solid var(--color-border)\"><span class=\"text-[14px] flex-1 truncate\" style=\"font-family:var(--font-mono);color:#e0e0e0\">npx getdesign@latest add expo</span><button class=\"flex-shrink-0 p-1 rounded transition-colors duration-150 cursor-pointer\" style=\"color:#666\" title=\"Copy command\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"></rect><path d=\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\"></path></svg></button></div><p class=\"text-[13px] leading-relaxed\" style=\"color:#a0a0a0\">Run this command from your project root, then ask your AI assistant to use<!-- --> <span style=\"font-family:var(--font-mono)\">DESIGN.md</span> <!-- -->for UI work.</p></div><div class=\"w-full lg:flex-1 lg:min-w-[320px] space-y-3\"><div class=\"grid grid-cols-1 sm:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 items-stretch\"><div class=\"h-[48px]\"><a href=\"/auth?next=%2Fexpo%2Fdesign-md\" style=\"background:var(--color-accent);border:1px solid var(--color-accent);color:#03231c\" class=\"inline-flex items-center justify-center gap-1 rounded-md px-4 py-2.5 text-label-13 transition-colors duration-150 cursor-pointer w-full h-full\"><span aria-hidden=\"true\" style=\"width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z\"></path></svg></span><span class=\"text-[12px] font-medium leading-none tracking-[-0.01em]\">SAVE</span></a></div><div class=\"rounded-md px-3 py-2 h-[48px] flex items-center justify-between gap-3\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><p class=\"text-[11px] uppercase tracking-[0.08em] mb-0\" style=\"color:#a0a0a0;font-family:var(--font-mono)\">Installs</p><p class=\"text-[16px] leading-none mb-0\" style=\"color:#ffb1ee\">—</p></div><div class=\"rounded-md px-3 py-2 h-[48px] flex items-center justify-between gap-3\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><p class=\"text-[11px] uppercase tracking-[0.08em] mb-0\" style=\"color:#a0a0a0;font-family:var(--font-mono)\">Bookmarked</p><p class=\"text-[16px] leading-none mb-0\" style=\"color:#ffb1ee\">—</p></div></div><div class=\"flex items-start gap-2 px-1 py-1\"><span aria-hidden=\"true\" class=\"text-[12px] leading-[1.6]\" style=\"color:#ffb1ee\">✦</span><p class=\"text-[13px] leading-relaxed mb-0\" style=\"color:#a0a0a0\">Not an official <!-- -->Expo<!-- --> design system. A curated starting point for building <!-- -->expo<!-- -->-like UIs with your AI coding agent.</p></div></div></div></section><div class=\"w-full lg:w-[56%]\"><section class=\"mb-8\"><div class=\"mb-5\"><p class=\"text-copy-14 mb-3\" style=\"color:#a0a0a0;font-size:16px\">Expo builds on React Native platform and carries it with dark theme, tight letter-spacing, code-centric. It is a strong fit for mobile dev platforms, documentation sites, and developer portals.</p></div></section></div><section class=\"mb-8\"><div class=\"flex flex-wrap items-center justify-between gap-2 mb-4\"><h2 class=\"text-heading-20\" style=\"color:var(--color-gray-1000)\">Preview</h2><div class=\"flex flex-wrap items-center gap-2 sm:gap-3\"><div class=\"flex rounded-md overflow-hidden\" style=\"border:1px solid var(--color-border)\"><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:var(--color-gray-100);color:var(--color-gray-1000);font-weight:600\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" ry=\"2\"></rect><line x1=\"8\" y1=\"21\" x2=\"16\" y2=\"21\"></line><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"21\"></line></svg><span class=\"sm:hidden\">Preview</span><span class=\"hidden sm:inline\">Live Preview</span></button><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:transparent;color:#ffb1ee;font-weight:400;border-left:1px solid var(--color-border)\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z\"></path><polyline points=\"14 2 14 8 20 8\"></polyline><line x1=\"16\" y1=\"13\" x2=\"8\" y2=\"13\"></line><line x1=\"16\" y1=\"17\" x2=\"8\" y2=\"17\"></line><polyline points=\"10 9 9 9 8 9\"></polyline></svg>DESIGN.md</button></div><div class=\"flex rounded-md overflow-hidden\" style=\"border:1px solid var(--color-border)\"><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:var(--color-gray-100);color:var(--color-gray-1000);font-weight:600\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line><line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line><line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line><line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line><line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line><line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line><line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg>Light</button><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:transparent;color:var(--color-gray-700);font-weight:400;border-left:1px solid var(--color-border)\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z\"></path></svg>Dark</button></div></div></div><div class=\"rounded-lg overflow-hidden\" style=\"border:1px solid var(--color-border)\"><iframe src=\"/design-md/expo/preview.html\" title=\"Expo design preview (light)\" class=\"w-full border-0\" style=\"height:3000px;background:#ffffff\" sandbox=\"allow-same-origin\"></iframe></div></section></main></div></div><footer class=\"mt-auto py-8\" style=\"border-top:1px solid var(--color-border)\"><div class=\"max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-0 text-label-12\" style=\"color:#a0a0a0\"><a href=\"https://github.com/VoltAgent/voltagent\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"inline-flex items-center gap-1.5 flex-shrink-0\" style=\"color:#666;cursor:pointer\"><img src=\"https://github.com/VoltAgent.png?size=32\" alt=\"VoltAgent\" width=\"20\" height=\"20\" style=\"border-radius:4px\"/><span class=\"text-[13px]\">Maintained by VoltAgent team</span></a><div class=\"flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2\"><span class=\"text-[15px] sm:text-[18px] tracking-widest\" style=\"font-family:&#x27;GeistPixel-Square&#x27;, monospace;color:var(--color-gray-1000);letter-spacing:0.12em\">get<span style=\"color:var(--color-accent)\">design</span>.md</span><span class=\"text-center\">— Design system inspirations from popular websites. Drop one in, let AI build matching UI.</span></div><div class=\"flex items-center gap-3 flex-shrink-0\"><a href=\"/terms\" style=\"color:#666\" class=\"transition-colors duration-150\">Terms</a><a href=\"/privacy\" style=\"color:#666\" class=\"transition-colors duration-150\">Privacy</a></div></div></footer></div><script></script><!--/$--><script class=\"$tsr\" id=\"$tsr-stream-barrier\">(self.$R=self.$R||{})[\"tsr\"]=[];self.$_TSR={h(){this.hydrated=!0,this.c()},e(){this.streamEnded=!0,this.c()},c(){this.hydrated&&this.streamEnded&&(delete self.$_TSR,delete self.$R.tsr)},p(e){this.initialized?e():this.buffer.push(e)},buffer:[]};\n;$_TSR.router=($R=>$R[0]={manifest:$R[1]={routes:$R[2]={__root__:$R[3]={preloads:$R[4]=[\"/assets/main-BrkQg8yh.js\"],assets:$R[5]=[$R[6]={tag:\"script\",attrs:$R[7]={type:\"module\",async:!0},children:\"import(\\\"/assets/main-BrkQg8yh.js\\\")\"}]},\"/what-is-design-md\":$R[8]={assets:$R[9]=[$R[10]={tag:\"link\",attrs:$R[11]={rel:\"stylesheet\",href:\"/assets/what-is-design-md-By1Pwg6r.css\",type:\"text/css\"}}]},\"/$owner/design-md\":$R[12]={preloads:$R[13]=[\"/assets/_owner.design-md-FJaEi25f.js\",\"/assets/Footer-B7DT6WgM.js\",\"/assets/Header-DU7XfwFi.js\",\"/assets/design-stars-BSIHiuJs.js\",\"/assets/index-VVd_15QY.js\"]}}},matches:$R[14]=[$R[15]={i:\"__root__\u0000\",u:1776078544800,s:\"success\",l:$R[16]={user:null,savedDesigns:$R[17]=[]},ssr:!0},$R[18]={i:\"\u0000$owner\u0000design-md\u0000expo\u0000design-md\",u:1776078544800,s:\"success\",ssr:!0}],lastMatchId:\"\u0000$owner\u0000design-md\u0000expo\u0000design-md\"})($R[\"tsr\"]);$_TSR.e();document.currentScript.remove()</script><script type=\"module\" async=\"\">import(\"/assets/main-BrkQg8yh.js\")</script></body></html>",
+            "metadata": {
+              "output": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preload\" as=\"image\" href=\"https://github.com/VoltAgent.png?size=32\"/><script async=\"\" src=\"https://www.googletagmanager.com/gtag/js?id=G-FFCDX6VFEW\"></script><link rel=\"preload\" href=\"/fonts/Geist-Variable.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"preload\" href=\"/fonts/GeistMono-Variable.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"preload\" href=\"/fonts/GeistPixel-Line.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><title>Design System Inspired by Expo</title><meta name=\"description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta property=\"og:title\" content=\"Design System Inspired by Expo\"/><meta property=\"og:description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta property=\"og:type\" content=\"article\"/><meta property=\"og:image\" content=\"https://getdesign.md/api/og/expo/design-md\"/><meta name=\"twitter:card\" content=\"summary_large_image\"/><meta name=\"twitter:title\" content=\"Design System Inspired by Expo\"/><meta name=\"twitter:description\" content=\"React Native platform. Dark theme, tight letter-spacing, code-centric.\"/><meta name=\"twitter:image\" content=\"https://getdesign.md/api/og/expo/design-md\"/><link rel=\"modulepreload\" href=\"/assets/main-BrkQg8yh.js\"/><link rel=\"modulepreload\" href=\"/assets/_owner.design-md-FJaEi25f.js\"/><link rel=\"modulepreload\" href=\"/assets/Footer-B7DT6WgM.js\"/><link rel=\"modulepreload\" href=\"/assets/Header-DU7XfwFi.js\"/><link rel=\"modulepreload\" href=\"/assets/design-stars-BSIHiuJs.js\"/><link rel=\"modulepreload\" href=\"/assets/index-VVd_15QY.js\"/><link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\"/><link rel=\"icon\" type=\"image/png\" href=\"/favicon-32.png\" sizes=\"32x32\"/><link rel=\"icon\" type=\"image/png\" href=\"/favicon-16.png\" sizes=\"16x16\"/><link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" sizes=\"180x180\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"stylesheet\" href=\"/assets/styles-B-ma8uNi.css\"/><script>window.dataLayer = window.dataLayer || [];\nwindow.gtag = window.gtag || function gtag(){window.dataLayer.push(arguments);};\nwindow.gtag('js', new Date());\nwindow.gtag('config', 'G-FFCDX6VFEW', { send_page_view: false });;document.currentScript.remove()</script></head><body class=\"bg-white text-gray-900 antialiased\"><!--$--><div style=\"background:var(--color-background);min-height:100vh\"><header style=\"border-bottom:1px solid var(--color-border);background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)\" class=\"sticky top-0 z-50\"><div class=\"min-[2200px]:max-w-[2000px] min-[2200px]:mx-auto w-full px-4 sm:px-6 lg:px-16 h-12 sm:h-14 flex items-center justify-between\"><div class=\"flex items-center gap-4 sm:gap-6\"><a href=\"/\" style=\"font-family:&#x27;GeistPixel-Square&#x27;, monospace;color:var(--color-gray-1000);letter-spacing:0.12em;font-weight:600;line-height:1\" class=\"text-[16px] sm:text-[20px] lg:text-[24px] tracking-widest\">get<span style=\"color:var(--color-accent)\">design</span>.md</a><a href=\"/request\" style=\"background:#ffb1ee;border:1px solid #ffb1ee;color:#000000;font-weight:600\" class=\"hidden sm:inline-flex items-center rounded-md px-3 py-1.5 text-label-13 transition-colors duration-150 cursor-pointer\">Request DESIGN.md</a></div><div class=\"flex items-center gap-3\"><a href=\"/what-is-design-md\" style=\"color:#ededed;font-family:var(--font-sans);letter-spacing:0.1em;font-weight:600\" class=\"hidden sm:inline-flex text-label-12 px-2 sm:px-3 py-1.5 tracking-widest  rounded-lg transition-colors duration-100\">What is DESIGN.md?</a><a href=\"/about\" style=\"color:#ededed;font-family:var(--font-sans);letter-spacing:0.1em;font-weight:600\" class=\"hidden sm:inline-flex text-label-12 px-2 sm:px-3 py-1.5 tracking-widest  rounded-lg transition-colors duration-100\">About</a><a href=\"https://github.com/VoltAgent/awesome-design-md\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"flex items-center rounded-full overflow-hidden transition-opacity duration-150 hover:opacity-90\" style=\"border:1px solid var(--color-border)\"><span class=\"flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5\" style=\"background:var(--color-gray-100);color:var(--color-gray-900)\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z\"></path></svg><span class=\"hidden sm:inline text-label-12\">Star</span></span><span class=\"flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5\" style=\"background:var(--color-background);color:var(--color-gray-800);border-left:1px solid var(--color-border)\"><svg width=\"11\" height=\"11\" viewBox=\"0 0 16 16\" fill=\"#F5A623\" style=\"flex-shrink:0\"><path d=\"M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z\"></path></svg><span class=\"text-label-12\" style=\"font-family:var(--font-mono);min-width:32px;text-align:center\">...</span></span></a><div class=\"hidden sm:flex items-center gap-3\"><a href=\"/auth\" style=\"background:#ffffff;border:1px solid #ffffff;color:#000000\" class=\"inline-flex items-center rounded-md px-3 py-1.5 text-label-13 transition-colors duration-150 cursor-pointer\">Sign in</a></div><button type=\"button\" class=\"sm:hidden flex items-center justify-center size-8 rounded-lg transition-colors duration-100\" style=\"color:var(--color-gray-700)\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"></line><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"></line><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"></line></svg></button></div></div></header><div style=\"border-bottom:1px solid var(--color-border)\"><div class=\"max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8\"><div><a href=\"/\" style=\"color:#a0a0a0\" class=\"inline-flex items-center gap-1.5 text-[12px] sm:text-label-13 mb-3 transition-colors duration-150 hover:text-[var(--color-gray-700)]\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 18-6-6 6-6\"></path></svg>Back to designs</a><h1 class=\"text-[22px] sm:text-heading-32 mb-3 flex items-center gap-3\" style=\"font-family:var(--font-mono);color:var(--color-gray-1000)\"><img src=\"https://github.com/expo.png?size=64\" alt=\"Expo\" width=\"32\" height=\"32\" loading=\"lazy\" style=\"border-radius:25%;display:inline-block;vertical-align:middle;flex-shrink:0\"/><span>Design System inspired by <!-- -->Expo</span></h1><p class=\"text-[14px] sm:text-[16px]  lg:max-w-[65%]\" style=\"color:#a0a0a0\">React Native platform. Dark theme, tight letter-spacing, code-centric.</p></div></div></div><div class=\"max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8\"><div class=\"grid grid-cols-1 gap-8\"><main class=\"min-w-0\"><section class=\"mb-8\"><h2 class=\"text-heading-20 mb-4\" style=\"color:var(--color-gray-1000)\">Usage</h2><div class=\"flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-4\"><div class=\"rounded-xl p-5 w-full lg:w-[56%]\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><div class=\"flex items-center gap-2 rounded-md px-4 py-3 mb-4\" style=\"background:#0a0a0a;border:1px solid var(--color-border)\"><span class=\"text-[14px] flex-1 truncate\" style=\"font-family:var(--font-mono);color:#e0e0e0\">npx getdesign@latest add expo</span><button class=\"flex-shrink-0 p-1 rounded transition-colors duration-150 cursor-pointer\" style=\"color:#666\" title=\"Copy command\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"></rect><path d=\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\"></path></svg></button></div><p class=\"text-[13px] leading-relaxed\" style=\"color:#a0a0a0\">Run this command from your project root, then ask your AI assistant to use<!-- --> <span style=\"font-family:var(--font-mono)\">DESIGN.md</span> <!-- -->for UI work.</p></div><div class=\"w-full lg:flex-1 lg:min-w-[320px] space-y-3\"><div class=\"grid grid-cols-1 sm:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 items-stretch\"><div class=\"h-[48px]\"><a href=\"/auth?next=%2Fexpo%2Fdesign-md\" style=\"background:var(--color-accent);border:1px solid var(--color-accent);color:#03231c\" class=\"inline-flex items-center justify-center gap-1 rounded-md px-4 py-2.5 text-label-13 transition-colors duration-150 cursor-pointer w-full h-full\"><span aria-hidden=\"true\" style=\"width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z\"></path></svg></span><span class=\"text-[12px] font-medium leading-none tracking-[-0.01em]\">SAVE</span></a></div><div class=\"rounded-md px-3 py-2 h-[48px] flex items-center justify-between gap-3\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><p class=\"text-[11px] uppercase tracking-[0.08em] mb-0\" style=\"color:#a0a0a0;font-family:var(--font-mono)\">Installs</p><p class=\"text-[16px] leading-none mb-0\" style=\"color:#ffb1ee\">—</p></div><div class=\"rounded-md px-3 py-2 h-[48px] flex items-center justify-between gap-3\" style=\"background:var(--color-background-100);border:1px solid var(--color-border)\"><p class=\"text-[11px] uppercase tracking-[0.08em] mb-0\" style=\"color:#a0a0a0;font-family:var(--font-mono)\">Bookmarked</p><p class=\"text-[16px] leading-none mb-0\" style=\"color:#ffb1ee\">—</p></div></div><div class=\"flex items-start gap-2 px-1 py-1\"><span aria-hidden=\"true\" class=\"text-[12px] leading-[1.6]\" style=\"color:#ffb1ee\">✦</span><p class=\"text-[13px] leading-relaxed mb-0\" style=\"color:#a0a0a0\">Not an official <!-- -->Expo<!-- --> design system. A curated starting point for building <!-- -->expo<!-- -->-like UIs with your AI coding agent.</p></div></div></div></section><div class=\"w-full lg:w-[56%]\"><section class=\"mb-8\"><div class=\"mb-5\"><p class=\"text-copy-14 mb-3\" style=\"color:#a0a0a0;font-size:16px\">Expo builds on React Native platform and carries it with dark theme, tight letter-spacing, code-centric. It is a strong fit for mobile dev platforms, documentation sites, and developer portals.</p></div></section></div><section class=\"mb-8\"><div class=\"flex flex-wrap items-center justify-between gap-2 mb-4\"><h2 class=\"text-heading-20\" style=\"color:var(--color-gray-1000)\">Preview</h2><div class=\"flex flex-wrap items-center gap-2 sm:gap-3\"><div class=\"flex rounded-md overflow-hidden\" style=\"border:1px solid var(--color-border)\"><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:var(--color-gray-100);color:var(--color-gray-1000);font-weight:600\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" ry=\"2\"></rect><line x1=\"8\" y1=\"21\" x2=\"16\" y2=\"21\"></line><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"21\"></line></svg><span class=\"sm:hidden\">Preview</span><span class=\"hidden sm:inline\">Live Preview</span></button><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:transparent;color:#ffb1ee;font-weight:400;border-left:1px solid var(--color-border)\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z\"></path><polyline points=\"14 2 14 8 20 8\"></polyline><line x1=\"16\" y1=\"13\" x2=\"8\" y2=\"13\"></line><line x1=\"16\" y1=\"17\" x2=\"8\" y2=\"17\"></line><polyline points=\"10 9 9 9 8 9\"></polyline></svg>DESIGN.md</button></div><div class=\"flex rounded-md overflow-hidden\" style=\"border:1px solid var(--color-border)\"><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:var(--color-gray-100);color:var(--color-gray-1000);font-weight:600\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line><line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line><line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line><line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line><line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line><line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line><line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg>Light</button><button type=\"button\" class=\"flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer whitespace-nowrap\" style=\"background:transparent;color:var(--color-gray-700);font-weight:400;border-left:1px solid var(--color-border)\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z\"></path></svg>Dark</button></div></div></div><div class=\"rounded-lg overflow-hidden\" style=\"border:1px solid var(--color-border)\"><iframe src=\"/design-md/expo/preview.html\" title=\"Expo design preview (light)\" class=\"w-full border-0\" style=\"height:3000px;background:#ffffff\" sandbox=\"allow-same-origin\"></iframe></div></section></main></div></div><footer class=\"mt-auto py-8\" style=\"border-top:1px solid var(--color-border)\"><div class=\"max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-0 text-label-12\" style=\"color:#a0a0a0\"><a href=\"https://github.com/VoltAgent/voltagent\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"inline-flex items-center gap-1.5 flex-shrink-0\" style=\"color:#666;cursor:pointer\"><img src=\"https://github.com/VoltAgent.png?size=32\" alt=\"VoltAgent\" width=\"20\" height=\"20\" style=\"border-radius:4px\"/><span class=\"text-[13px]\">Maintained by VoltAgent team</span></a><div class=\"flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2\"><span class=\"text-[15px] sm:text-[18px] tracking-widest\" style=\"font-family:&#x27;GeistPixel-Square&#x27;, monospace;color:var(--color-gray-1000);letter-spacing:0.12em\">get<span style=\"color:var(--color-accent)\">design</span>.md</span><span class=\"text-center\">— Design system inspirations from popular websites. Drop one in, let AI build matching UI.</span></div><div class=\"flex items-center gap-3 flex-shrink-0\"><a href=\"/terms\" style=\"color:#666\" class=\"transition-colors duration-150\">Terms</a><a href=\"/privacy\" style=\"color:#666\" class=\"transition-colors duration-150\">Privacy</a></div></div></footer></div><script></script><!--/$--><script class=\"$tsr\" id=\"$tsr-stream-barrier\">(self.$R=self.$R||{})[\"tsr\"]=[];self.$_TSR={h(){this.hydrated=!0,this.c()},e(){this.streamEnded=!0,this.c()},c(){this.hydrated&&this.streamEnded&&(delete self.$_TSR,delete self.$R.tsr)},p(e){this.initialized?e():this.buffer.push(e)},buffer:[]};\n;$_TSR.router=($R=>$R[0]={manifest:$R[1]={routes:$R[2]={__root__:$R[3]={preloads:$R[4]=[\"/assets/main-BrkQg8yh.js\"],assets:$R[5]=[$R[6]={tag:\"script\",attrs:$R[7]={type:\"module\",async:!0},children:\"import(\\\"/assets/main-BrkQg8yh.js\\\")\"}]},\"/what-is-design-md\":$R[8]={assets:$R[9]=[$R[10]={tag:\"link\",attrs:$R[11]={rel:\"stylesheet\",href:\"/assets/what-is-design-md-By1Pwg6r.css\",type:\"text/css\"}}]},\"/$owner/design-md\":$R[12]={preloads:$R[13]=[\"/assets/_owner.design-md-FJaEi25f.js\",\"/assets/Footer-B7DT6WgM.js\",\"/assets/Header-DU7XfwFi.js\",\"/assets/design-stars-BSIHiuJs.js\",\"/assets/index-VVd_15QY.js\"]}}},matches:$R[14]=[$R[15]={i:\"__root__\u0000\",u:1776078544800,s:\"success\",l:$R[16]={user:null,savedDesigns:$R[17]=[]},ssr:!0},$R[18]={i:\"\u0000$owner\u0000design-md\u0000expo\u0000design-md\",u:1776078544800,s:\"success\",ssr:!0}],lastMatchId:\"\u0000$owner\u0000design-md\u0000expo\u0000design-md\"})($R[\"tsr\"]);$_TSR.e();document.currentScript.remove()</script><script type=\"module\" async=\"\">import(\"/assets/main-BrkQg8yh.js\")</script></body></html>",
+              "exit": 0,
+              "description": "Fetch Expo design from external site",
+              "truncated": false
+            },
+            "title": "Fetch Expo design from external site",
+            "time": {
+              "start": 1776078544924,
+              "end": 1776078544927
+            }
+          },
+          "id": "prt_d8687da4b001gLHGzgXhGDmhna",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687b77a001Jf5L7JWZd78dlT"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 7335,
+            "input": 1280,
+            "output": 268,
+            "reasoning": 0,
+            "cache": {
+              "write": 433,
+              "read": 5354
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8687e021001lyniaeFg7PrqoQ",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687b77a001Jf5L7JWZd78dlT"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 13580,
+          "input": 5984,
+          "output": 276,
+          "reasoning": 0,
+          "cache": {
+            "write": 1722,
+            "read": 5598
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078544995,
+          "completed": 1776078554620
+        },
+        "finish": "tool-calls",
+        "id": "msg_d8687e063001qqDKdQ0501rxBw",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d8687ef2e001SQF070LOCGgU1F",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        },
+        {
+          "type": "reasoning",
+          "text": "I can see the HTML content but it's a JavaScript-rendered page. I can see some information in the meta tags and visible content though:\n\n- Title: \"Design System Inspired by Expo\"\n- Meta description: \"React Native platform. Dark theme, tight letter-spacing, code-centric.\"\n- The page has a \"Live Preview\" button that loads an iframe with `/design-md/expo/preview.html`\n\nLet me try to fetch the preview HTML directly to see if there's more design information there.",
+          "time": {
+            "start": 1776078548784,
+            "end": 1776078551753
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "80e08045c9b0648bd75237f5c16832af98ca88784ab838cc560e321a73d55270"
+            }
+          },
+          "id": "prt_d8687ef3000120eL3i31j5bOU4",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        },
+        {
+          "type": "text",
+          "text": "I can see it's a JS-rendered page. Let me try to fetch the preview HTML and any raw design content:",
+          "time": {
+            "start": 1776078551754,
+            "end": 1776078552573
+          },
+          "id": "prt_d8687faca001rlKYmnYycMYK6k",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        },
+        {
+          "type": "tool",
+          "tool": "bash",
+          "callID": "call_function_u8b4tjhdisip_1",
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "curl -sL \"https://getdesign.md/design-md/expo/preview.html\" 2>&1 | head -500",
+              "timeout": 30000,
+              "description": "Fetch Expo design preview HTML"
+            },
+            "output": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Design System Inspired by Expo</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap\" rel=\"stylesheet\">\n<style>\n  :root {\n    --color-expo-black: #000000;\n    --color-near-black: #1c2024;\n    --color-link-cobalt: #0d74ce;\n    --color-legal-blue: #476cff;\n    --color-widget-sky: #47c2ff;\n    --color-preview-purple: #8145b5;\n    --color-cloud-gray: #f0f0f3;\n    --color-pure-white: #ffffff;\n    --color-widget-dark: #1a1a1a;\n    --color-banner-dark: #171717;\n    --color-slate-gray: #60646c;\n    --color-mid-slate: #555860;\n    --color-silver: #b0b4ba;\n    --color-pewter: #999999;\n    --color-light-silver: #cccccc;\n    --color-dark-slate: #363a3f;\n    --color-charcoal: #333333;\n    --color-warning: #ab6400;\n    --color-destructive: #eb8e90;\n    --color-border-lavender: #e0e1e6;\n    --color-input-border: #d9d9e0;\n    --color-focus-ring: #2547d0;\n    --font-body: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\n    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;\n    /* Light mode */\n    --bg-page: var(--color-cloud-gray);\n    --bg-card: var(--color-pure-white);\n    --bg-nav: rgba(240,240,243,0.92);\n    --text-primary: var(--color-near-black);\n    --text-secondary: var(--color-slate-gray);\n    --text-muted: var(--color-silver);\n    --border-color: var(--color-border-lavender);\n    --border-subtle: rgba(224,225,230,0.5);\n    --section-label-color: var(--color-expo-black);\n  }\n\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n\n  body {\n    background: var(--bg-page);\n    color: var(--text-primary);\n    font-family: var(--font-body);\n    font-size: 16px;\n    line-height: 1.4;\n    -webkit-font-smoothing: antialiased;\n  }\n\n  /* NAV */\n  .nav {\n    position: sticky;\n    top: 0;\n    z-index: 100;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: 16px 40px;\n    background: var(--bg-nav);\n    backdrop-filter: blur(12px);\n    border-bottom: 1px solid var(--border-color);\n  }\n  .nav-brand { font-family: var(--font-body); font-size: 18px; font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; color: var(--color-expo-black); }\n  .nav-brand svg { width: 24px; height: 24px; }\n  .nav-links { display: flex; gap: 32px; align-items: center; }\n  .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }\n  .nav-links a:hover { color: var(--color-near-black); }\n  .nav-cta {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 8px 20px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 14px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .nav-status {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    font-size: 12px;\n    font-weight: 500;\n    color: var(--text-secondary);\n    background: var(--color-pure-white);\n    border: 1px solid var(--color-input-border);\n    border-radius: 9999px;\n    padding: 4px 12px 4px 8px;\n  }\n  .nav-status-dot {\n    width: 8px;\n    height: 8px;\n    border-radius: 50%;\n    background: #22c55e;\n  }\n\n  /* HERO */\n  .hero {\n    position: relative;\n    text-align: center;\n    padding: 120px 40px 100px;\n    overflow: hidden;\n  }\n  .hero h1 {\n    font-family: var(--font-body);\n    font-size: 60px;\n    font-weight: 700;\n    line-height: 1.10;\n    letter-spacing: -3px;\n    margin-bottom: 24px;\n    color: var(--color-expo-black);\n    position: relative;\n  }\n  .hero p {\n    color: var(--text-secondary);\n    font-size: 18px;\n    line-height: 1.4;\n    margin-bottom: 40px;\n    position: relative;\n  }\n  .hero-buttons { display: flex; gap: 16px; justify-content: center; position: relative; }\n  .btn-primary-pill {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 28px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .btn-standard {\n    background: var(--color-pure-white);\n    color: var(--color-near-black);\n    padding: 12px 24px;\n    border: 1px solid var(--color-input-border);\n    border-radius: 6px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 500;\n    cursor: pointer;\n  }\n\n  /* SECTIONS */\n  .section {\n    max-width: 1200px;\n    margin: 0 auto;\n    padding: 96px 40px;\n  }\n  .section-title {\n    font-family: var(--font-body);\n    font-size: 14px;\n    font-weight: 600;\n    text-transform: uppercase;\n    letter-spacing: 2.52px;\n    color: var(--section-label-color);\n    margin-bottom: 12px;\n  }\n  .section-heading {\n    font-family: var(--font-body);\n    font-size: 48px;\n    font-weight: 600;\n    line-height: 1.10;\n    letter-spacing: -2px;\n    margin-bottom: 48px;\n    color: var(--color-expo-black);\n  }\n  .section-divider {\n    border: none;\n    border-top: 1px solid var(--border-subtle);\n    margin: 0 40px;\n    max-width: 1200px;\n    margin-left: auto;\n    margin-right: auto;\n  }\n\n  /* COLOR PALETTE */\n  .color-group { margin-bottom: 40px; }\n  .color-group-title { font-size: 20px; font-weight: 600; line-height: 1.2; margin-bottom: 20px; color: var(--text-secondary); }\n  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }\n  .color-swatch { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }\n  .color-swatch-block { height: 80px; }\n  .color-swatch-info { padding: 12px; background: var(--bg-card); }\n  .color-swatch-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }\n  .color-swatch-hex { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }\n  .color-swatch-role { font-size: 12px; color: var(--text-muted); line-height: 1.4; }\n\n  /* TYPOGRAPHY */\n  .type-sample { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border-subtle); }\n  .type-sample:last-child { border-bottom: none; }\n  .type-sample-text { margin-bottom: 8px; }\n  .type-sample-label { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }\n\n  /* BUTTONS */\n  .button-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }\n  .button-demo { text-align: center; }\n  .button-demo-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.55px; }\n  .btn-dark-pill {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 28px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .btn-white-standard {\n    background: var(--color-pure-white);\n    color: var(--color-near-black);\n    padding: 12px 24px;\n    border: 1px solid var(--color-input-border);\n    border-radius: 6px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 500;\n    cursor: pointer;\n  }\n  .btn-dark-rounded {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 24px;\n    border: none;\n    border-radius: 32px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n\n  /* CARDS */\n  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }\n  .card { background: var(--bg-card); border-radius: 8px; padding: 28px; }\n  .card-standard { border: 1px solid var(--border-color); }\n  .card-elevated { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.08) 0px 3px 6px, rgba(0,0,0,0.07) 0px 2px 4px; }\n  .card-glow { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.1) 0px 10px 20px, rgba(0,0,0,0.05) 0px 3px 6px; border-radius: 16px; }\n  .card h3 { font-family: var(--font-body); font-size: 20px; font-weight: 600; line-height: 1.20; letter-spacing: -0.25px; margin-bottom: 12px; color: var(--color-near-black); }\n  .card p { color: var(--text-secondary); font-size: 16px; line-height: 1.40; }\n  .card-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.55px; color: var(--color-expo-black); margin-bottom: 16px; }\n\n  /* CODE BLOCK */\n  .code-block {\n    background: var(--color-near-black);\n    border: 1px solid var(--color-dark-slate);\n    border-radius: 8px;\n    padding: 20px 24px;\n    margin-top: 24px;\n    font-family: var(--font-mono);\n    font-size: 14px;\n    line-height: 1.4;\n    color: #f2f2f2;\n    overflow-x: auto;\n  }\n  .code-block .keyword { color: var(--color-link-cobalt); }\n  .code-block .string { color: #22c55e; }\n  .code-block .comment { color: var(--color-pewter); }\n\n  /* SPACING */\n  .spacing-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }\n  .spacing-item { text-align: center; }\n  .spacing-box { background: rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.12); border-radius: 2px; margin-bottom: 8px; }\n  .spacing-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }\n\n  /* RADIUS */\n  .radius-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }\n  .radius-item { text-align: center; }\n  .radius-box { width: 80px; height: 80px; background: var(--bg-card); border: 1px solid var(--border-color); margin-bottom: 8px; }\n  .radius-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }\n  .radius-context { font-size: 11px; color: var(--text-muted); margin-top: 2px; }\n\n  /* ELEVATION */\n  .elevation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }\n  .elevation-card { background: var(--bg-card); border-radius: 8px; padding: 24px; min-height: 140px; display: flex; flex-direction: column; justify-content: space-between; }\n  .elevation-flat { border: none; background: var(--bg-page); }\n  .elevation-surface { border: none; background: var(--bg-card); }\n  .elevation-whisper { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.08) 0px 3px 6px, rgba(0,0,0,0.07) 0px 2px 4px; }\n  .elevation-elevated { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.1) 0px 10px 20px, rgba(0,0,0,0.05) 0px 3px 6px; }\n  .elevation-modal { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.15) 0px 20px 40px, rgba(0,0,0,0.08) 0px 8px 16px; }\n  .elevation-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }\n  .elevation-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }\n  .elevation-level { font-family: var(--font-mono); font-size: 11px; color: var(--color-expo-black); text-transform: uppercase; letter-spacing: 0.55px; margin-top: 12px; }\n\n  /* RESPONSIVE */\n  @media (max-width: 768px) {\n    .nav { padding: 12px 20px; }\n    .nav-links a:not(.nav-cta-wrapper) { display: none; }\n    .nav-status { display: none; }\n    .hero { padding: 80px 20px 60px; }\n    .hero h1 { font-size: 36px; letter-spacing: -1.5px; }\n    .section { padding: 60px 20px; }\n    .section-heading { font-size: 28px; letter-spacing: -1px; }\n    .color-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }\n    .card-grid { grid-template-columns: 1fr; }\n    .hero-buttons { flex-direction: column; align-items: center; }\n    .button-row { flex-direction: column; align-items: flex-start; }\n  }\n\n  /* getdesign.md nav additions */\n  .nav-left { display: flex; align-items: center; gap: 20px; }\n  .nav-brand-link,\n  .nav-brand-link:link,\n  .nav-brand-link:visited,\n  .nav-brand-link:hover,\n  .nav-brand-link:active { text-decoration: none; color: inherit; }\n  .nav-github,\n  .nav-github:link,\n  .nav-github:visited,\n  .nav-github:hover,\n  .nav-github:active {\n    display: inline-flex;\n    align-items: center;\n    gap: 6px;\n    font-size: 12px;\n    font-weight: 600;\n    color: inherit;\n    text-decoration: none;\n    padding: 5px 10px;\n    border: 1px solid rgba(128, 128, 128, 0.3);\n    border-radius: 6px;\n    opacity: 0.75;\n    transition: opacity 200ms ease, border-color 200ms ease;\n    font-family: inherit;\n    line-height: 1;\n    white-space: nowrap;\n  }\n  .nav-github:hover { opacity: 1; border-color: rgba(128, 128, 128, 0.55); }\n  .nav-github svg { display: block; flex-shrink: 0; }\n\n  /* getdesign.md nav centering */\n  .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }\n  .nav > .nav-left { justify-self: start; }\n  .nav > .nav-links { justify-self: center; }\n  .nav > :last-child { justify-self: end; }\n</style>\n</head>\n<body>\n\n<!-- NAV -->\n<nav class=\"nav\">\n  <div class=\"nav-left\">\n    <a href=\"https://getdesign.md/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"nav-brand-link\">\n      <span class=\"nav-brand\">getdesign.md</span>\n    </a>\n    <a class=\"nav-github\" href=\"https://github.com/VoltAgent/awesome-design-md\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"awesome-design-md on GitHub\">\n      <svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z\"/></svg>\n      awesome-design-md\n    </a>\n  </div>\n  <div class=\"nav-links\">\n    <a href=\"#colors\">Colors</a>\n    <a href=\"#typography\">Typography</a>\n    <a href=\"#buttons\">Buttons</a>\n    <a href=\"#cards\">Cards</a>\n    <a href=\"#spacing\">Spacing</a>\n    <a href=\"#elevation\">Elevation</a>\n    <div class=\"nav-status\"><span class=\"nav-status-dot\"></span> All Systems Operational</div>\n    \n  </div>\n  <button class=\"nav-cta\">Sign Up</button>\n\n</nav>\n\n<!-- HERO -->\n<section class=\"hero\">\n  <h1>Design System<br>Inspired by Expo</h1>\n  <p>Auto-generated design token catalog from DESIGN.md</p>\n  <div class=\"hero-buttons\">\n    <button class=\"btn-primary-pill\">Explore Tokens</button>\n    <button class=\"btn-standard\">View Source</button>\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- COLORS -->\n<section class=\"section\" id=\"colors\">\n  <div class=\"section-title\">01 / Color Palette</div>\n  <h2 class=\"section-heading\">Color Palette & Roles</h2>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Primary</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #000000;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Expo Black</div><div class=\"color-swatch-hex\">#000000</div><div class=\"color-swatch-role\">Primary headlines, CTA buttons, brand anchor</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #1c2024;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Near Black</div><div class=\"color-swatch-hex\">#1c2024</div><div class=\"color-swatch-role\">Body text, softer than pure black for reading</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Secondary & Accent</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #0d74ce;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Link Cobalt</div><div class=\"color-swatch-hex\">#0d74ce</div><div class=\"color-swatch-role\">Standard links, interactive signals</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #476cff;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Legal Blue</div><div class=\"color-swatch-hex\">#476cff</div><div class=\"color-swatch-role\">Footer/legal links, brighter accent</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #47c2ff;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Widget Sky</div><div class=\"color-swatch-hex\">#47c2ff</div><div class=\"color-swatch-role\">Widget branding, lightest accent</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #8145b5;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Preview Purple</div><div class=\"color-swatch-hex\">#8145b5</div><div class=\"color-swatch-role\">Beta/preview feature indicators</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Surface & Background</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #f0f0f3; border-bottom: 1px solid #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Cloud Gray</div><div class=\"color-swatch-hex\">#f0f0f3</div><div class=\"color-swatch-role\">Primary page background</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #ffffff; border-bottom: 1px solid #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Pure White</div><div class=\"color-swatch-hex\">#ffffff</div><div class=\"color-swatch-role\">Card surfaces, elevated containers</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #1a1a1a;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Widget Dark</div><div class=\"color-swatch-hex\">#1a1a1a</div><div class=\"color-swatch-role\">Dark theme widgets, overlays</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #171717;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Banner Dark</div><div class=\"color-swatch-hex\">#171717</div><div class=\"color-swatch-role\">Promo banners, high-contrast surfaces</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Neutrals & Text</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #60646c;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Slate Gray</div><div class=\"color-swatch-hex\">#60646c</div><div class=\"color-swatch-role\">Secondary text (305 instances)</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #555860;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Mid Slate</div><div class=\"color-swatch-hex\">#555860</div><div class=\"color-swatch-role\">Emphasized secondary text</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #b0b4ba;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Silver</div><div class=\"color-swatch-hex\">#b0b4ba</div><div class=\"color-swatch-role\">Tertiary text, placeholders, metadata</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #363a3f;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Dark Slate</div><div class=\"color-swatch-hex\">#363a3f</div><div class=\"color-swatch-role\">Borders on dark surfaces, switch tracks</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Semantic</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #ab6400;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Warning Amber</div><div class=\"color-swatch-hex\">#ab6400</div><div class=\"color-swatch-role\">Warning states, deep amber for seriousness</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #eb8e90;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Destructive Rose</div><div class=\"color-swatch-hex\">#eb8e90</div><div class=\"color-swatch-role\">Disabled destructive actions, gentle alarm</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Border Lavender</div><div class=\"color-swatch-hex\">#e0e1e6</div><div class=\"color-swatch-role\">Standard card/container borders</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #d9d9e0;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Input Border</div><div class=\"color-swatch-hex\">#d9d9e0</div><div class=\"color-swatch-role\">Buttons, form elements, interactive borders</div></div></div>\n    </div>\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- TYPOGRAPHY -->\n<section class=\"section\" id=\"typography\">\n  <div class=\"section-title\">02 / Typography Scale</div>\n  <h2 class=\"section-heading\">Typography Rules</h2>\n\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 60px; font-weight: 700; line-height: 1.10; letter-spacing: -3px; color: var(--color-expo-black);\">Display Hero</div><div class=\"type-sample-label\">Display / Hero &mdash; 64px / 700&ndash;900 / 1.10 / -3px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 48px; font-weight: 600; line-height: 1.10; letter-spacing: -2px; color: var(--color-expo-black);\">Section Heading</div><div class=\"type-sample-label\">Section Heading &mdash; 48px / 600 / 1.10 / -2px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 20px; font-weight: 600; line-height: 1.20; letter-spacing: -0.25px;\">Sub-heading</div><div class=\"type-sample-label\">Sub-heading &mdash; 20px / 600 / 1.20 / -0.25px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 18px; font-weight: 400; line-height: 1.40; color: var(--text-secondary);\">Body large text for intro paragraphs and section descriptions with comfortable reading rhythm.</div><div class=\"type-sample-label\">Body Large &mdash; 18px / 400&ndash;500 / 1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.40;\">Standard body text for paragraphs, navigation links, and button labels. Inter provides geometric precision at every weight.</div><div class=\"type-sample-label\">Body / Button &mdash; 16px / 400&ndash;700 / 1.25&ndash;1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 14px; font-weight: 500; line-height: 1.40; color: var(--text-secondary);\">Caption text for descriptions and metadata labels</div><div class=\"type-sample-label\">Caption / Label &mdash; 14px / 400&ndash;600 / 1.00&ndash;1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 12px; font-weight: 500; line-height: 1.00; color: var(--text-muted);\">Tag / Small Badge</div><div class=\"type-sample-label\">Tag / Small &mdash; 12px / 500 / 1.00&ndash;1.60 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 16px; font-weight: 400; line-height: 1.40;\">npx create-expo-app@latest my-app</div><div class=\"type-sample-label\">Code Body &mdash; 16px / 400&ndash;600 / 1.40 / normal &mdash; JetBrains Mono</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 14px; font-weight: 400; line-height: 1.40;\">import { Camera } from \"expo-camera\";</div><div class=\"type-sample-label\">Code Caption &mdash; 14px / 400&ndash;600 / 1.40 / normal &mdash; JetBrains Mono</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 1.60; text-transform: uppercase; color: var(--text-muted);\">REACT NATIVE</div><div class=\"type-sample-label\">Code Small / Tag &mdash; 12px / 400 / 1.60 / uppercase &mdash; JetBrains Mono</div></div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- BUTTONS -->\n<section class=\"section\" id=\"buttons\">\n  <div class=\"section-title\">03 / Button Variants</div>\n  <h2 class=\"section-heading\">Buttons</h2>\n\n  <div class=\"button-row\">\n    <div class=\"button-demo\"><button class=\"btn-dark-pill\">Get Started</button><div class=\"button-demo-label\">Primary Pill (Dark)</div></div>\n    <div class=\"button-demo\"><button class=\"btn-white-standard\">View Docs</button><div class=\"button-demo-label\">Standard (White)</div></div>\n    <div class=\"button-demo\"><button class=\"btn-dark-rounded\">Sign Up Free</button><div class=\"button-demo-label\">Dark Rounded (32px)</div></div>\n  </div>\n\n  <div class=\"code-block\" style=\"margin-top: 40px;\">\n    <span class=\"comment\">// Get started with Expo</span><br>\n    <span class=\"keyword\">$</span> npx create-expo-app@latest my-app\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- CARDS -->\n<section class=\"section\" id=\"cards\">\n  <div class=\"section-title\">04 / Card Examples</div>\n  <h2 class=\"section-heading\">Cards & Containers</h2>\n\n  <div class=\"card-grid\">\n    <div class=\"card card-standard\">\n      <div class=\"card-label\">Standard Card</div>\n      <h3>Border Lavender Container</h3>\n      <p>Standard content card with 1px Border Lavender border and 8px radius. White surface clearly lifted from Cloud Gray page background.</p>\n    </div>\n    <div class=\"card card-elevated\">\n      <div class=\"card-label\">Elevated (Whisper)</div>\n      <h3>Whisper Shadow Lift</h3>\n      <p>Subtle card elevation with whisper-soft shadow. Barely perceptible lift for hover states and highlighted content.</p>\n    </div>\n    <div class=\"card card-glow\">\n      <div class=\"card-label\">Featured (Glow)</div>\n      <h3>Standard Elevation</h3>\n      <p>Clear floating elevation with generous 16px radius. For feature showcases, product screenshots, and hero content containers.</p>\n",
+            "metadata": {
+              "output": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Design System Inspired by Expo</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap\" rel=\"stylesheet\">\n<style>\n  :root {\n    --color-expo-black: #000000;\n    --color-near-black: #1c2024;\n    --color-link-cobalt: #0d74ce;\n    --color-legal-blue: #476cff;\n    --color-widget-sky: #47c2ff;\n    --color-preview-purple: #8145b5;\n    --color-cloud-gray: #f0f0f3;\n    --color-pure-white: #ffffff;\n    --color-widget-dark: #1a1a1a;\n    --color-banner-dark: #171717;\n    --color-slate-gray: #60646c;\n    --color-mid-slate: #555860;\n    --color-silver: #b0b4ba;\n    --color-pewter: #999999;\n    --color-light-silver: #cccccc;\n    --color-dark-slate: #363a3f;\n    --color-charcoal: #333333;\n    --color-warning: #ab6400;\n    --color-destructive: #eb8e90;\n    --color-border-lavender: #e0e1e6;\n    --color-input-border: #d9d9e0;\n    --color-focus-ring: #2547d0;\n    --font-body: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\n    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;\n    /* Light mode */\n    --bg-page: var(--color-cloud-gray);\n    --bg-card: var(--color-pure-white);\n    --bg-nav: rgba(240,240,243,0.92);\n    --text-primary: var(--color-near-black);\n    --text-secondary: var(--color-slate-gray);\n    --text-muted: var(--color-silver);\n    --border-color: var(--color-border-lavender);\n    --border-subtle: rgba(224,225,230,0.5);\n    --section-label-color: var(--color-expo-black);\n  }\n\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n\n  body {\n    background: var(--bg-page);\n    color: var(--text-primary);\n    font-family: var(--font-body);\n    font-size: 16px;\n    line-height: 1.4;\n    -webkit-font-smoothing: antialiased;\n  }\n\n  /* NAV */\n  .nav {\n    position: sticky;\n    top: 0;\n    z-index: 100;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: 16px 40px;\n    background: var(--bg-nav);\n    backdrop-filter: blur(12px);\n    border-bottom: 1px solid var(--border-color);\n  }\n  .nav-brand { font-family: var(--font-body); font-size: 18px; font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; color: var(--color-expo-black); }\n  .nav-brand svg { width: 24px; height: 24px; }\n  .nav-links { display: flex; gap: 32px; align-items: center; }\n  .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }\n  .nav-links a:hover { color: var(--color-near-black); }\n  .nav-cta {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 8px 20px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 14px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .nav-status {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    font-size: 12px;\n    font-weight: 500;\n    color: var(--text-secondary);\n    background: var(--color-pure-white);\n    border: 1px solid var(--color-input-border);\n    border-radius: 9999px;\n    padding: 4px 12px 4px 8px;\n  }\n  .nav-status-dot {\n    width: 8px;\n    height: 8px;\n    border-radius: 50%;\n    background: #22c55e;\n  }\n\n  /* HERO */\n  .hero {\n    position: relative;\n    text-align: center;\n    padding: 120px 40px 100px;\n    overflow: hidden;\n  }\n  .hero h1 {\n    font-family: var(--font-body);\n    font-size: 60px;\n    font-weight: 700;\n    line-height: 1.10;\n    letter-spacing: -3px;\n    margin-bottom: 24px;\n    color: var(--color-expo-black);\n    position: relative;\n  }\n  .hero p {\n    color: var(--text-secondary);\n    font-size: 18px;\n    line-height: 1.4;\n    margin-bottom: 40px;\n    position: relative;\n  }\n  .hero-buttons { display: flex; gap: 16px; justify-content: center; position: relative; }\n  .btn-primary-pill {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 28px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .btn-standard {\n    background: var(--color-pure-white);\n    color: var(--color-near-black);\n    padding: 12px 24px;\n    border: 1px solid var(--color-input-border);\n    border-radius: 6px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 500;\n    cursor: pointer;\n  }\n\n  /* SECTIONS */\n  .section {\n    max-width: 1200px;\n    margin: 0 auto;\n    padding: 96px 40px;\n  }\n  .section-title {\n    font-family: var(--font-body);\n    font-size: 14px;\n    font-weight: 600;\n    text-transform: uppercase;\n    letter-spacing: 2.52px;\n    color: var(--section-label-color);\n    margin-bottom: 12px;\n  }\n  .section-heading {\n    font-family: var(--font-body);\n    font-size: 48px;\n    font-weight: 600;\n    line-height: 1.10;\n    letter-spacing: -2px;\n    margin-bottom: 48px;\n    color: var(--color-expo-black);\n  }\n  .section-divider {\n    border: none;\n    border-top: 1px solid var(--border-subtle);\n    margin: 0 40px;\n    max-width: 1200px;\n    margin-left: auto;\n    margin-right: auto;\n  }\n\n  /* COLOR PALETTE */\n  .color-group { margin-bottom: 40px; }\n  .color-group-title { font-size: 20px; font-weight: 600; line-height: 1.2; margin-bottom: 20px; color: var(--text-secondary); }\n  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }\n  .color-swatch { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }\n  .color-swatch-block { height: 80px; }\n  .color-swatch-info { padding: 12px; background: var(--bg-card); }\n  .color-swatch-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }\n  .color-swatch-hex { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }\n  .color-swatch-role { font-size: 12px; color: var(--text-muted); line-height: 1.4; }\n\n  /* TYPOGRAPHY */\n  .type-sample { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border-subtle); }\n  .type-sample:last-child { border-bottom: none; }\n  .type-sample-text { margin-bottom: 8px; }\n  .type-sample-label { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }\n\n  /* BUTTONS */\n  .button-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }\n  .button-demo { text-align: center; }\n  .button-demo-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.55px; }\n  .btn-dark-pill {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 28px;\n    border: none;\n    border-radius: 9999px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n  .btn-white-standard {\n    background: var(--color-pure-white);\n    color: var(--color-near-black);\n    padding: 12px 24px;\n    border: 1px solid var(--color-input-border);\n    border-radius: 6px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 500;\n    cursor: pointer;\n  }\n  .btn-dark-rounded {\n    background: var(--color-expo-black);\n    color: var(--color-pure-white);\n    padding: 12px 24px;\n    border: none;\n    border-radius: 32px;\n    font-size: 16px;\n    font-family: var(--font-body);\n    font-weight: 600;\n    cursor: pointer;\n  }\n\n  /* CARDS */\n  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }\n  .card { background: var(--bg-card); border-radius: 8px; padding: 28px; }\n  .card-standard { border: 1px solid var(--border-color); }\n  .card-elevated { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.08) 0px 3px 6px, rgba(0,0,0,0.07) 0px 2px 4px; }\n  .card-glow { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.1) 0px 10px 20px, rgba(0,0,0,0.05) 0px 3px 6px; border-radius: 16px; }\n  .card h3 { font-family: var(--font-body); font-size: 20px; font-weight: 600; line-height: 1.20; letter-spacing: -0.25px; margin-bottom: 12px; color: var(--color-near-black); }\n  .card p { color: var(--text-secondary); font-size: 16px; line-height: 1.40; }\n  .card-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.55px; color: var(--color-expo-black); margin-bottom: 16px; }\n\n  /* CODE BLOCK */\n  .code-block {\n    background: var(--color-near-black);\n    border: 1px solid var(--color-dark-slate);\n    border-radius: 8px;\n    padding: 20px 24px;\n    margin-top: 24px;\n    font-family: var(--font-mono);\n    font-size: 14px;\n    line-height: 1.4;\n    color: #f2f2f2;\n    overflow-x: auto;\n  }\n  .code-block .keyword { color: var(--color-link-cobalt); }\n  .code-block .string { color: #22c55e; }\n  .code-block .comment { color: var(--color-pewter); }\n\n  /* SPACING */\n  .spacing-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }\n  .spacing-item { text-align: center; }\n  .spacing-box { background: rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.12); border-radius: 2px; margin-bottom: 8px; }\n  .spacing-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }\n\n  /* RADIUS */\n  .radius-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }\n  .radius-item { text-align: center; }\n  .radius-box { width: 80px; height: 80px; background: var(--bg-card); border: 1px solid var(--border-color); margin-bottom: 8px; }\n  .radius-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }\n  .radius-context { font-size: 11px; color: var(--text-muted); margin-top: 2px; }\n\n  /* ELEVATION */\n  .elevation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }\n  .elevation-card { background: var(--bg-card); border-radius: 8px; padding: 24px; min-height: 140px; display: flex; flex-direction: column; justify-content: space-between; }\n  .elevation-flat { border: none; background: var(--bg-page); }\n  .elevation-surface { border: none; background: var(--bg-card); }\n  .elevation-whisper { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.08) 0px 3px 6px, rgba(0,0,0,0.07) 0px 2px 4px; }\n  .elevation-elevated { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.1) 0px 10px 20px, rgba(0,0,0,0.05) 0px 3px 6px; }\n  .elevation-modal { border: 1px solid var(--border-color); box-shadow: rgba(0,0,0,0.15) 0px 20px 40px, rgba(0,0,0,0.08) 0px 8px 16px; }\n  .elevation-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }\n  .elevation-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }\n  .elevation-level { font-family: var(--font-mono); font-size: 11px; color: var(--color-expo-black); text-transform: uppercase; letter-spacing: 0.55px; margin-top: 12px; }\n\n  /* RESPONSIVE */\n  @media (max-width: 768px) {\n    .nav { padding: 12px 20px; }\n    .nav-links a:not(.nav-cta-wrapper) { display: none; }\n    .nav-status { display: none; }\n    .hero { padding: 80px 20px 60px; }\n    .hero h1 { font-size: 36px; letter-spacing: -1.5px; }\n    .section { padding: 60px 20px; }\n    .section-heading { font-size: 28px; letter-spacing: -1px; }\n    .color-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }\n    .card-grid { grid-template-columns: 1fr; }\n    .hero-buttons { flex-direction: column; align-items: center; }\n    .button-row { flex-direction: column; align-items: flex-start; }\n  }\n\n  /* getdesign.md nav additions */\n  .nav-left { display: flex; align-items: center; gap: 20px; }\n  .nav-brand-link,\n  .nav-brand-link:link,\n  .nav-brand-link:visited,\n  .nav-brand-link:hover,\n  .nav-brand-link:active { text-decoration: none; color: inherit; }\n  .nav-github,\n  .nav-github:link,\n  .nav-github:visited,\n  .nav-github:hover,\n  .nav-github:active {\n    display: inline-flex;\n    align-items: center;\n    gap: 6px;\n    font-size: 12px;\n    font-weight: 600;\n    color: inherit;\n    text-decoration: none;\n    padding: 5px 10px;\n    border: 1px solid rgba(128, 128, 128, 0.3);\n    border-radius: 6px;\n    opacity: 0.75;\n    transition: opacity 200ms ease, border-color 200ms ease;\n    font-family: inherit;\n    line-height: 1;\n    white-space: nowrap;\n  }\n  .nav-github:hover { opacity: 1; border-color: rgba(128, 128, 128, 0.55); }\n  .nav-github svg { display: block; flex-shrink: 0; }\n\n  /* getdesign.md nav centering */\n  .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }\n  .nav > .nav-left { justify-self: start; }\n  .nav > .nav-links { justify-self: center; }\n  .nav > :last-child { justify-self: end; }\n</style>\n</head>\n<body>\n\n<!-- NAV -->\n<nav class=\"nav\">\n  <div class=\"nav-left\">\n    <a href=\"https://getdesign.md/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"nav-brand-link\">\n      <span class=\"nav-brand\">getdesign.md</span>\n    </a>\n    <a class=\"nav-github\" href=\"https://github.com/VoltAgent/awesome-design-md\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"awesome-design-md on GitHub\">\n      <svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z\"/></svg>\n      awesome-design-md\n    </a>\n  </div>\n  <div class=\"nav-links\">\n    <a href=\"#colors\">Colors</a>\n    <a href=\"#typography\">Typography</a>\n    <a href=\"#buttons\">Buttons</a>\n    <a href=\"#cards\">Cards</a>\n    <a href=\"#spacing\">Spacing</a>\n    <a href=\"#elevation\">Elevation</a>\n    <div class=\"nav-status\"><span class=\"nav-status-dot\"></span> All Systems Operational</div>\n    \n  </div>\n  <button class=\"nav-cta\">Sign Up</button>\n\n</nav>\n\n<!-- HERO -->\n<section class=\"hero\">\n  <h1>Design System<br>Inspired by Expo</h1>\n  <p>Auto-generated design token catalog from DESIGN.md</p>\n  <div class=\"hero-buttons\">\n    <button class=\"btn-primary-pill\">Explore Tokens</button>\n    <button class=\"btn-standard\">View Source</button>\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- COLORS -->\n<section class=\"section\" id=\"colors\">\n  <div class=\"section-title\">01 / Color Palette</div>\n  <h2 class=\"section-heading\">Color Palette & Roles</h2>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Primary</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #000000;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Expo Black</div><div class=\"color-swatch-hex\">#000000</div><div class=\"color-swatch-role\">Primary headlines, CTA buttons, brand anchor</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #1c2024;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Near Black</div><div class=\"color-swatch-hex\">#1c2024</div><div class=\"color-swatch-role\">Body text, softer than pure black for reading</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Secondary & Accent</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #0d74ce;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Link Cobalt</div><div class=\"color-swatch-hex\">#0d74ce</div><div class=\"color-swatch-role\">Standard links, interactive signals</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #476cff;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Legal Blue</div><div class=\"color-swatch-hex\">#476cff</div><div class=\"color-swatch-role\">Footer/legal links, brighter accent</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #47c2ff;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Widget Sky</div><div class=\"color-swatch-hex\">#47c2ff</div><div class=\"color-swatch-role\">Widget branding, lightest accent</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #8145b5;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Preview Purple</div><div class=\"color-swatch-hex\">#8145b5</div><div class=\"color-swatch-role\">Beta/preview feature indicators</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Surface & Background</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #f0f0f3; border-bottom: 1px solid #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Cloud Gray</div><div class=\"color-swatch-hex\">#f0f0f3</div><div class=\"color-swatch-role\">Primary page background</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #ffffff; border-bottom: 1px solid #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Pure White</div><div class=\"color-swatch-hex\">#ffffff</div><div class=\"color-swatch-role\">Card surfaces, elevated containers</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #1a1a1a;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Widget Dark</div><div class=\"color-swatch-hex\">#1a1a1a</div><div class=\"color-swatch-role\">Dark theme widgets, overlays</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #171717;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Banner Dark</div><div class=\"color-swatch-hex\">#171717</div><div class=\"color-swatch-role\">Promo banners, high-contrast surfaces</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Neutrals & Text</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #60646c;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Slate Gray</div><div class=\"color-swatch-hex\">#60646c</div><div class=\"color-swatch-role\">Secondary text (305 instances)</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #555860;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Mid Slate</div><div class=\"color-swatch-hex\">#555860</div><div class=\"color-swatch-role\">Emphasized secondary text</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #b0b4ba;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Silver</div><div class=\"color-swatch-hex\">#b0b4ba</div><div class=\"color-swatch-role\">Tertiary text, placeholders, metadata</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #363a3f;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Dark Slate</div><div class=\"color-swatch-hex\">#363a3f</div><div class=\"color-swatch-role\">Borders on dark surfaces, switch tracks</div></div></div>\n    </div>\n  </div>\n\n  <div class=\"color-group\">\n    <h3 class=\"color-group-title\">Semantic</h3>\n    <div class=\"color-grid\">\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #ab6400;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Warning Amber</div><div class=\"color-swatch-hex\">#ab6400</div><div class=\"color-swatch-role\">Warning states, deep amber for seriousness</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #eb8e90;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Destructive Rose</div><div class=\"color-swatch-hex\">#eb8e90</div><div class=\"color-swatch-role\">Disabled destructive actions, gentle alarm</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #e0e1e6;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Border Lavender</div><div class=\"color-swatch-hex\">#e0e1e6</div><div class=\"color-swatch-role\">Standard card/container borders</div></div></div>\n      <div class=\"color-swatch\"><div class=\"color-swatch-block\" style=\"background: #d9d9e0;\"></div><div class=\"color-swatch-info\"><div class=\"color-swatch-name\">Input Border</div><div class=\"color-swatch-hex\">#d9d9e0</div><div class=\"color-swatch-role\">Buttons, form elements, interactive borders</div></div></div>\n    </div>\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- TYPOGRAPHY -->\n<section class=\"section\" id=\"typography\">\n  <div class=\"section-title\">02 / Typography Scale</div>\n  <h2 class=\"section-heading\">Typography Rules</h2>\n\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 60px; font-weight: 700; line-height: 1.10; letter-spacing: -3px; color: var(--color-expo-black);\">Display Hero</div><div class=\"type-sample-label\">Display / Hero &mdash; 64px / 700&ndash;900 / 1.10 / -3px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 48px; font-weight: 600; line-height: 1.10; letter-spacing: -2px; color: var(--color-expo-black);\">Section Heading</div><div class=\"type-sample-label\">Section Heading &mdash; 48px / 600 / 1.10 / -2px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 20px; font-weight: 600; line-height: 1.20; letter-spacing: -0.25px;\">Sub-heading</div><div class=\"type-sample-label\">Sub-heading &mdash; 20px / 600 / 1.20 / -0.25px &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 18px; font-weight: 400; line-height: 1.40; color: var(--text-secondary);\">Body large text for intro paragraphs and section descriptions with comfortable reading rhythm.</div><div class=\"type-sample-label\">Body Large &mdash; 18px / 400&ndash;500 / 1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.40;\">Standard body text for paragraphs, navigation links, and button labels. Inter provides geometric precision at every weight.</div><div class=\"type-sample-label\">Body / Button &mdash; 16px / 400&ndash;700 / 1.25&ndash;1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 14px; font-weight: 500; line-height: 1.40; color: var(--text-secondary);\">Caption text for descriptions and metadata labels</div><div class=\"type-sample-label\">Caption / Label &mdash; 14px / 400&ndash;600 / 1.00&ndash;1.40 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-body); font-size: 12px; font-weight: 500; line-height: 1.00; color: var(--text-muted);\">Tag / Small Badge</div><div class=\"type-sample-label\">Tag / Small &mdash; 12px / 500 / 1.00&ndash;1.60 / normal &mdash; Inter</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 16px; font-weight: 400; line-height: 1.40;\">npx create-expo-app@latest my-app</div><div class=\"type-sample-label\">Code Body &mdash; 16px / 400&ndash;600 / 1.40 / normal &mdash; JetBrains Mono</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 14px; font-weight: 400; line-height: 1.40;\">import { Camera } from \"expo-camera\";</div><div class=\"type-sample-label\">Code Caption &mdash; 14px / 400&ndash;600 / 1.40 / normal &mdash; JetBrains Mono</div></div>\n  <div class=\"type-sample\"><div class=\"type-sample-text\" style=\"font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 1.60; text-transform: uppercase; color: var(--text-muted);\">REACT NATIVE</div><div class=\"type-sample-label\">Code Small / Tag &mdash; 12px / 400 / 1.60 / uppercase &mdash; JetBrains Mono</div></div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- BUTTONS -->\n<section class=\"section\" id=\"buttons\">\n  <div class=\"section-title\">03 / Button Variants</div>\n  <h2 class=\"section-heading\">Buttons</h2>\n\n  <div class=\"button-row\">\n    <div class=\"button-demo\"><button class=\"btn-dark-pill\">Get Started</button><div class=\"button-demo-label\">Primary Pill (Dark)</div></div>\n    <div class=\"button-demo\"><button class=\"btn-white-standard\">View Docs</button><div class=\"button-demo-label\">Standard (White)</div></div>\n    <div class=\"button-demo\"><button class=\"btn-dark-rounded\">Sign Up Free</button><div class=\"button-demo-label\">Dark Rounded (32px)</div></div>\n  </div>\n\n  <div class=\"code-block\" style=\"margin-top: 40px;\">\n    <span class=\"comment\">// Get started with Expo</span><br>\n    <span class=\"keyword\">$</span> npx create-expo-app@latest my-app\n  </div>\n</section>\n\n<hr class=\"section-divider\">\n\n<!-- CARDS -->\n<section class=\"section\" id=\"cards\">\n  <div class=\"section-title\">04 / Card Examples</div>\n  <h2 class=\"section-heading\">Cards & Containers</h2>\n\n  <div class=\"card-grid\">\n    <div class=\"card card-standard\">\n      <div class=\"card-label\">Standard Card</div>\n      <h3>Border Lavender Container</h3>\n      <p>Standard content card with 1px Border Lavender border and 8px radius. White surface clearly lifted from Cloud Gray page background.</p>\n    </div>\n    <div class=\"card card-elevated\">\n      <div class=\"card-label\">Elevated (Whisper)</div>\n      <h3>Whisper Shadow Lift</h3>\n      <p>Subtle card elevation with whisper-soft shadow. Barely perceptible lift for hover states and highlighted content.</p>\n    </div>\n    <div class=\"card card-glow\">\n      <div class=\"card-label\">Featured (Glow)</div>\n      <h3>Standard Elevation</h3>\n      <p>Clear floating elevation with generous 16px radius. For feature showcases, product screenshots, and hero content containers.</p>\n",
+              "exit": 0,
+              "description": "Fetch Expo design preview HTML",
+              "truncated": false
+            },
+            "title": "Fetch Expo design preview HTML",
+            "time": {
+              "start": 1776078554278,
+              "end": 1776078554281
+            }
+          },
+          "id": "prt_d8687fdfe0015xT3K1ieJEVbGI",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        },
+        {
+          "type": "tool",
+          "tool": "bash",
+          "callID": "call_function_u8b4tjhdisip_2",
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "curl -sL \"https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/expo/design.md\" 2>&1",
+              "timeout": 30000,
+              "description": "Try to fetch raw design.md from GitHub"
+            },
+            "output": "404: Not Found",
+            "metadata": {
+              "output": "404: Not Found",
+              "exit": 0,
+              "description": "Try to fetch raw design.md from GitHub",
+              "truncated": false
+            },
+            "title": "Try to fetch raw design.md from GitHub",
+            "time": {
+              "start": 1776078554545,
+              "end": 1776078554547
+            }
+          },
+          "id": "prt_d86880133001Y3GwPFUUuRr5nN",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        },
+        {
+          "reason": "tool-calls",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 13580,
+            "input": 5984,
+            "output": 276,
+            "reasoning": 0,
+            "cache": {
+              "write": 1722,
+              "read": 5598
+            }
+          },
+          "cost": 0,
+          "id": "prt_d868805b5001T0qngkMYUMQkBA",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d8687e063001qqDKdQ0501rxBw"
+        }
+      ]
+    },
+    {
+      "info": {
+        "parentID": "msg_d86873be1002Zm3pQdZi9Bmxha",
+        "role": "assistant",
+        "mode": "explore",
+        "agent": "explore",
+        "path": {
+          "cwd": "/Users/dhruv2mars/dev/github/gunmetal",
+          "root": "/Users/dhruv2mars/dev/github/gunmetal"
+        },
+        "cost": 0,
+        "tokens": {
+          "total": 24093,
+          "input": 8450,
+          "output": 2078,
+          "reasoning": 0,
+          "cache": {
+            "write": 6518,
+            "read": 7047
+          }
+        },
+        "modelID": "MiniMax-M2.7",
+        "providerID": "minimax-coding-plan",
+        "time": {
+          "created": 1776078554621,
+          "completed": 1776078599849
+        },
+        "finish": "stop",
+        "id": "msg_d868805fd0012HIXIv03cdnXpE",
+        "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME"
+      },
+      "parts": [
+        {
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-start",
+          "id": "prt_d86881662001YFOjU2P232bBGE",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868805fd0012HIXIv03cdnXpE"
+        },
+        {
+          "type": "reasoning",
+          "text": "I found the preview HTML which contains a lot of the design system information. Let me also try to get the raw DESIGN.md content directly from GitHub to see if it exists there. But based on what I found in the preview.html, I now have a comprehensive understanding of the Expo design system.\n\nLet me summarize what I've found:\n\n1. **Design.md files** - The original design.md has been moved to an external site (getdesign.md). The GitHub repo only has a README.md redirecting to the external site.\n\n2. **Design Language & Visual Style** - The preview.html gives us the complete picture:\n   - Dark theme foundation (inherited from React Native platform)\n   - Code-centric aesthetic\n   - Tight letter-spacing\n   - Clean, geometric precision\n\n3. **Colors** - I have the full color palette:\n   - Primary: Expo Black (#000000), Near Black (#1c2024)\n   - Secondary/Accent: Link Cobalt (#0d74ce), Legal Blue (#476cff), Widget Sky (#47c2ff), Preview Purple (#8145b5)\n   - Surface: Cloud Gray (#f0f0f3), Pure White (#ffffff), Widget Dark (#1a1a1a), Banner Dark (#171717)\n   - Neutrals: Slate Gray (#60646c), Mid Slate (#555860), Silver (#b0b4ba), Dark Slate (#363a3f)\n   - Semantic: Warning Amber (#ab6400), Destructive Rose (#eb8e90), Border Lavender (#e0e1e6), Input Border (#d9d9e0)\n\n4. **Typography**:\n   - Body: Inter (400, 500, 600, 700, 800, 900 weights)\n   - Code/Mono: JetBrains Mono\n   - Scale: 12px to 60px with varying weights and line heights\n   - Display Hero: 60px / 700 / -3px letter-spacing\n   - Section Heading: 48px / 600 / -2px letter-spacing\n\n5. **Components**:\n   - Buttons: Primary pill (dark), Standard (white), Dark rounded (32px radius)\n   - Cards: Standard, Elevated (whisper), Featured (glow) with 8px radius\n   - Code blocks with dark near-black background\n\n6. **What makes it distinctive/beautiful**:\n   - Bold contrast between pure black and cloud gray backgrounds\n   - Tight letter-spacing creates a refined, modern aesthetic\n   - Generous border-radius on primary buttons for approachability\n   - Inter and JetBrains Mono pairing reinforces the developer-focused identity\n\n7. **Design Structure**:\n   - Organized around color, typography, and component categories with consistent spacing and elevation systems\n   - Fully documented in preview.html at https://getdesign.md/design-md/expo/preview.html",
+          "time": {
+            "start": 1776078558820,
+            "end": 1776078572334
+          },
+          "metadata": {
+            "anthropic": {
+              "signature": "e43ff6a5e80d328bd32e5289abbb68735e1eb491ee2d013f839ffd3f2c358a36"
+            }
+          },
+          "id": "prt_d86881664001Sd1BQy4aJC4RxD",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868805fd0012HIXIv03cdnXpE"
+        },
+        {
+          "type": "text",
+          "text": "\nExcellent! I found the complete Expo design system. Here's my comprehensive analysis:\n\n---\n\n## Expo Design System Analysis\n\n### 1. Design.md Files\n\n**The actual `design.md` content has been migrated to an external site.** The GitHub repo (`/design-md/expo/`) only contains a redirect README pointing to:\n- **https://getdesign.md/expo/design-md**\n\nThe live preview with all design tokens is at:\n- **https://getdesign.md/design-md/expo/preview.html**\n\n---\n\n### 2. Design Language, Visual Style, Colors, Typography, Components\n\n#### **Overall Character**\n- **Dark theme** foundation (React Native platform heritage)\n- **Code-centric** aesthetic - tight letter-spacing, monospace accents\n- **Geometric precision** - clean, modern, developer-focused\n- Strong fit for mobile dev platforms, documentation sites, and developer portals\n\n#### **Color Palette**\n\n| Role | Color Name | Hex | Usage |\n|------|-----------|-----|-------|\n| **Primary** | Expo Black | `#000000` | Headlines, CTA buttons, brand anchor |\n| | Near Black | `#1c2024` | Body text (softer than pure black) |\n| **Accent** | Link Cobalt | `#0d74ce` | Standard links, interactive signals |\n| | Legal Blue | `#476cff` | Footer/legal links, brighter accent |\n| | Widget Sky | `#47c2ff` | Widget branding, lightest accent |\n| | Preview Purple | `#8145b5` | Beta/preview feature indicators |\n| **Surface** | Cloud Gray | `#f0f0f3` | Primary page background |\n| | Pure White | `#ffffff` | Card surfaces, elevated containers |\n| | Widget Dark | `#1a1a1a` | Dark theme widgets, overlays |\n| | Banner Dark | `#171717` | Promo banners, high-contrast surfaces |\n| **Neutrals** | Slate Gray | `#60646c` | Secondary text |\n| | Mid Slate | `#555860` | Emphasized secondary text |\n| | Silver | `#b0b4ba` | Tertiary text, placeholders |\n| | Dark Slate | `#363a3f` | Borders on dark surfaces |\n| **Semantic** | Warning Amber | `#ab6400` | Warning states |\n| | Destructive Rose | `#eb8e90` | Disabled destructive actions |\n| | Border Lavender | `#e0e1e6` | Standard borders |\n| | Input Border | `#d9d9e0` | Form elements |\n\n#### **Typography**\n\n| Style | Font | Size | Weight | Line Height | Letter Spacing |\n|-------|------|------|--------|-------------|----------------|\n| Display Hero | Inter | 60px | 700 | 1.10 | -3px |\n| Section Heading | Inter | 48px | 600 | 1.10 | -2px |\n| Sub-heading | Inter | 20px | 600 | 1.20 | -0.25px |\n| Body Large | Inter | 18px | 400-500 | 1.40 | normal |\n| Body / Button | Inter | 16px | 400-700 | 1.25-1.40 | normal |\n| Caption / Label | Inter | 14px | 400-600 | 1.00-1.40 | normal |\n| Tag / Small | Inter | 12px | 500 | 1.00-1.60 | normal |\n| Code Body | JetBrains Mono | 16px | 400-600 | 1.40 | normal |\n| Code Caption | JetBrains Mono | 14px | 400-600 | 1.40 | normal |\n| Code Small/Tag | JetBrains Mono | 12px | 400 | 1.60 | uppercase |\n\n#### **Components**\n\n**Buttons:**\n- **Primary Pill (Dark)**: `background: #000`, white text, `border-radius: 9999px`, 12x28px padding\n- **Standard (White)**: white bg, near-black text, 1px border, 6px radius\n- **Dark Rounded**: `border-radius: 32px`, 12x24px padding\n\n**Cards:**\n- **Standard**: 1px Border Lavender border, 8px radius, white surface\n- **Elevated (Whisper)**: subtle shadow `0px 3px 6px, 0px 2px 4px`\n- **Featured (Glow)**: stronger shadow, 16px radius for hero content\n\n**Code Blocks:**\n- Near-black background (`#1c2024`), 1px dark slate border, 8px radius\n- JetBrains Mono font, `#f2f2f2` text color\n\n**Elevation System:**\n- Flat, Surface, Whisper, Elevated, Modal levels with progressive shadows\n\n---\n\n### 3. What Makes It Distinctive/Beautiful\n\n1. **Bold Contrast**: Pure black (`#000000`) against cloud gray (`#f0f0f3`) creates dramatic visual impact\n2. **Tight Letter-Spacing**: Headlines use -2px to -3px tracking for a modern, compact feel\n3. **Pill Buttons**: Extensive use of `border-radius: 9999px` on CTAs gives approachability to the technical brand\n4. **Code-Centric Typography**: JetBrains Mono for all code reinforces the developer platform identity\n5. **Layered Grays**: Multiple gray tones (Slate, Mid Slate, Silver, Dark Slate) create depth without color\n6. **Accent Blues & Purples**: Cobalt, Legal Blue, and Widget Sky provide fresh, tech-forward highlights\n7. **Consistent 8px Grid**: Spacing and radius values follow a cohesive system\n\n---\n\n### 4. Design Structure\n\nThe design is organized into numbered sections:\n1. **01 / Color Palette** - Primary, Secondary/Accent, Surface/Background, Neutrals, Semantic\n2. **02 / Typography Scale** - Display through Code Small with exact specifications\n3. **03 / Button Variants** - Primary, Standard, Dark Rounded with code examples\n4. **04 / Card Examples** - Standard, Elevated, Featured variants\n5. **05 / Spacing** - 8px-based spacing scale\n6. **06 / Radius** - 2px to 16px radius values\n7. **07 / Elevation** - Whisper through Modal shadow systems\n\n---\n\n### File Locations\n\n| File | Path |\n|------|------|\n| GitHub redirect | `/design-md/expo/README.md` |\n| External design site | `https://getdesign.md/expo/design-md` |\n| Live preview (HTML) | `https://getdesign.md/design-md/expo/preview.html` |\n\n**Note**: To use this design, run `npx getdesign@latest add expo` from your project root, then ask your AI assistant to use `DESIGN.md` for UI work.",
+          "time": {
+            "start": 1776078572335,
+            "end": 1776078599778
+          },
+          "id": "prt_d86884b2f001VPjaLj4t8Pyuml",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868805fd0012HIXIv03cdnXpE"
+        },
+        {
+          "reason": "stop",
+          "snapshot": "63ff57dcc800b2c47786720124a8d20904e2b1d3",
+          "type": "step-finish",
+          "tokens": {
+            "total": 24093,
+            "input": 8450,
+            "output": 2078,
+            "reasoning": 0,
+            "cache": {
+              "write": 6518,
+              "read": 7047
+            }
+          },
+          "cost": 0,
+          "id": "prt_d8688b664001QFGtb3LQNkTHLQ",
+          "sessionID": "ses_27978c420ffeW6qLuitiyQr8ME",
+          "messageID": "msg_d868805fd0012HIXIv03cdnXpE"
+        }
+      ]
+    }
+  ]
+}

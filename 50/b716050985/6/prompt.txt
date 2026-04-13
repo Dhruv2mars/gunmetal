@@ -1,0 +1,9 @@
+Go to https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/expo and explore the Expo design specifically.
+
+I need to understand:
+1. What design.md files exist for Expo?
+2. What is the design language, visual style, colors, typography, components?
+3. What makes it distinctive/beautiful?
+4. How is the design structured?
+
+Please fetch the actual design.md content and any related files to understand the design fully.
