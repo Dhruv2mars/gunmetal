@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
-import { Barlow_Semi_Condensed, IBM_Plex_Mono, Teko } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
-const display = Teko({
-  variable: "--font-display",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const body = Barlow_Semi_Condensed({
-  variable: "--font-body",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const mono = IBM_Plex_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -27,7 +24,33 @@ export const metadata: Metadata = {
     template: "%s | Gunmetal",
   },
   description:
-    "Gunmetal is a local-first inference middle layer with one local API, connected providers, request history, token stats, and matching browser, TUI, and CLI surfaces.",
+    "One local API. Every AI provider. Gunmetal turns your AI subscriptions into a unified endpoint.",
+  keywords: [
+    "AI",
+    "inference",
+    "local API",
+    "OpenAI compatible",
+    "AI gateway",
+    "model routing",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://gunmetalapp.vercel.app",
+    siteName: "Gunmetal",
+    title: "Gunmetal — One Local API. Every AI Provider.",
+    description:
+      "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Gunmetal — One Local API. Every AI Provider.",
+    description:
+      "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -36,11 +59,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${display.variable} ${body.variable} ${mono.variable}`}
-    >
-      <body>{children}</body>
+    <html lang="en" data-theme="dark">
+      <body className={`${inter.variable} ${jetbrains.variable}`}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

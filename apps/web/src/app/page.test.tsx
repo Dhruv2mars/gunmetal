@@ -9,15 +9,22 @@ describe("marketing routes", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
     expect(html).toContain("Gunmetal");
-    expect(html).toContain("Turn the AI access you already pay for into one local API.");
-    expect(html).toContain("gunmetal setup");
-    expect(html).toContain("One install path. One local API. One super app.");
-    expect(html).toContain("gunmetalapp.vercel.app");
-    expect(html).toContain("codex, copilot");
-    expect(html).toContain("openrouter, zen");
-    expect(html).toContain("openai");
-    expect(html).not.toContain("azure");
-    expect(html).not.toContain("nvidia");
+    expect(html).toContain("Local AI Inference Gateway");
+    expect(html).toContain("middleman");
+    expect(html).toContain("AI inference");
+    expect(html).toContain("Turn your AI subscriptions");
+    expect(html).toContain("Install Gunmetal");
+    expect(html).toContain("Documentation");
+    expect(html).toContain("How It Works");
+    expect(html).toContain("Three steps to full control");
+    expect(html).toContain("Mount Providers");
+    expect(html).toContain("Mint Access");
+    expect(html).toContain("Direct Apps");
+    expect(html).toContain("Connect everything");
+    expect(html).toContain("Docs");
+    expect(html).toContain("Install");
+    expect(html).toContain("Start Here");
+    expect(html).toContain("GitHub");
   });
 
   test("web ui page explains the local browser flow", () => {
