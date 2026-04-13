@@ -1,0 +1,10 @@
+Thoroughly explore the Gunmetal codebase to understand:
+1. What is Gunmetal - the product/project purpose
+2. The overall architecture (web app, SDK, Rust packages)
+3. The current landing page structure and design in apps/web/
+4. Current design.md file contents
+5. Any existing design guidelines, brand assets, color schemes
+6. The tech stack used for the web app (Next.js, Tailwind, etc.)
+7. Key features or services offered by Gunmetal
+
+Be very thorough - read package.json files, README files, look at the landing page components, understand the brand personality. Return comprehensive findings about what this project is, what it does, and what the current design looks like.
