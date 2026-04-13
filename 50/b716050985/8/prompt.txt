@@ -1,0 +1,12 @@
+Explore this entire repository thoroughly. I need to understand:
+
+1. **Project overview**: What is this project? What does it do?
+2. **Full directory structure**: All directories and key files
+3. **Technology stack**: Languages, frameworks, key dependencies
+4. **Architecture**: How is the code organized? What's the overall design?
+5. **Git history**: What has been built, major milestones, recent changes
+6. **Key modules/packages**: What are the main components and their responsibilities?
+7. **Build/test commands**: How to build, test, run the project
+8. **Entry points**: Where does execution start?
+
+Please provide a comprehensive summary with enough detail for someone to understand the entire project. Include file paths and line references for important components. Be very thorough - this is for understanding a complex codebase.
