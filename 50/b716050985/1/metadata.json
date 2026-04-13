@@ -1,0 +1,86 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "50b716050985",
+  "session_id": "ses_278f06c3effevFNTKirQirfWbJ",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-13T13:44:27.729802Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/package.json",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/page.tsx",
+    "bun.lock"
+  ],
+  "agent": "OpenCode",
+  "model": "MiniMax-M2.7",
+  "turn_id": "2b729fd2d1e5",
+  "token_usage": {
+    "input_tokens": 11763,
+    "cache_creation_tokens": 13333,
+    "cache_read_tokens": 21805,
+    "output_tokens": 1636,
+    "api_call_count": 5
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-13T13:44:27.689279Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 937,
+    "total_committed": 0,
+    "total_lines_changed": 937,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 3038,
+      "user_lines_removed": 937,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/DESIGN.md": 529,
+        "apps/web/package.json": 4,
+        "apps/web/postcss.config.mjs": 5,
+        "apps/web/src/app/globals.css": 324,
+        "apps/web/src/app/layout.tsx": 41,
+        "apps/web/src/app/page.test.tsx": 17,
+        "apps/web/src/app/page.tsx": 12,
+        "apps/web/src/components/index.ts": 15,
+        "apps/web/src/components/layout/Footer.tsx": 79,
+        "apps/web/src/components/layout/Navbar.tsx": 174,
+        "apps/web/src/components/providers/ThemeProvider.tsx": 38,
+        "apps/web/src/components/sections/CoreValue.tsx": 153,
+        "apps/web/src/components/sections/Features.tsx": 179,
+        "apps/web/src/components/sections/Hero.tsx": 267,
+        "apps/web/src/components/sections/HowItWorks.tsx": 137,
+        "apps/web/src/components/sections/Installation.tsx": 89,
+        "apps/web/src/components/sections/Providers.tsx": 100,
+        "apps/web/src/components/ui/Badge.tsx": 41,
+        "apps/web/src/components/ui/Button.tsx": 124,
+        "apps/web/src/components/ui/Card.tsx": 146,
+        "apps/web/src/components/ui/CodeBlock.tsx": 145,
+        "apps/web/src/components/ui/Dropdown.tsx": 151,
+        "apps/web/src/hooks/use-scroll-reveal.ts": 49,
+        "apps/web/src/lib/design-tokens.ts": 133,
+        "bun.lock": 86
+      },
+      "user_removed_per_file": {
+        "apps/web/package.json": 1,
+        "apps/web/src/app/globals.css": 708,
+        "apps/web/src/app/layout.tsx": 19,
+        "apps/web/src/app/page.test.tsx": 10,
+        "apps/web/src/app/page.tsx": 198,
+        "bun.lock": 1
+      }
+    }
+  ]
+}

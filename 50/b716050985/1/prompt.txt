@@ -1,0 +1,6 @@
+Find and analyze the current navbar implementation in this codebase. Look in apps/web/ directory for navbar components, layout files, and any navigation-related code. Report:
+1. Where the navbar component(s) are located
+2. What components/libraries it currently uses
+3. What styling approach it uses (Tailwind, CSS modules, etc.)
+4. What links/items it currently contains
+5. Any relevant files like header, nav, navigation components
