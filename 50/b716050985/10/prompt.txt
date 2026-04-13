@@ -1,0 +1,19 @@
+what all .md files are there in this projec t
+
+---
+
+compare them with the last commit to main, tell me which files were not there before
+
+---
+
+tell me what are newly added not updated.
+
+---
+
+33d0759264e850bea491e36eb67315e931b9c6aa
+
+is there any other .md file which was not part of in the above commit other than the design.md
+
+---
+
+ok then, remove the design md file
