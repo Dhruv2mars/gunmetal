@@ -1,0 +1,13 @@
+Research x.ai's (Elon Musk's AI company) official landing page design at x.com/ai (or their website). I need to understand:
+
+1. The color palette used (backgrounds, text, accents)
+2. Typography choices (fonts, sizes, weights, letter-spacing)
+3. Layout principles and spacing system
+4. Navigation and footer design
+5. Any distinctive visual elements
+6. Overall brand personality and tone
+7. Component styling (buttons, cards, sections)
+
+Also check if there's a getdesign x.ai template by running `npx getdesign@latest list` to see available design systems.
+
+Return comprehensive findings about their design language.
