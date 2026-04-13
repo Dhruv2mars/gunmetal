@@ -1,0 +1,46 @@
+go ahead. and whenever you feel is the right time to push to main, do that. continue!
+
+---
+
+first. cleanup repo, git, etc. make things clear, push, etc
+
+---
+
+whats our next steps and phases? lets discuss and plan. as i have certain things in mind
+
+---
+
+ok, lets focus on phase 1 and things to do in there:
+- the perfect single user golden path. this is correct. here, we will have to touch the cli, tui, and the webUI. 
+- major refactor: i am thinking about shifting the TUI from rust to openTUI coz of ux. but in that case, will the CLI also change, or will it be same as now? we have to discuss this. 
+
+seperate from this phase: i want to add a chat playground in webUI and TUI. basically, a chat interface, where the users can add their api key, select the model, and chat with it. this is just so that the user can demo/test their api keys directly or wanna test the models. basically, this is same as groq, nvidia, meta, openrouter have playgrounds.
+
+---
+
+plan:
+- we are going ahead with the tui rewrite in opentui. thats sure. and i like your reasoning on its architecture. 
+- all three surfaces should be first class. webui is the primary way of doing things. but all can be done via cli. and tui is just webui but in terminal. 
+- in phase 1, along with all what you suggested should happen. add tui rewrite and all 3 surface full in there as well.
+
+---
+
+- for playground. do both. as far as i know, we do support both in gunmetal. right? do simple one first. 
+
+any more qustions>/
+
+---
+
+1. only gunmetal keys. 
+2. synced models
+3. full parity (start with mvp but move ahead in phase 1)
+4. interactive chat, just like other chat playgrounds (start with one shot but move ahead in phase 1)
+5. through playground
+
+---
+
+1. only gunmetal keys. 
+2. synced models
+3. full parity (start with mvp but move ahead in phase 1)
+4. interactive chat, just like other chat playgrounds (start with one shot but move ahead in phase 1)
+5. through playground

@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "d85c49ae0bd8",
+  "strategy": "manual-commit",
+  "branch": "feat/phase1-golden-path",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/plans.md",
+    "docs/prompt.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d8/5c49ae0bd8/0/metadata.json",
+      "transcript": "/d8/5c49ae0bd8/0/full.jsonl",
+      "content_hash": "/d8/5c49ae0bd8/0/content_hash.txt",
+      "prompt": "/d8/5c49ae0bd8/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 51106252,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 48721280,
+    "output_tokens": 257374,
+    "api_call_count": 374
+  }
+}
