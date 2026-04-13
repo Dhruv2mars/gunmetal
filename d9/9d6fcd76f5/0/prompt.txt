@@ -1,7 +1,3 @@
-start implementing phase 1. complete all the milestones and do not stop before youre done with full complete phase 1.
-
----
-
 ok, just a vision clarity thought. here is how i envision gunmetal to become:
 
 gunmetal will have 2 things, seperations: products and developer (kind of like 2 tab in navbar of some landing pages). 
