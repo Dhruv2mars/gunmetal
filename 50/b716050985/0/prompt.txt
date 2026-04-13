@@ -1,0 +1,55 @@
+start implementing the phase 2. complete all the tracks fully. do not stop before youre fully done with the whole phase. go ahead!
+
+---
+
+ok, before expanding more things or doing anything else. lets get into the shipping mindset. focus only on the gunmetal superapp for now. the web landing page, cli, tui, and the webUI, evrything has to be xtremely perfect and fully done and public usable level. we are going to make it public, so that anyone can use it. therefore it has to be perffect. before public GA, test it as well. 
+
+start step by step: landing page -> cli -> tui -> webUI
+
+any questions
+
+---
+
+check if gunmetal.vercel.app is available. if not, gunmetalapp.vercel.app should be the url for web landing page. and the url for webui should be, gunmetalapp.vercel.app/webui
+
+---
+
+do testing with agent browser to know if landing page is ok and perfect
+
+---
+
+what the hell is this then? gunmetal.vercel.pp
+
+---
+
+good. i hope our memory is based on the right truth. 
+
+now, if web is done, i would like you to finish the cli now.
+
+---
+
+have you actually tested the cli to get the api key and use it in the playground? test that, keep the provider github copilot and the model to be gpt 5.4
+
+---
+
+i did paste in the code and was authenticated.
+
+---
+
+ok, run cmd. once the tab opens in browser, ill copy and paste link myself. keep the terminal open
+
+---
+
+done
+
+---
+
+ok, leave it. use codex auth for testing the cli.
+
+---
+
+great. move ahead.
+
+---
+
+test and move ahead
