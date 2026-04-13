@@ -125,6 +125,12 @@ class GunmetalTuiApp {
     this.buildPlaygroundView();
     this.buildRequestsView();
 
+    this.ui.statusLine = new TextRenderable(renderer, {
+      content: this.status,
+      textColor: "#f4f4ee",
+    });
+    root.add(this.ui.statusLine);
+
     this.ui.footer = new TextRenderable(renderer, {
       content: "Ctrl+1 setup  Ctrl+2 playground  Ctrl+3 requests  Ctrl+R refresh  Tab move focus  Ctrl+C quit",
       textColor: "#9aa3ad",
@@ -690,7 +696,7 @@ class GunmetalTuiApp {
 
     const models = this.data?.models || [];
     if (!models.some((model) => model.id === this.playground.model)) {
-      this.playground.model = models[0]?.id || "";
+      this.playground.model = this.defaultPlaygroundModel() || "";
     }
 
     if (this.lastSecret && !this.ui.playgroundKeyInput.value) {
@@ -705,8 +711,28 @@ class GunmetalTuiApp {
     this.renderSetupView();
     this.renderPlaygroundView();
     this.renderRequestsView();
-    this.ui.footer.content = this.status;
+    this.ui.statusLine.content = this.truncate(this.status, this.terminalWidth() - 2);
+    this.ui.footer.content = this.footerHelp();
     this.rendering = false;
+  }
+
+  footerHelp() {
+    if (this.compactTerminal()) {
+      if (this.selectedTab === "setup") {
+        return "Ctrl+S save · Ctrl+A auth · Ctrl+M sync · Ctrl+K key";
+      }
+      if (this.selectedTab === "playground") {
+        return "Enter send · Ctrl+L clear · Ctrl+1/3 switch · Ctrl+R refresh";
+      }
+      return "Filter logs · Ctrl+1/2 switch · Ctrl+R refresh";
+    }
+    if (this.selectedTab === "setup") {
+      return "Ctrl+S save  Ctrl+A auth  Ctrl+M sync  Ctrl+K key  Ctrl+O out  Ctrl+D del";
+    }
+    if (this.selectedTab === "playground") {
+      return "Enter send  Ctrl+L clear  Ctrl+1 setup  Ctrl+3 reqs  Ctrl+R refresh";
+    }
+    return "Filter provider/status/query  Ctrl+1 setup  Ctrl+2 play  Ctrl+R refresh";
   }
 
   renderHeader() {
@@ -714,10 +740,17 @@ class GunmetalTuiApp {
     const setup = this.data?.setup;
     const traffic = this.data?.traffic;
     this.ui.headerCounts.content = counts
-      ? `Providers ${counts.profiles} · Models ${counts.models} · Keys ${counts.keys} · Requests ${counts.logs}`
+      ? this.compactTerminal()
+        ? `P ${counts.profiles} · M ${counts.models} · K ${counts.keys} · R ${counts.logs}`
+        : `Providers ${counts.profiles} · Models ${counts.models} · Keys ${counts.keys} · Requests ${counts.logs}`
       : "Counts unavailable.";
     this.ui.headerNext.content = setup
-      ? `Next: ${setup.next_step}  Latest traffic ${traffic?.total_tokens ?? 0} total tokens`
+      ? this.compactTerminal()
+        ? this.truncate(`Next: ${setup.next_step} · ${traffic?.total_tokens ?? 0} tokens`, this.terminalWidth() - 4)
+        : this.truncate(
+            `Next: ${setup.next_step}  Latest traffic ${traffic?.total_tokens ?? 0} total tokens`,
+            this.terminalWidth() - 4,
+          )
       : "Waiting for operator state...";
   }
 
@@ -727,16 +760,30 @@ class GunmetalTuiApp {
     this.ui.providerBaseUrlInput.placeholder = config.baseUrlPlaceholder;
     this.ui.providerBaseUrlInput.visible = config.supportsBaseUrl;
     this.ui.providerApiKeyInput.visible = config.requiresApiKey;
-    this.ui.setupMeta.content =
-      `${config.helperTitle}\n${config.helperBody}\n\nCtrl+S save  Ctrl+A auth  Ctrl+M sync models  Ctrl+K create key  Ctrl+O logout  Ctrl+D delete provider`;
+    this.ui.setupMeta.content = this.formatLines(
+      this.compactTerminal()
+        ? [
+            config.helperTitle,
+            config.helperBody,
+            "Ctrl+S save · Ctrl+A auth",
+            "Ctrl+M sync · Ctrl+K key",
+          ]
+        : [
+            config.helperTitle,
+            config.helperBody,
+            "",
+            "Ctrl+S save  Ctrl+A auth  Ctrl+M sync models  Ctrl+K create key  Ctrl+O logout  Ctrl+D delete provider",
+          ],
+      this.detailTextWidth(),
+    );
   }
 
   renderSetupView() {
     const providers = this.data?.profiles || [];
     const providerListOptions = providers.length
       ? providers.map((profile) => ({
-          name: `${profile.provider} · ${profile.name}`,
-          description: `${profile.auth_label} · ${profile.model_count} models`,
+          name: this.truncate(`${profile.provider} · ${profile.name}`, this.listTextWidth()),
+          description: this.truncate(`${profile.auth_label} · ${profile.model_count} models`, this.listTextWidth()),
           value: profile.id,
         }))
       : [{ name: "No providers yet", description: "Save the first provider on the right.", value: "empty" }];
@@ -778,21 +825,29 @@ class GunmetalTuiApp {
       (provider) => provider.kind === selectedProfile?.provider,
     );
     this.ui.providerDetails.content = selectedProfile
-      ? [
-          `${selectedProfile.name} (${selectedProfile.provider})`,
-          `${selectedProfile.auth_label} · ${selectedProfile.model_count} synced models`,
-          selectedProfile.base_url ? `Base URL ${selectedProfile.base_url}` : "Base URL default",
-          selectedProviderDefinition
-            ? `Modes ${(selectedProviderDefinition.supports_chat_completions ? "chat/completions " : "")}${selectedProviderDefinition.supports_responses_api ? "responses" : ""}`.trim()
-            : null,
-          "",
-          `Keys available ${keys.length}`,
-          models.length ? `First model ${models[0].id}` : "Sync models to register provider/model ids.",
-          "",
-          "Use Ctrl+A to auth, Ctrl+M to sync, Ctrl+K to mint one Gunmetal key.",
-          this.lastSecret ? `Last key secret ${this.lastSecret}` : "Key secrets appear here when created.",
-        ].join("\n")
-      : "No provider selected.\n\nSave one provider, then auth it, sync models, and create a key.";
+      ? this.formatLines(
+          [
+            `${selectedProfile.name} (${selectedProfile.provider})`,
+            `${selectedProfile.auth_label} · ${selectedProfile.model_count} synced models`,
+            selectedProfile.base_url ? `Base URL ${selectedProfile.base_url}` : "Base URL default",
+            selectedProviderDefinition
+              ? `Modes ${(selectedProviderDefinition.supports_chat_completions ? "chat/completions " : "")}${selectedProviderDefinition.supports_responses_api ? "responses" : ""}`.trim()
+              : null,
+            "",
+            `Keys available ${keys.length}`,
+            models.length ? `Ready model ${models[0].id}` : "Sync models to register provider/model ids.",
+            "",
+            this.compactTerminal()
+              ? "Auth with Ctrl+A. Sync with Ctrl+M. Create one key with Ctrl+K."
+              : "Use Ctrl+A to auth, Ctrl+M to sync, Ctrl+K to mint one Gunmetal key.",
+            this.lastSecret ? `Latest key secret ${this.lastSecret}` : "Key secrets appear here when created.",
+          ],
+          this.listTextWidth(),
+        )
+      : this.formatLines(
+          ["No provider selected.", "", "Save one provider, then auth it, sync models, and create a key."],
+          this.listTextWidth(),
+        );
   }
 
   renderPlaygroundView() {
@@ -818,17 +873,22 @@ class GunmetalTuiApp {
     this.ui.playgroundHistorySelect.setSelectedIndex(
       this.playground.historyMode === "single" ? 1 : 0,
     );
-    this.ui.playgroundMeta.content = [
-      this.playground.model || "No model selected",
-      this.playground.mode === "chat" ? "chat/completions" : "responses",
-      this.playground.durationMs == null ? null : `${this.playground.durationMs} ms`,
-      this.playground.usage?.total_tokens != null
-        ? `tokens in ${this.playground.usage.input_tokens ?? 0} · out ${this.playground.usage.output_tokens ?? 0} · total ${this.playground.usage.total_tokens}`
-        : "Usage lands in request history after each request.",
-      this.playground.running ? "Streaming response..." : "Enter sends. Ctrl+L clears.",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    this.ui.playgroundMeta.content = this.formatLines(
+      [
+        this.playground.model || "No model selected yet",
+        this.playground.mode === "chat" ? "chat/completions" : "responses",
+        this.playground.durationMs == null ? null : `${this.playground.durationMs} ms`,
+        this.playground.usage?.total_tokens != null
+          ? `tokens in ${this.playground.usage.input_tokens ?? 0} · out ${this.playground.usage.output_tokens ?? 0} · total ${this.playground.usage.total_tokens}`
+          : "Usage lands in request history after each request.",
+        !this.ui.playgroundKeyInput.value.trim()
+          ? "Create a key in Setup with Ctrl+K or paste one here."
+          : this.playground.running
+            ? "Streaming response..."
+            : "Enter sends. Ctrl+L clears.",
+      ],
+      this.detailTextWidth(),
+    );
 
     this.clearChildren(this.ui.playgroundTranscript);
     if (!this.playground.messages.length) {
@@ -893,8 +953,8 @@ class GunmetalTuiApp {
 
     const requestOptions = logs.length
       ? logs.map((log) => ({
-          name: `${log.profile_name || log.provider} · ${log.status_code ?? "pending"}`,
-          description: `${log.model} · ${log.request_mode || "request"} · ${log.duration_ms}ms`,
+          name: this.truncate(`${log.profile_name || log.provider} · ${log.status_code ?? "pending"}`, this.listTextWidth()),
+          description: this.truncate(`${log.model} · ${log.request_mode || "request"} · ${log.duration_ms}ms`, this.listTextWidth()),
           value: log.id,
         }))
       : [{ name: "No requests yet", description: "Use the playground or any compatible app.", value: "empty" }];
@@ -914,7 +974,15 @@ class GunmetalTuiApp {
     }
     const traffic = this.data?.traffic;
     this.ui.requestTraffic.content = traffic
-      ? `Recent ${traffic.recent_requests} · Success ${traffic.success_count} · Errors ${traffic.error_count}\nTotal tokens ${traffic.total_tokens} · Avg latency ${traffic.avg_latency_ms ?? "—"} ms`
+      ? this.formatLines(
+          [
+            this.compactTerminal()
+              ? `Recent ${traffic.recent_requests} · Ok ${traffic.success_count} · Err ${traffic.error_count}`
+              : `Recent ${traffic.recent_requests} · Success ${traffic.success_count} · Errors ${traffic.error_count}`,
+            `Total tokens ${traffic.total_tokens} · Avg latency ${traffic.avg_latency_ms ?? "—"} ms`,
+          ],
+          this.detailTextWidth(),
+        )
       : "Traffic summary unavailable.";
     const providerSummary = (this.data?.provider_summaries || [])
       .slice(0, 3)
@@ -928,23 +996,29 @@ class GunmetalTuiApp {
         (item) =>
           `${item.model} · ${item.requests} req · ${item.total_tokens} tok · ${item.avg_latency_ms ?? "—"} ms`,
       );
-    this.ui.requestSummary.content = [
-      "Top providers",
-      providerSummary.length ? providerSummary.join("\n") : "No provider traffic yet.",
-      "",
-      "Top models",
-      modelSummary.length ? modelSummary.join("\n") : "No model traffic yet.",
-    ].join("\n");
+    this.ui.requestSummary.content = this.formatLines(
+      [
+        "Top providers",
+        ...(providerSummary.length ? providerSummary : ["No provider traffic yet."]),
+        "",
+        "Top models",
+        ...(modelSummary.length ? modelSummary : ["No model traffic yet."]),
+      ],
+      this.detailTextWidth(),
+    );
     this.ui.requestDetails.content = selectedLog
-      ? [
-          `${selectedLog.model}`,
-          `via ${selectedLog.profile_name || selectedLog.provider}`,
-          `status ${selectedLog.status_code ?? "pending"} · ${selectedLog.duration_ms} ms`,
-          `tokens in ${selectedLog.input_tokens ?? 0} · out ${selectedLog.output_tokens ?? 0} · total ${selectedLog.total_tokens ?? 0}`,
-          `key ${selectedLog.key_name || "unknown"} · mode ${selectedLog.request_mode || "request"}`,
-          `${selectedLog.endpoint} · ${selectedLog.started_at}`,
-          selectedLog.error_message ? `error ${selectedLog.error_message}` : "request completed without recorded provider error",
-        ].join("\n")
+      ? this.formatLines(
+          [
+            `${selectedLog.model}`,
+            `via ${selectedLog.profile_name || selectedLog.provider}`,
+            `status ${selectedLog.status_code ?? "pending"} · ${selectedLog.duration_ms} ms`,
+            `tokens in ${selectedLog.input_tokens ?? 0} · out ${selectedLog.output_tokens ?? 0} · total ${selectedLog.total_tokens ?? 0}`,
+            `key ${selectedLog.key_name || "unknown"} · mode ${selectedLog.request_mode || "request"}`,
+            `${selectedLog.endpoint} · ${selectedLog.started_at}`,
+            selectedLog.error_message ? `error ${selectedLog.error_message}` : "request completed without recorded provider error",
+          ],
+          this.detailTextWidth(),
+        )
       : logs.length
         ? "Select one request from the filtered list."
         : "Use the playground or any OpenAI-compatible app and the first request will appear here.";
@@ -990,6 +1064,22 @@ class GunmetalTuiApp {
     return (this.data?.profiles || []).find((profile) => profile.id === this.selectedProfileId) || null;
   }
 
+  modelsForProfile(profile) {
+    if (!profile) {
+      return [];
+    }
+    return (this.data?.models || []).filter((model) => model.provider === profile.provider);
+  }
+
+  defaultPlaygroundModel() {
+    const selected = this.selectedProfile();
+    const profileModel = this.modelsForProfile(selected)[0]?.id;
+    if (profileModel) {
+      return profileModel;
+    }
+    return (this.data?.models || [])[0]?.id || "";
+  }
+
   async saveProvider() {
     const provider = this.selectedProviderKind();
     const payload = {
@@ -1026,6 +1116,10 @@ class GunmetalTuiApp {
     const result = await submitAction(`/app/api/profiles/${profile.id}/${action}`, {});
     this.status = result.message;
     await this.refreshState();
+    if (action === "sync") {
+      this.playground.model = this.defaultPlaygroundModel();
+      this.renderAll();
+    }
   }
 
   async createKey() {
@@ -1046,6 +1140,11 @@ class GunmetalTuiApp {
       this.playground.key = result.secret;
     }
     await this.refreshState();
+    this.playground.model = this.defaultPlaygroundModel();
+    this.status = result.secret
+      ? "Key created. Playground is ready for the first request."
+      : this.status;
+    this.selectTab(1);
   }
 
   async deleteProfile() {
@@ -1141,6 +1240,46 @@ class GunmetalTuiApp {
     for (const child of renderable.getChildren()) {
       renderable.remove(child.id);
     }
+  }
+
+  terminalWidth() {
+    return Math.max(60, process.stdout?.columns || 100);
+  }
+
+  compactTerminal() {
+    return this.terminalWidth() <= 90;
+  }
+
+  listTextWidth() {
+    return this.compactTerminal() ? 24 : 40;
+  }
+
+  detailTextWidth() {
+    return this.compactTerminal() ? 44 : 72;
+  }
+
+  truncate(text, width) {
+    const value = String(text ?? "");
+    if (value.length <= width) {
+      return value;
+    }
+    if (width <= 3) {
+      return value.slice(0, width);
+    }
+    return `${value.slice(0, width - 3)}...`;
+  }
+
+  formatLines(lines, width) {
+    return lines
+      .filter((line) => line !== null && line !== undefined)
+      .map((line) => {
+        const value = String(line);
+        if (!value) {
+          return "";
+        }
+        return this.truncate(value, width);
+      })
+      .join("\n");
   }
 }
 

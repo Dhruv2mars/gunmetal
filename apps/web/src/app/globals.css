@@ -588,6 +588,29 @@ select {
   font-size: 0.88rem;
 }
 
+.home-proof-strip {
+  margin-top: 1.3rem;
+}
+
+.home-step-list li {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.home-step-list li strong {
+  color: var(--text);
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.45rem;
+  line-height: 0.92;
+  font-weight: 600;
+}
+
+.home-step-list li span {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
 .home-sections {
   display: grid;
   gap: 1rem;

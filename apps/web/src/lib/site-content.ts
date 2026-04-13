@@ -1,6 +1,6 @@
 export const primaryNav = [
   { href: "/", label: "Home" },
-  { href: "/web-ui", label: "Web UI" },
+  { href: "/webui", label: "Web UI" },
   { href: "/start-here", label: "Start Here" },
   { href: "/docs", label: "Docs" },
   { href: "/install", label: "Install" },
@@ -48,7 +48,7 @@ export const providerLanes = [
   {
     title: "Direct API Key",
     body: "Use standard provider keys under the same local surface.",
-    items: ["openai", "azure", "nvidia"],
+    items: ["openai"],
   },
 ];
 

@@ -2003,13 +2003,70 @@ async fn invoke_provider_raw_stream(
     endpoint: &'static str,
 ) -> Result<ProviderByteStream, Response> {
     let started_at = Instant::now();
+    let request_model = request.model.clone();
 
     match state
         .providers
         .raw_stream_chat_completion(&profile, &request)
         .await
     {
-        Ok(provider_stream) => Ok(provider_stream),
+        Ok(mut provider_stream) => {
+            let request_logger = state.request_logger.clone();
+            let key_id = key.id;
+            let profile_id = profile.id;
+            let provider = profile.provider.clone();
+            let endpoint_name = endpoint.to_owned();
+
+            Ok(async_stream::try_stream! {
+                let mut logged = false;
+                while let Some(item) = provider_stream.next().await {
+                    match item {
+                        Ok(chunk) => yield chunk,
+                        Err(error) => {
+                            if !logged {
+                                logged = true;
+                                request_logger.log(NewRequestLogEntry {
+                                    key_id: Some(key_id),
+                                    profile_id: Some(profile_id),
+                                    provider: provider.clone(),
+                                    model: request_model.clone(),
+                                    endpoint: endpoint_name.clone(),
+                                    status_code: Some(StatusCode::BAD_GATEWAY.as_u16()),
+                                    duration_ms: started_at.elapsed().as_millis() as u64,
+                                    usage: TokenUsage {
+                                        input_tokens: None,
+                                        output_tokens: None,
+                                        total_tokens: None,
+                                    },
+                                    error_message: Some(error.to_string()),
+                                });
+                            }
+
+                            Err::<Vec<u8>, anyhow::Error>(error)?;
+                        }
+                    }
+                }
+
+                if !logged {
+                    request_logger.log(NewRequestLogEntry {
+                        key_id: Some(key_id),
+                        profile_id: Some(profile_id),
+                        provider,
+                        model: request_model,
+                        endpoint: endpoint_name,
+                        status_code: Some(StatusCode::OK.as_u16()),
+                        duration_ms: started_at.elapsed().as_millis() as u64,
+                        usage: TokenUsage {
+                            input_tokens: None,
+                            output_tokens: None,
+                            total_tokens: None,
+                        },
+                        error_message: None,
+                    });
+                }
+            }
+            .boxed())
+        }
         Err(error) => {
             state.request_logger.log(NewRequestLogEntry {
                 key_id: Some(key.id),
@@ -2169,9 +2226,13 @@ mod tests {
         assert!(body.contains("profile-form-helper"));
         assert!(body.contains("playground-form"));
         assert!(body.contains("playground-transcript"));
+        assert!(body.contains("playground-provider"));
         assert!(body.contains("request-summary"));
         assert!(body.contains("request-filters"));
         assert!(body.contains("request-detail"));
+        assert!(body.contains("latest 8"));
+        assert!(body.contains("Gunmetal key only"));
+        assert!(body.contains("models-note"));
     }
 
     #[tokio::test]
@@ -2823,6 +2884,11 @@ mod tests {
         assert!(body.contains("\"role\":\"assistant\""));
         assert!(body.contains("hello from codex"));
         assert!(body.contains("[DONE]"));
+
+        let logs = wait_for_logs(&fixture.storage, 1);
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0].status_code, Some(200));
+        assert_eq!(logs[0].endpoint, "/v1/chat/completions");
     }
 
     #[tokio::test]
@@ -2976,6 +3042,11 @@ mod tests {
         assert!(body.contains("event: response.completed"));
         assert!(body.contains("hello from codex"));
         assert!(body.contains("[DONE]"));
+
+        let logs = wait_for_logs(&fixture.storage, 1);
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0].status_code, Some(200));
+        assert_eq!(logs[0].endpoint, "/v1/responses");
     }
 
     struct Fixture {

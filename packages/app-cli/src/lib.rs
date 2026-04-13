@@ -112,6 +112,12 @@ const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
 const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal chat            test a key against one synced model\n  gunmetal logs summary    inspect recent provider/model traffic\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
+const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
+const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/app\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
+const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web` / `gunmetal tui`.";
+const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start` or open `gunmetal web`.";
+const PROVIDERS_LIST_HELP_FOOTER: &str = "Lists built-in provider support, auth mode, request modes, and priority.\nUse `gunmetal profiles list` for the providers you already saved locally.";
+const LOGS_LIST_HELP_FOOTER: &str = "Examples:\n  gunmetal logs list\n  gunmetal logs list --provider codex\n  gunmetal logs list --query timeout --status error\n  gunmetal logs list --model openai/gpt-5.4";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -129,35 +135,47 @@ pub struct Cli {
 pub enum Command {
     Setup(SetupArgs),
     Chat(ChatArgs),
+    #[command(about = "Open the local browser UI. Starts Gunmetal if needed.")]
     Web(WebArgs),
+    #[command(about = "Start the local Gunmetal API in the background.")]
     Start(StartArgs),
+    #[command(about = "Run the local Gunmetal API in the foreground.")]
     Serve(ServeArgs),
+    #[command(about = "Stop the managed local Gunmetal service.")]
     Stop(StopArgs),
+    #[command(about = "Check whether the local Gunmetal service is live.")]
     Status(StatusArgs),
+    #[command(about = "Manage Gunmetal-local API keys.")]
     Keys {
         #[command(subcommand)]
         command: KeyCommand,
     },
+    #[command(about = "List or sync the local model registry.")]
     Models {
         #[command(subcommand)]
         command: ModelCommand,
     },
+    #[command(about = "Manage saved provider connections on this machine.")]
     Profiles {
         #[command(subcommand)]
         command: ProfileCommand,
     },
+    #[command(about = "Inspect built-in provider support shipped by Gunmetal.")]
     Providers {
         #[command(subcommand)]
         command: ProviderCommand,
     },
+    #[command(about = "Check auth state or log browser providers in and out.")]
     Auth {
         #[command(subcommand)]
         command: AuthCommand,
     },
+    #[command(about = "Inspect recent request history and token usage.")]
     Logs {
         #[command(subcommand)]
         command: LogCommand,
     },
+    #[command(about = "Open the terminal UI.")]
     Tui,
 }
 
@@ -174,57 +192,77 @@ pub enum LogStatus {
 }
 
 #[derive(Debug, clap::Args)]
-#[command(about = "Interactive local playground for one Gunmetal key and one synced model.")]
+#[command(
+    about = "Interactive local playground for one Gunmetal key and one synced model.",
+    after_help = CHAT_HELP_FOOTER
+)]
 pub struct ChatArgs {
-    #[arg(long)]
+    #[arg(long, help = "Gunmetal-local API key to use for the playground.")]
     pub api_key: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Synced model id in provider/model form.")]
     pub model: Option<String>,
-    #[arg(long, value_enum, default_value_t = ChatMode::Chat)]
+    #[arg(long, value_enum, default_value_t = ChatMode::Chat, help = "Request shape to use for the playground.")]
     pub mode: ChatMode,
-    #[arg(long)]
+    #[arg(long, help = "Run one prompt non-interactively and exit.")]
     pub prompt: Option<String>,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(
+    about = "Start the local Gunmetal API in the background.",
+    after_help = START_HELP_FOOTER
+)]
 pub struct StartArgs {
-    #[arg(long, default_value = DEFAULT_HOST)]
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the local Gunmetal service.")]
     pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT)]
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(
+    about = "Open the local browser UI. Starts Gunmetal if needed.",
+    after_help = WEB_HELP_FOOTER
+)]
 pub struct WebArgs {
-    #[arg(long, default_value = DEFAULT_HOST)]
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the local Gunmetal service.")]
     pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT)]
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Start the local browser UI without opening a browser window."
+    )]
     pub no_open: bool,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(about = "Run the local Gunmetal API in the foreground.")]
 pub struct ServeArgs {
-    #[arg(long, default_value = DEFAULT_HOST)]
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the local Gunmetal service.")]
     pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT)]
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(about = "Stop the managed local Gunmetal service.")]
 pub struct StopArgs {
-    #[arg(long, default_value = DEFAULT_HOST)]
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the managed local Gunmetal service.")]
     pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT)]
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the managed local Gunmetal service.")]
     pub port: u16,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(
+    about = "Check whether the local Gunmetal service is live.",
+    after_help = STATUS_HELP_FOOTER
+)]
 pub struct StatusArgs {
-    #[arg(long, default_value = DEFAULT_HOST)]
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the managed local Gunmetal service.")]
     pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT)]
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the managed local Gunmetal service.")]
     pub port: u16,
 }
 
@@ -234,123 +272,197 @@ pub struct StatusArgs {
     after_help = SETUP_HELP_FOOTER
 )]
 pub struct SetupArgs {
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Provider kind to connect, such as codex, openrouter, or openai."
+    )]
     pub provider: Option<ProviderKind>,
-    #[arg(long)]
+    #[arg(long, help = "Saved local name for this provider connection.")]
     pub name: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Optional upstream base URL override when the provider supports it."
+    )]
     pub base_url: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Upstream API key for gateway and direct providers.")]
     pub api_key: Option<String>,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Custom provider binary path when supported."
+    )]
     pub bin_path: Option<PathBuf>,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Working directory for provider runtimes that need one."
+    )]
     pub cwd: Option<PathBuf>,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "HTTP referer override for providers that require it."
+    )]
     pub http_referer: Option<String>,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Custom app title header for providers that support it."
+    )]
     pub title: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Local Gunmetal key name to create at the end of setup.")]
     pub key_name: Option<String>,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Print browser auth URLs without opening a browser window."
+    )]
     pub no_open: bool,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Start browser auth and return immediately without waiting for completion."
+    )]
     pub no_wait: bool,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(long, help_heading = "Advanced", help = "Skip model sync after auth.")]
     pub no_sync: bool,
-    #[arg(long, help_heading = "Advanced")]
+    #[arg(
+        long,
+        help_heading = "Advanced",
+        help = "Skip Gunmetal key creation at the end of setup."
+    )]
     pub no_key: bool,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum KeyCommand {
+    #[command(about = "Create one Gunmetal-local API key.")]
     Create {
-        #[arg(long)]
+        #[arg(long, help = "Human-readable name for the new key.")]
         name: String,
-        #[arg(long = "scope", value_delimiter = ',')]
+        #[arg(
+            long = "scope",
+            value_delimiter = ',',
+            help = "Comma-separated scopes. Defaults to inference,models_read."
+        )]
         scopes: Vec<KeyScope>,
-        #[arg(long = "provider", value_delimiter = ',')]
+        #[arg(
+            long = "provider",
+            value_delimiter = ',',
+            help = "Optional provider allowlist for this key."
+        )]
         providers: Vec<ProviderKind>,
     },
+    #[command(about = "List saved Gunmetal-local API keys.")]
     List,
-    Disable {
-        key: String,
-    },
-    Revoke {
-        key: String,
-    },
-    Delete {
-        key: String,
-    },
+    #[command(about = "Disable one key without deleting it.")]
+    Disable { key: String },
+    #[command(about = "Revoke one key so it cannot be used again.")]
+    Revoke { key: String },
+    #[command(about = "Delete one key record from local storage.")]
+    Delete { key: String },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ModelCommand {
+    #[command(about = "List synced models in the local registry.")]
     List,
+    #[command(about = "Sync models for one saved provider connection.")]
     Sync { profile: String },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ProfileCommand {
+    #[command(about = "Create or update one saved provider connection.")]
     Create {
-        #[arg(long)]
+        #[arg(long, help = "Provider kind to connect, such as codex or openrouter.")]
         provider: ProviderKind,
-        #[arg(long)]
+        #[arg(long, help = "Saved local name for this provider connection.")]
         name: String,
-        #[arg(long)]
+        #[arg(long, help = "Optional custom upstream base URL.")]
         base_url: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Upstream API key for gateway and direct providers.")]
         api_key: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Custom provider binary path when supported.")]
         bin_path: Option<PathBuf>,
-        #[arg(long)]
+        #[arg(long, help = "Working directory for provider runtimes that need one.")]
         cwd: Option<PathBuf>,
-        #[arg(long)]
+        #[arg(long, help = "HTTP referer override for providers that require it.")]
         http_referer: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Custom app title header for providers that support it.")]
         title: Option<String>,
     },
+    #[command(about = "List saved provider connections on this machine.")]
     List,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ProviderCommand {
+    #[command(
+        about = "List built-in provider support shipped by Gunmetal.",
+        after_help = PROVIDERS_LIST_HELP_FOOTER
+    )]
     List,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum AuthCommand {
+    #[command(about = "Check auth state for one saved provider connection.")]
     Status {
+        #[arg(help = "Saved provider name or id.")]
         profile: String,
     },
+    #[command(about = "Start or resume auth for one saved provider connection.")]
     Login {
+        #[arg(help = "Saved provider name or id.")]
         profile: String,
-        #[arg(long)]
+        #[arg(long, help = "Print the auth URL without opening a browser window.")]
         no_open: bool,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Start auth and return immediately without waiting for completion."
+        )]
         no_wait: bool,
     },
+    #[command(about = "Log one saved provider connection out locally.")]
     Logout {
+        #[arg(help = "Saved provider name or id.")]
         profile: String,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum LogCommand {
+    #[command(
+        about = "List recent requests with optional filters.",
+        after_help = LOGS_LIST_HELP_FOOTER
+    )]
     List {
-        #[arg(long, default_value_t = 20)]
+        #[arg(
+            long,
+            default_value_t = 20,
+            help = "Maximum number of recent requests to inspect."
+        )]
         limit: usize,
-        #[arg(long)]
+        #[arg(long, help = "Filter by provider name.")]
         provider: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Filter by model id.")]
         model: Option<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Free-text filter over provider, key, endpoint, mode, or error."
+        )]
         query: Option<String>,
-        #[arg(long, value_enum)]
+        #[arg(long, value_enum, help = "Filter by success or error requests.")]
         status: Option<LogStatus>,
     },
+    #[command(about = "Summarize recent request traffic by provider and model.")]
     Summary {
-        #[arg(long, default_value_t = 24)]
+        #[arg(
+            long,
+            default_value_t = 24,
+            help = "Maximum number of recent requests to summarize."
+        )]
         limit: usize,
     },
 }
@@ -521,7 +633,9 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 writeln!(output, "id: {}", profile.id)?;
             }
             ProfileCommand::List => {
-                let profiles = paths.storage_handle()?.list_profiles()?;
+                let storage = paths.storage_handle()?;
+                let profiles = storage.list_profiles()?;
+                let models = storage.list_models()?;
                 if profiles.is_empty() {
                     writeln!(
                         output,
@@ -529,10 +643,14 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     )?;
                 }
                 for profile in profiles {
+                    let model_count = models
+                        .iter()
+                        .filter(|model| model.profile_id == Some(profile.id))
+                        .count();
                     writeln!(
                         output,
-                        "{} {} id={} enabled={}",
-                        profile.provider, profile.name, profile.id, profile.enabled
+                        "{} {} enabled={} models={} id={}",
+                        profile.provider, profile.name, profile.enabled, model_count, profile.id
                     )?;
                 }
             }
@@ -1975,7 +2093,10 @@ fn write_service_report(
         writeln!(output, "Health: {health}")?;
     }
     if !status.running {
-        writeln!(output, "Run `gunmetal start` or open `gunmetal`.")?;
+        writeln!(
+            output,
+            "Next: run `gunmetal start`, `gunmetal web`, or `gunmetal tui`."
+        )?;
     }
     Ok(())
 }
@@ -2332,6 +2453,59 @@ mod tests {
     }
 
     #[test]
+    fn service_and_logs_help_explain_public_paths() {
+        let mut command = Cli::command();
+        let web = command.find_subcommand_mut("web").expect("web subcommand");
+        let web_help = web.render_help().to_string();
+        assert!(web_help.contains("Open the local browser UI"));
+        assert!(web_help.contains("http://127.0.0.1:4684/app"));
+
+        let mut command = Cli::command();
+        let start = command
+            .find_subcommand_mut("start")
+            .expect("start subcommand");
+        let start_help = start.render_help().to_string();
+        assert!(start_help.contains("Start the local Gunmetal API in the background."));
+        assert!(start_help.contains("gunmetal web"));
+        assert!(start_help.contains("gunmetal tui"));
+
+        let mut command = Cli::command();
+        let status = command
+            .find_subcommand_mut("status")
+            .expect("status subcommand");
+        let status_help = status.render_help().to_string();
+        assert!(status_help.contains("Check whether the local Gunmetal service is live."));
+        assert!(status_help.contains("gunmetal start"));
+
+        let mut command = Cli::command();
+        let logs = command
+            .find_subcommand_mut("logs")
+            .expect("logs subcommand");
+        let list = logs
+            .find_subcommand_mut("list")
+            .expect("logs list subcommand");
+        let logs_help = list.render_help().to_string();
+        assert!(logs_help.contains("List recent requests with optional filters."));
+        assert!(logs_help.contains("--query"));
+        assert!(logs_help.contains("timeout"));
+    }
+
+    #[test]
+    fn providers_help_points_at_builtin_support() {
+        let mut command = Cli::command();
+        let providers = command
+            .find_subcommand_mut("providers")
+            .expect("providers subcommand");
+        let list = providers
+            .find_subcommand_mut("list")
+            .expect("providers list subcommand");
+        let help = list.render_help().to_string();
+
+        assert!(help.contains("List built-in provider support shipped by Gunmetal."));
+        assert!(help.contains("gunmetal profiles list"));
+    }
+
+    #[test]
     fn stop_timeout_keeps_pid_and_running_state() {
         let status = super::ServiceStatus {
             state: "running".to_owned(),
@@ -2388,7 +2562,7 @@ mod tests {
 
         let text = String::from_utf8(output).unwrap();
         assert!(text.contains("Gunmetal is not running."));
-        assert!(text.contains("Run `gunmetal start` or open `gunmetal`."));
+        assert!(text.contains("Next: run `gunmetal start`, `gunmetal web`, or `gunmetal tui`."));
         assert!(text.contains(&format!("http://127.0.0.1:{port}/v1")));
     }
 

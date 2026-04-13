@@ -502,7 +502,7 @@
 
       .request-filter-bar {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px;
         margin-top: 14px;
       }
@@ -712,16 +712,20 @@
           <article class="panel">
             <p class="panel-kicker">Playground</p>
             <p class="note">
-              Paste a Gunmetal key, pick one synced model, and test the local
-              API directly through <span class="mono">chat/completions</span> or
-              <span class="mono">responses</span>.
+              Use one Gunmetal key, pick a synced provider and model, and test
+              the local API directly through <span class="mono">chat/completions</span>
+              or <span class="mono">responses</span>.
             </p>
             <form class="playground-form" id="playground-form">
               <label>
                 Gunmetal key
-                <input id="playground-key" name="api_key" placeholder="gm_..." autocomplete="off" />
+                <input id="playground-key" name="api_key" placeholder="Gunmetal key only (gm_...)" autocomplete="off" />
               </label>
               <div class="playground-toolbar">
+                <label>
+                  Provider
+                  <select id="playground-provider" name="provider"></select>
+                </label>
                 <label>
                   Model
                   <select id="playground-model" name="model"></select>
@@ -761,6 +765,7 @@
           </article>
           <article class="panel">
             <p class="panel-kicker">Models</p>
+            <p class="note" id="models-note"></p>
             <div id="models"></div>
           </article>
         </section>
@@ -774,6 +779,7 @@
         selectedLogId: null,
         playground: {
           key: "",
+          provider: "",
           model: "",
           mode: "chat",
           historyMode: "conversation",
@@ -786,6 +792,7 @@
           provider: "all",
           status: "all",
           query: "",
+          limit: "8",
         },
       };
 
@@ -838,7 +845,24 @@
 
       function updateRequestFilter(name, value) {
         appState.requestFilters[name] = value;
-        renderState();
+        render();
+      }
+
+      function availablePlaygroundProviders(data) {
+        const models = Array.isArray(data?.models) ? data.models : [];
+        const profiles = Array.isArray(data?.profiles) ? data.profiles : [];
+        return profiles
+          .filter((profile) => models.some((model) => model.provider === profile.provider))
+          .map((profile) => ({
+            value: profile.provider,
+            label: `${profile.name} · ${profile.provider}`,
+          }));
+      }
+
+      function filteredPlaygroundModels(data) {
+        const models = Array.isArray(data?.models) ? data.models : [];
+        if (!appState.playground.provider) return models;
+        return models.filter((model) => model.provider === appState.playground.provider);
       }
 
       function setBanner(message, tone = "default") {
@@ -995,15 +1019,29 @@
         }
       }
 
+      async function wait(ms) {
+        await new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
       function syncPlaygroundSelections(data) {
         const models = Array.isArray(data?.models) ? data.models : [];
         if (!models.length) {
+          appState.playground.provider = "";
           appState.playground.model = "";
           return;
         }
 
-        if (!models.some((model) => model.id === appState.playground.model)) {
-          appState.playground.model = models[0].id;
+        const providers = availablePlaygroundProviders(data);
+        if (
+          !appState.playground.provider ||
+          !providers.some((provider) => provider.value === appState.playground.provider)
+        ) {
+          appState.playground.provider = providers[0]?.value || models[0].provider;
+        }
+
+        const providerModels = filteredPlaygroundModels(data);
+        if (!providerModels.some((model) => model.id === appState.playground.model)) {
+          appState.playground.model = providerModels[0]?.id || models[0].id;
         }
       }
 
@@ -1070,8 +1108,18 @@
 
       function renderPlayground() {
         const data = appState.data;
-        const models = data?.models || [];
+        const providerOptions = availablePlaygroundProviders(data);
+        const models = filteredPlaygroundModels(data);
         const latestLog = data?.logs?.[0] || null;
+
+        $("playground-provider").innerHTML = providerOptions.length
+          ? providerOptions
+              .map(
+                (provider) =>
+                  `<option value="${escapeHtml(provider.value)}"${appState.playground.provider === provider.value ? " selected" : ""}>${escapeHtml(provider.label)}</option>`,
+              )
+              .join("")
+          : `<option value="">sync a provider first</option>`;
 
         $("playground-model").innerHTML = models.length
           ? models
@@ -1088,12 +1136,14 @@
         $("playground-clear").disabled =
           appState.playground.running || !appState.playground.messages.length;
         $("playground-key").disabled = appState.playground.running;
+        $("playground-provider").disabled = appState.playground.running || !providerOptions.length;
         $("playground-model").disabled = appState.playground.running || !models.length;
         $("playground-mode").disabled = appState.playground.running;
         $("playground-history").disabled = appState.playground.running;
         $("playground-input").disabled = appState.playground.running;
 
         const meta = [
+          providerOptions.find((provider) => provider.value === appState.playground.provider)?.label || null,
           appState.playground.model || null,
           appState.playground.mode === "chat" ? "chat/completions" : "responses",
           appState.playground.lastDurationMs == null
@@ -1414,6 +1464,14 @@
             Search
             <input value="${escapeHtml(appState.requestFilters.query)}" placeholder="model, key, endpoint, error" oninput="updateRequestFilter('query', this.value)" />
           </label>
+          <label>
+            Range
+            <select onchange="updateRequestFilter('limit', this.value)">
+              <option value="8"${appState.requestFilters.limit === "8" ? " selected" : ""}>latest 8</option>
+              <option value="24"${appState.requestFilters.limit === "24" ? " selected" : ""}>latest 24</option>
+              <option value="all"${appState.requestFilters.limit === "all" ? " selected" : ""}>all matches</option>
+            </select>
+          </label>
         `;
 
         $("service-panel").innerHTML = `
@@ -1492,7 +1550,14 @@
             </table>`
           : `<p class="note">No keys yet. Create one from a provider card.</p>`;
 
-        $("models").innerHTML = data.models.length
+        const activeModelProvider = appState.playground.provider || data.models[0]?.provider || "";
+        const activeProviderModels = activeModelProvider
+          ? data.models.filter((model) => model.provider === activeModelProvider)
+          : data.models;
+        $("models-note").innerHTML = activeProviderModels.length
+          ? `Showing ${escapeHtml(Math.min(activeProviderModels.length, 12))} of ${escapeHtml(activeProviderModels.length)} synced models for <span class="mono">${escapeHtml(activeModelProvider)}</span>. Use the playground provider selector to switch the view.`
+          : "No models in view yet.";
+        $("models").innerHTML = activeProviderModels.length
           ? `<table class="table">
               <thead>
                 <tr>
@@ -1502,8 +1567,8 @@
                 </tr>
               </thead>
               <tbody>
-                ${data.models
-                  .slice(0, 14)
+                ${activeProviderModels
+                  .slice(0, 12)
                   .map(
                     (model) => `
                       <tr>
@@ -1521,9 +1586,14 @@
         renderPlayground();
 
         const filteredLogs = data.logs.filter(logMatchesRequestFilters);
+        const visibleLogs =
+          appState.requestFilters.limit === "all"
+            ? filteredLogs
+            : filteredLogs.slice(0, Number(appState.requestFilters.limit || 8));
 
         $("logs").innerHTML = filteredLogs.length
-          ? `<table class="table">
+          ? `<p class="note">Showing ${escapeHtml(visibleLogs.length)} of ${escapeHtml(filteredLogs.length)} matching requests.</p>
+            <table class="table">
               <thead>
                 <tr>
                   <th>When</th>
@@ -1533,7 +1603,7 @@
                 </tr>
               </thead>
               <tbody>
-                ${filteredLogs
+                ${visibleLogs
                   .map(
                     (log) => `
                       <tr class="request-row${appState.selectedLogId === log.id ? " request-row-active" : ""}" onclick="selectLog('${log.id}')">
@@ -1552,7 +1622,7 @@
             : `<p class="note">No request history yet. Use the playground here or point one app at Gunmetal, then come back.</p>`;
 
         const selectedLog =
-          filteredLogs.find((log) => log.id === appState.selectedLogId) || filteredLogs[0] || null;
+          visibleLogs.find((log) => log.id === appState.selectedLogId) || visibleLogs[0] || null;
         if (selectedLog) {
           appState.selectedLogId = selectedLog.id;
         }
@@ -1678,6 +1748,9 @@
           appState.selectedLogId = null;
           setBanner("Playground request completed.", "success");
           await loadState();
+          await wait(350);
+          appState.selectedLogId = null;
+          await loadState();
         } catch (error) {
           appState.playground.messages = appState.playground.messages.slice(
             0,
@@ -1727,6 +1800,12 @@
 
       $("playground-key").addEventListener("input", (event) => {
         appState.playground.key = event.currentTarget.value;
+      });
+
+      $("playground-provider").addEventListener("change", (event) => {
+        appState.playground.provider = event.currentTarget.value;
+        syncPlaygroundSelections(appState.data);
+        renderPlayground();
       });
 
       $("playground-model").addEventListener("change", (event) => {
