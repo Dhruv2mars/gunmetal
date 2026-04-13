@@ -1,0 +1,8 @@
+we need to redesign the navbar competely from scratch. checkout spacex.com navbar design. i want something like that. 
+
+completely redo the whole navbar.
+
+---
+
+that hamburger is for narrow/small screens. for desktop layout, the stuff stays in the navbar. 
+the navbar is fixed.
