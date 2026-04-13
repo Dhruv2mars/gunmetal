@@ -453,6 +453,65 @@
         line-height: 1.4;
       }
 
+      .request-summary-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-table {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .summary-table h3 {
+        margin: 0 0 12px;
+        font-size: 14px;
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .summary-row:last-child {
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+
+      .summary-row strong,
+      .summary-row span {
+        display: block;
+      }
+
+      .summary-row span {
+        margin-top: 4px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .request-filter-bar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .request-filter-bar label {
+        display: grid;
+        gap: 8px;
+      }
+
       .playground-form,
       .playground-toolbar,
       .playground-composer {
@@ -551,6 +610,8 @@
 
         .setup-grid,
         .snapshot-grid,
+        .request-summary-grid,
+        .request-filter-bar,
         .request-detail-grid,
         .playground-toolbar {
           grid-template-columns: 1fr;
@@ -612,6 +673,8 @@
           </article>
           <article class="panel">
             <p class="panel-kicker">Request history</p>
+            <div class="request-detail" id="request-summary"></div>
+            <div class="request-filter-bar" id="request-filters"></div>
             <div class="request-detail" id="request-detail"></div>
             <div id="logs"></div>
           </article>
@@ -725,6 +788,10 @@
           usage: null,
           lastDurationMs: null,
         },
+        requestFilters: {
+          provider: "all",
+          status: "all",
+        },
       };
 
       const $ = (id) => document.getElementById(id);
@@ -741,6 +808,27 @@
         if (!value) return "";
         const date = new Date(value);
         return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+      }
+
+      function providerFilterValue(provider, profileName) {
+        return `${provider}::${profileName || ""}`;
+      }
+
+      function logMatchesRequestFilters(log) {
+        const providerMatches =
+          appState.requestFilters.provider === "all" ||
+          providerFilterValue(log.provider, log.profile_name) === appState.requestFilters.provider;
+        const statusMatches =
+          appState.requestFilters.status === "all" ||
+          (appState.requestFilters.status === "success"
+            ? (log.status_code ?? 0) < 400 && !log.error_message
+            : (log.status_code ?? 0) >= 400 || Boolean(log.error_message));
+        return providerMatches && statusMatches;
+      }
+
+      function updateRequestFilter(name, value) {
+        appState.requestFilters[name] = value;
+        renderState();
       }
 
       function setBanner(message, tone = "default") {
@@ -1253,6 +1341,85 @@
           )
           .join("");
 
+        $("request-summary").innerHTML = `
+          <div class="request-summary-grid">
+            <article class="summary-table">
+              <h3>Top providers</h3>
+              <div class="summary-list">
+                ${
+                  data.provider_summaries.length
+                    ? data.provider_summaries
+                        .slice(0, 4)
+                        .map(
+                          (item) => `
+                            <div class="summary-row">
+                              <div>
+                                <strong>${escapeHtml(item.label)}</strong>
+                                <span>${escapeHtml(item.provider)} · ${escapeHtml(item.requests)} requests</span>
+                              </div>
+                              <div>
+                                <strong>${escapeHtml(item.total_tokens)}</strong>
+                                <span>${escapeHtml(item.error_count)} errors · ${escapeHtml(item.avg_latency_ms ?? "—")} ms</span>
+                              </div>
+                            </div>
+                          `,
+                        )
+                        .join("")
+                    : `<p class="note">No provider traffic yet.</p>`
+                }
+              </div>
+            </article>
+            <article class="summary-table">
+              <h3>Top models</h3>
+              <div class="summary-list">
+                ${
+                  data.model_summaries.length
+                    ? data.model_summaries
+                        .slice(0, 5)
+                        .map(
+                          (item) => `
+                            <div class="summary-row">
+                              <div>
+                                <strong>${escapeHtml(item.model)}</strong>
+                                <span>${escapeHtml(item.provider)} · ${escapeHtml(item.requests)} requests</span>
+                              </div>
+                              <div>
+                                <strong>${escapeHtml(item.total_tokens)}</strong>
+                                <span>${escapeHtml(item.error_count)} errors · ${escapeHtml(item.avg_latency_ms ?? "—")} ms</span>
+                              </div>
+                            </div>
+                          `,
+                        )
+                        .join("")
+                    : `<p class="note">No model traffic yet.</p>`
+                }
+              </div>
+            </article>
+          </div>
+        `;
+
+        const providerOptions = [
+          `<option value="all">all providers</option>`,
+          ...data.provider_summaries.map((item) => {
+            const value = providerFilterValue(item.provider, item.profile_name);
+            return `<option value="${escapeHtml(value)}"${appState.requestFilters.provider === value ? " selected" : ""}>${escapeHtml(item.label)} · ${escapeHtml(item.provider)}</option>`;
+          }),
+        ].join("");
+        $("request-filters").innerHTML = `
+          <label>
+            Provider
+            <select onchange="updateRequestFilter('provider', this.value)">${providerOptions}</select>
+          </label>
+          <label>
+            Status
+            <select onchange="updateRequestFilter('status', this.value)">
+              <option value="all"${appState.requestFilters.status === "all" ? " selected" : ""}>all statuses</option>
+              <option value="success"${appState.requestFilters.status === "success" ? " selected" : ""}>success only</option>
+              <option value="error"${appState.requestFilters.status === "error" ? " selected" : ""}>errors only</option>
+            </select>
+          </label>
+        `;
+
         $("service-panel").innerHTML = `
           <div><strong>Status</strong><div class="subtle">${escapeHtml(data.service.status)}</div></div>
           <div><strong>Version</strong><div class="subtle mono">${escapeHtml(data.service.version)}</div></div>
@@ -1347,7 +1514,9 @@
 
         renderPlayground();
 
-        $("logs").innerHTML = data.logs.length
+        const filteredLogs = data.logs.filter(logMatchesRequestFilters);
+
+        $("logs").innerHTML = filteredLogs.length
           ? `<table class="table">
               <thead>
                 <tr>
@@ -1358,7 +1527,7 @@
                 </tr>
               </thead>
               <tbody>
-                ${data.logs
+                ${filteredLogs
                   .map(
                     (log) => `
                       <tr class="request-row${appState.selectedLogId === log.id ? " request-row-active" : ""}" onclick="selectLog('${log.id}')">
@@ -1372,9 +1541,12 @@
                   .join("")}
               </tbody>
             </table>`
-          : `<p class="note">No request history yet. Use the playground here or point one app at Gunmetal, then come back.</p>`;
+          : data.logs.length
+            ? `<p class="note">No requests match the current filters.</p>`
+            : `<p class="note">No request history yet. Use the playground here or point one app at Gunmetal, then come back.</p>`;
 
-        const selectedLog = data.logs.find((log) => log.id === appState.selectedLogId) || data.logs[0] || null;
+        const selectedLog =
+          filteredLogs.find((log) => log.id === appState.selectedLogId) || filteredLogs[0] || null;
         if (selectedLog) {
           appState.selectedLogId = selectedLog.id;
         }

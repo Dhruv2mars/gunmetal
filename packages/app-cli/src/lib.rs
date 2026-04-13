@@ -13,7 +13,7 @@ use clap::{Parser, Subcommand};
 use futures_util::StreamExt;
 use gunmetal_core::{
     ChatMessage, ChatRole, KeyScope, KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile,
-    ProviderAuthState, ProviderKind, ProviderLoginSession, TokenUsage,
+    ProviderAuthState, ProviderKind, ProviderLoginSession, RequestLogEntry, TokenUsage,
 };
 use gunmetal_daemon::DaemonState;
 use gunmetal_providers::{builtin_provider_hub, builtin_providers};
@@ -31,7 +31,7 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal chat            test a key against one synced model\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal chat            test a key against one synced model\n  gunmetal logs summary    inspect recent provider/model traffic\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 
 #[derive(Debug, Parser)]
@@ -86,6 +86,12 @@ pub enum Command {
 pub enum ChatMode {
     Chat,
     Responses,
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
+pub enum LogStatus {
+    Success,
+    Error,
 }
 
 #[derive(Debug, clap::Args)]
@@ -254,6 +260,16 @@ pub enum AuthCommand {
 pub enum LogCommand {
     List {
         #[arg(long, default_value_t = 20)]
+        limit: usize,
+        #[arg(long)]
+        provider: Option<String>,
+        #[arg(long)]
+        model: Option<String>,
+        #[arg(long, value_enum)]
+        status: Option<LogStatus>,
+    },
+    Summary {
+        #[arg(long, default_value_t = 24)]
         limit: usize,
     },
 }
@@ -541,8 +557,20 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
             }
         },
         Command::Logs { command } => match command {
-            LogCommand::List { limit } => {
-                let logs = paths.storage_handle()?.list_request_logs(limit)?;
+            LogCommand::List {
+                limit,
+                provider,
+                model,
+                status,
+            } => {
+                let logs = paths
+                    .storage_handle()?
+                    .list_request_logs(limit)?
+                    .into_iter()
+                    .filter(|log| {
+                        log_matches_filters(log, provider.as_deref(), model.as_deref(), status)
+                    })
+                    .collect::<Vec<_>>();
                 if logs.is_empty() {
                     writeln!(
                         output,
@@ -552,15 +580,28 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 for log in logs {
                     writeln!(
                         output,
-                        "{} {} {} {} {} {}ms tokens={}",
+                        "{} {} {} {} {} {}ms in={} out={} total={}",
                         log.started_at,
                         log.provider,
                         log.model,
                         log.endpoint,
                         log.status_code.unwrap_or_default(),
                         log.duration_ms,
+                        log.usage.input_tokens.unwrap_or_default(),
+                        log.usage.output_tokens.unwrap_or_default(),
                         log.usage.total_tokens.unwrap_or_default()
                     )?;
+                }
+            }
+            LogCommand::Summary { limit } => {
+                let logs = paths.storage_handle()?.list_request_logs(limit)?;
+                if logs.is_empty() {
+                    writeln!(
+                        output,
+                        "No logs yet. Start Gunmetal with `gunmetal start`, then make one request."
+                    )?;
+                } else {
+                    write_log_summary(&mut output, &logs)?;
                 }
             }
         },
@@ -1423,6 +1464,150 @@ fn write_chat_summary(output: &mut impl Write, result: &ChatTurnResult) -> Resul
     Ok(())
 }
 
+#[derive(Debug, Default)]
+struct LogSummaryAccumulator {
+    requests: usize,
+    success_count: usize,
+    error_count: usize,
+    latency_total_ms: u64,
+    input_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+}
+
+impl LogSummaryAccumulator {
+    fn observe(&mut self, log: &RequestLogEntry) {
+        self.requests += 1;
+        if log_succeeded(log) {
+            self.success_count += 1;
+        }
+        if log_failed(log) {
+            self.error_count += 1;
+        }
+        self.latency_total_ms += log.duration_ms;
+        self.input_tokens += u64::from(log.usage.input_tokens.unwrap_or_default());
+        self.output_tokens += u64::from(log.usage.output_tokens.unwrap_or_default());
+        self.total_tokens += u64::from(log.usage.total_tokens.unwrap_or_default());
+    }
+
+    fn avg_latency_ms(&self) -> Option<u64> {
+        (self.requests > 0).then(|| self.latency_total_ms / self.requests as u64)
+    }
+}
+
+fn log_matches_filters(
+    log: &RequestLogEntry,
+    provider: Option<&str>,
+    model: Option<&str>,
+    status: Option<LogStatus>,
+) -> bool {
+    let provider_matches = provider
+        .map(|value| {
+            let query = value.trim().to_ascii_lowercase();
+            log.provider
+                .to_string()
+                .to_ascii_lowercase()
+                .contains(&query)
+        })
+        .unwrap_or(true);
+    let model_matches = model
+        .map(|value| {
+            let query = value.trim().to_ascii_lowercase();
+            log.model.to_ascii_lowercase().contains(&query)
+        })
+        .unwrap_or(true);
+    let status_matches = match status {
+        Some(LogStatus::Success) => log_succeeded(log),
+        Some(LogStatus::Error) => log_failed(log),
+        None => true,
+    };
+    provider_matches && model_matches && status_matches
+}
+
+fn log_succeeded(log: &RequestLogEntry) -> bool {
+    log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none()
+}
+
+fn log_failed(log: &RequestLogEntry) -> bool {
+    log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some()
+}
+
+fn write_log_summary(output: &mut impl Write, logs: &[RequestLogEntry]) -> Result<()> {
+    let mut provider_summary = std::collections::BTreeMap::<String, LogSummaryAccumulator>::new();
+    let mut model_summary = std::collections::BTreeMap::<String, LogSummaryAccumulator>::new();
+    let mut overall = LogSummaryAccumulator::default();
+
+    for log in logs {
+        overall.observe(log);
+        provider_summary
+            .entry(log.provider.to_string())
+            .or_default()
+            .observe(log);
+        model_summary
+            .entry(log.model.clone())
+            .or_default()
+            .observe(log);
+    }
+
+    writeln!(
+        output,
+        "recent={} success={} errors={} avg_latency={}ms tokens_in={} tokens_out={} tokens_total={}",
+        overall.requests,
+        overall.success_count,
+        overall.error_count,
+        overall.avg_latency_ms().unwrap_or_default(),
+        overall.input_tokens,
+        overall.output_tokens,
+        overall.total_tokens
+    )?;
+
+    let mut provider_rows = provider_summary.into_iter().collect::<Vec<_>>();
+    provider_rows.sort_by(|left, right| {
+        right
+            .1
+            .total_tokens
+            .cmp(&left.1.total_tokens)
+            .then_with(|| right.1.requests.cmp(&left.1.requests))
+            .then_with(|| left.0.cmp(&right.0))
+    });
+    writeln!(output, "providers:")?;
+    for (provider, summary) in provider_rows.into_iter().take(5) {
+        writeln!(
+            output,
+            "  {} req={} tokens={} errors={} avg={}ms",
+            provider,
+            summary.requests,
+            summary.total_tokens,
+            summary.error_count,
+            summary.avg_latency_ms().unwrap_or_default()
+        )?;
+    }
+
+    let mut model_rows = model_summary.into_iter().collect::<Vec<_>>();
+    model_rows.sort_by(|left, right| {
+        right
+            .1
+            .total_tokens
+            .cmp(&left.1.total_tokens)
+            .then_with(|| right.1.requests.cmp(&left.1.requests))
+            .then_with(|| left.0.cmp(&right.0))
+    });
+    writeln!(output, "models:")?;
+    for (model, summary) in model_rows.into_iter().take(5) {
+        writeln!(
+            output,
+            "  {} req={} tokens={} errors={} avg={}ms",
+            model,
+            summary.requests,
+            summary.total_tokens,
+            summary.error_count,
+            summary.avg_latency_ms().unwrap_or_default()
+        )?;
+    }
+
+    Ok(())
+}
+
 async fn wait_for_provider_auth(
     providers: &ProviderHub,
     profile: &gunmetal_core::ProviderProfile,
@@ -1844,12 +2029,47 @@ mod tests {
 
     #[test]
     fn parses_logs_list_command() {
-        let cli = Cli::parse_from(["gunmetal", "logs", "list", "--limit", "12"]);
+        let cli = Cli::parse_from([
+            "gunmetal",
+            "logs",
+            "list",
+            "--limit",
+            "12",
+            "--provider",
+            "codex",
+            "--model",
+            "gpt-5",
+            "--status",
+            "error",
+        ]);
 
         match cli.command.unwrap() {
-            Command::Logs { command } => match command {
-                LogCommand::List { limit } => assert_eq!(limit, 12),
-            },
+            Command::Logs {
+                command:
+                    LogCommand::List {
+                        limit,
+                        provider,
+                        model,
+                        status,
+                    },
+            } => {
+                assert_eq!(limit, 12);
+                assert_eq!(provider.as_deref(), Some("codex"));
+                assert_eq!(model.as_deref(), Some("gpt-5"));
+                assert_eq!(status, Some(super::LogStatus::Error));
+            }
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
+    fn parses_logs_summary_command() {
+        let cli = Cli::parse_from(["gunmetal", "logs", "summary", "--limit", "30"]);
+
+        match cli.command.unwrap() {
+            Command::Logs {
+                command: LogCommand::Summary { limit },
+            } => assert_eq!(limit, 30),
             _ => panic!("unexpected command"),
         }
     }
@@ -1919,6 +2139,7 @@ mod tests {
 
         assert!(help.contains("gunmetal setup"));
         assert!(help.contains("gunmetal chat"));
+        assert!(help.contains("gunmetal logs summary"));
         assert!(help.contains("gunmetal web"));
         assert!(help.contains("gunmetal start"));
         assert!(help.contains("gunmetal status"));
@@ -2046,7 +2267,12 @@ mod tests {
                 command: ModelCommand::List,
             },
             Command::Logs {
-                command: LogCommand::List { limit: 20 },
+                command: LogCommand::List {
+                    limit: 20,
+                    provider: None,
+                    model: None,
+                    status: None,
+                },
             },
         ] {
             let mut output = Vec::new();

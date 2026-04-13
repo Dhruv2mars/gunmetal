@@ -784,18 +784,8 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
 
     let traffic = OperatorTrafficRow {
         recent_requests: log_count,
-        success_count: logs
-            .iter()
-            .filter(|log| {
-                log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none()
-            })
-            .count(),
-        error_count: logs
-            .iter()
-            .filter(|log| {
-                log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some()
-            })
-            .count(),
+        success_count: logs.iter().filter(|log| log_succeeded(log)).count(),
+        error_count: logs.iter().filter(|log| log_failed(log)).count(),
         avg_latency_ms: (!logs.is_empty())
             .then(|| logs.iter().map(|log| log.duration_ms).sum::<u64>() / logs.len() as u64),
         input_tokens: logs
@@ -812,6 +802,8 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             .sum(),
         latest_request_at: logs.first().map(|log| log.started_at.to_rfc3339()),
     };
+    let provider_summaries = summarize_logs_by_provider(&logs, &profile_rows);
+    let model_summaries = summarize_logs_by_model(&logs);
 
     let setup = OperatorSetupRow {
         provider_ready: profile_count > 0,
@@ -861,6 +853,8 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
         },
         setup,
         traffic,
+        provider_summaries,
+        model_summaries,
         providers: provider_rows,
         profiles: profile_rows,
         models: models.into_iter().map(ModelResponse::from).collect(),
@@ -966,6 +960,8 @@ struct OperatorStateResponse {
     counts: OperatorCountRow,
     setup: OperatorSetupRow,
     traffic: OperatorTrafficRow,
+    provider_summaries: Vec<OperatorProviderSummaryRow>,
+    model_summaries: Vec<OperatorModelSummaryRow>,
     providers: Vec<OperatorProviderRow>,
     profiles: Vec<OperatorProfileRow>,
     models: Vec<ModelResponse>,
@@ -1002,6 +998,35 @@ struct OperatorSetupRow {
 #[derive(Debug, Serialize)]
 struct OperatorTrafficRow {
     recent_requests: usize,
+    success_count: usize,
+    error_count: usize,
+    avg_latency_ms: Option<u64>,
+    input_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+    latest_request_at: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorProviderSummaryRow {
+    provider: String,
+    profile_name: Option<String>,
+    label: String,
+    requests: usize,
+    success_count: usize,
+    error_count: usize,
+    avg_latency_ms: Option<u64>,
+    input_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+    latest_request_at: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct OperatorModelSummaryRow {
+    model: String,
+    provider: String,
+    requests: usize,
     success_count: usize,
     error_count: usize,
     avg_latency_ms: Option<u64>,
@@ -1054,6 +1079,135 @@ struct OperatorLogRow {
     output_tokens: Option<u32>,
     total_tokens: Option<u32>,
     error_message: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct OperatorSummaryAccumulator {
+    requests: usize,
+    success_count: usize,
+    error_count: usize,
+    latency_total_ms: u64,
+    input_tokens: u64,
+    output_tokens: u64,
+    total_tokens: u64,
+    latest_request_at: Option<String>,
+}
+
+impl OperatorSummaryAccumulator {
+    fn observe(&mut self, log: &gunmetal_core::RequestLogEntry) {
+        self.requests += 1;
+        if log_succeeded(log) {
+            self.success_count += 1;
+        }
+        if log_failed(log) {
+            self.error_count += 1;
+        }
+        self.latency_total_ms += log.duration_ms;
+        self.input_tokens += u64::from(log.usage.input_tokens.unwrap_or_default());
+        self.output_tokens += u64::from(log.usage.output_tokens.unwrap_or_default());
+        self.total_tokens += u64::from(log.usage.total_tokens.unwrap_or_default());
+        let started_at = log.started_at.to_rfc3339();
+        if self
+            .latest_request_at
+            .as_ref()
+            .is_none_or(|current| started_at > *current)
+        {
+            self.latest_request_at = Some(started_at);
+        }
+    }
+
+    fn avg_latency_ms(&self) -> Option<u64> {
+        (self.requests > 0).then(|| self.latency_total_ms / self.requests as u64)
+    }
+}
+
+fn summarize_logs_by_provider(
+    logs: &[gunmetal_core::RequestLogEntry],
+    profile_rows: &[OperatorProfileRow],
+) -> Vec<OperatorProviderSummaryRow> {
+    let mut summaries: HashMap<(String, Option<String>), OperatorSummaryAccumulator> =
+        HashMap::new();
+    for log in logs {
+        let profile_name = profile_rows
+            .iter()
+            .find(|profile| Some(profile.id) == log.profile_id)
+            .map(|profile| profile.name.clone());
+        summaries
+            .entry((log.provider.to_string(), profile_name))
+            .or_default()
+            .observe(log);
+    }
+
+    let mut rows = summaries
+        .into_iter()
+        .map(
+            |((provider, profile_name), summary)| OperatorProviderSummaryRow {
+                label: profile_name.clone().unwrap_or_else(|| provider.clone()),
+                provider,
+                profile_name,
+                requests: summary.requests,
+                success_count: summary.success_count,
+                error_count: summary.error_count,
+                avg_latency_ms: summary.avg_latency_ms(),
+                input_tokens: summary.input_tokens,
+                output_tokens: summary.output_tokens,
+                total_tokens: summary.total_tokens,
+                latest_request_at: summary.latest_request_at,
+            },
+        )
+        .collect::<Vec<_>>();
+    rows.sort_by(|left, right| {
+        right
+            .total_tokens
+            .cmp(&left.total_tokens)
+            .then_with(|| right.requests.cmp(&left.requests))
+            .then_with(|| left.label.cmp(&right.label))
+    });
+    rows
+}
+
+fn summarize_logs_by_model(
+    logs: &[gunmetal_core::RequestLogEntry],
+) -> Vec<OperatorModelSummaryRow> {
+    let mut summaries: HashMap<(String, String), OperatorSummaryAccumulator> = HashMap::new();
+    for log in logs {
+        summaries
+            .entry((log.model.clone(), log.provider.to_string()))
+            .or_default()
+            .observe(log);
+    }
+
+    let mut rows = summaries
+        .into_iter()
+        .map(|((model, provider), summary)| OperatorModelSummaryRow {
+            model,
+            provider,
+            requests: summary.requests,
+            success_count: summary.success_count,
+            error_count: summary.error_count,
+            avg_latency_ms: summary.avg_latency_ms(),
+            input_tokens: summary.input_tokens,
+            output_tokens: summary.output_tokens,
+            total_tokens: summary.total_tokens,
+            latest_request_at: summary.latest_request_at,
+        })
+        .collect::<Vec<_>>();
+    rows.sort_by(|left, right| {
+        right
+            .total_tokens
+            .cmp(&left.total_tokens)
+            .then_with(|| right.requests.cmp(&left.requests))
+            .then_with(|| left.model.cmp(&right.model))
+    });
+    rows
+}
+
+fn log_succeeded(log: &gunmetal_core::RequestLogEntry) -> bool {
+    log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none()
+}
+
+fn log_failed(log: &gunmetal_core::RequestLogEntry) -> bool {
+    log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some()
 }
 
 #[derive(Debug, Deserialize)]
@@ -1903,6 +2057,8 @@ mod tests {
         assert!(body.contains("profile-form-helper"));
         assert!(body.contains("playground-form"));
         assert!(body.contains("playground-transcript"));
+        assert!(body.contains("request-summary"));
+        assert!(body.contains("request-filters"));
         assert!(body.contains("request-detail"));
     }
 
@@ -1931,6 +2087,24 @@ mod tests {
                 error_message: None,
             })
             .unwrap();
+        fixture
+            .storage
+            .log_request(gunmetal_core::NewRequestLogEntry {
+                key_id: Some(key.id),
+                profile_id: Some(profile.id),
+                provider: ProviderKind::Codex,
+                model: "codex/gpt-5.4-mini".to_owned(),
+                endpoint: "/v1/responses".to_owned(),
+                status_code: Some(429),
+                duration_ms: 30,
+                usage: TokenUsage {
+                    input_tokens: Some(5),
+                    output_tokens: Some(0),
+                    total_tokens: Some(5),
+                },
+                error_message: Some("rate limited".to_owned()),
+            })
+            .unwrap();
 
         let response = app(fixture.state())
             .oneshot(
@@ -1947,7 +2121,7 @@ mod tests {
         assert_eq!(body["counts"]["profiles"], 1);
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
-        assert_eq!(body["counts"]["logs"], 1);
+        assert_eq!(body["counts"]["logs"], 2);
         assert_eq!(body["setup"]["provider_ready"], true);
         assert_eq!(body["setup"]["models_ready"], true);
         assert_eq!(body["setup"]["key_ready"], true);
@@ -1957,20 +2131,31 @@ mod tests {
             "Traffic is flowing. Review requests and token usage below."
         );
         assert_eq!(body["service"]["version"], env!("CARGO_PKG_VERSION"));
-        assert_eq!(body["traffic"]["recent_requests"], 1);
+        assert_eq!(body["traffic"]["recent_requests"], 2);
         assert_eq!(body["traffic"]["success_count"], 1);
-        assert_eq!(body["traffic"]["error_count"], 0);
-        assert_eq!(body["traffic"]["avg_latency_ms"], 12);
-        assert_eq!(body["traffic"]["input_tokens"], 2);
+        assert_eq!(body["traffic"]["error_count"], 1);
+        assert_eq!(body["traffic"]["avg_latency_ms"], 21);
+        assert_eq!(body["traffic"]["input_tokens"], 7);
         assert_eq!(body["traffic"]["output_tokens"], 3);
-        assert_eq!(body["traffic"]["total_tokens"], 5);
+        assert_eq!(body["traffic"]["total_tokens"], 10);
         assert!(body["traffic"]["latest_request_at"].is_string());
+        assert_eq!(body["provider_summaries"][0]["label"], "default");
+        assert_eq!(body["provider_summaries"][0]["requests"], 2);
+        assert_eq!(body["provider_summaries"][0]["success_count"], 1);
+        assert_eq!(body["provider_summaries"][0]["error_count"], 1);
+        assert_eq!(body["provider_summaries"][0]["total_tokens"], 10);
+        assert_eq!(body["model_summaries"][0]["model"], "codex/gpt-5.4");
+        assert_eq!(body["model_summaries"][0]["requests"], 1);
         assert_eq!(body["profiles"][0]["name"], "default");
         assert_eq!(body["keys"][0]["state"], "active");
-        assert_eq!(body["logs"][0]["model"], "codex/gpt-5.4");
-        assert_eq!(body["logs"][0]["input_tokens"], 2);
-        assert_eq!(body["logs"][0]["output_tokens"], 3);
-        assert_eq!(body["logs"][0]["total_tokens"], 5);
+        let log_models = body["logs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["model"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        assert!(log_models.contains(&"codex/gpt-5.4".to_owned()));
+        assert!(log_models.contains(&"codex/gpt-5.4-mini".to_owned()));
     }
 
     #[tokio::test]

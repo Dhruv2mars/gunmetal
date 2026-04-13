@@ -29,6 +29,10 @@ class GunmetalTuiApp {
       durationMs: null,
       running: false,
     };
+    this.requestFilters = {
+      provider: "all",
+      status: "all",
+    };
     this.lastSecret = null;
     this.rendering = false;
     this.ui = {};
@@ -437,10 +441,65 @@ class GunmetalTuiApp {
     });
     view.add(detailColumn);
 
+    const filterRow = new BoxRenderable(renderer, {
+      width: "100%",
+      height: 8,
+      flexDirection: "row",
+      gap: 1,
+    });
+    detailColumn.add(filterRow);
+
+    this.ui.requestProviderFilter = new SelectRenderable(renderer, {
+      width: "50%",
+      height: 8,
+      border: true,
+      borderStyle: "rounded",
+      borderColor: "#24303a",
+      focusedBorderColor: "#7dd3c8",
+      selectedBackgroundColor: "#1f2c31",
+      options: [],
+      showDescription: false,
+      wrapSelection: true,
+    });
+    this.ui.requestProviderFilter.on("selectionChanged", (_index, option) => {
+      if (this.rendering) return;
+      this.requestFilters.provider = String(option?.value || "all");
+      this.renderAll();
+    });
+    filterRow.add(this.ui.requestProviderFilter);
+
+    this.ui.requestStatusFilter = new SelectRenderable(renderer, {
+      width: "50%",
+      height: 8,
+      border: true,
+      borderStyle: "rounded",
+      borderColor: "#24303a",
+      focusedBorderColor: "#7dd3c8",
+      selectedBackgroundColor: "#1f2c31",
+      options: [
+        { name: "all statuses", value: "all" },
+        { name: "success only", value: "success" },
+        { name: "errors only", value: "error" },
+      ],
+      showDescription: false,
+      wrapSelection: true,
+    });
+    this.ui.requestStatusFilter.on("selectionChanged", (_index, option) => {
+      if (this.rendering) return;
+      this.requestFilters.status = String(option?.value || "all");
+      this.renderAll();
+    });
+    filterRow.add(this.ui.requestStatusFilter);
+
     this.ui.requestTraffic = new TextRenderable(renderer, {
       width: "100%",
       content: "No traffic yet.",
       textColor: "#9aa3ad",
+    });
+    this.ui.requestSummary = new TextRenderable(renderer, {
+      width: "100%",
+      content: "Waiting for traffic summaries...",
+      textColor: "#f4f4ee",
     });
     this.ui.requestDetails = new TextRenderable(renderer, {
       width: "100%",
@@ -449,6 +508,7 @@ class GunmetalTuiApp {
       textColor: "#f4f4ee",
     });
     detailColumn.add(this.ui.requestTraffic);
+    detailColumn.add(this.ui.requestSummary);
     detailColumn.add(this.ui.requestDetails);
   }
 
@@ -540,7 +600,7 @@ class GunmetalTuiApp {
       ];
     }
     if (this.selectedTab === "requests") {
-      return [this.ui.requestList];
+      return [this.ui.requestList, this.ui.requestProviderFilter, this.ui.requestStatusFilter];
     }
 
     const focusables = [
@@ -783,7 +843,26 @@ class GunmetalTuiApp {
   }
 
   renderRequestsView() {
-    const logs = this.data?.logs || [];
+    const logs = (this.data?.logs || []).filter((log) => this.logMatchesRequestFilters(log));
+    const providerOptions = [
+      { name: "all providers", value: "all" },
+      ...((this.data?.provider_summaries || []).map((item) => ({
+        name: `${item.label} · ${item.provider}`,
+        value: this.providerFilterValue(item.provider, item.profile_name),
+      }))),
+    ];
+    this.ui.requestProviderFilter.options = providerOptions;
+    this.ui.requestProviderFilter.setSelectedIndex(
+      Math.max(
+        0,
+        providerOptions.findIndex((item) => item.value === this.requestFilters.provider),
+      ),
+    );
+
+    this.ui.requestStatusFilter.setSelectedIndex(
+      this.requestFilters.status === "success" ? 1 : this.requestFilters.status === "error" ? 2 : 0,
+    );
+
     const requestOptions = logs.length
       ? logs.map((log) => ({
           name: `${log.profile_name || log.provider} · ${log.status_code ?? "pending"}`,
@@ -801,11 +880,33 @@ class GunmetalTuiApp {
         : 0,
     );
 
-    const selectedLog = logs.find((log) => log.id === this.selectedLogId);
+    const selectedLog = logs.find((log) => log.id === this.selectedLogId) || logs[0];
+    if (selectedLog) {
+      this.selectedLogId = selectedLog.id;
+    }
     const traffic = this.data?.traffic;
     this.ui.requestTraffic.content = traffic
       ? `Recent ${traffic.recent_requests} · Success ${traffic.success_count} · Errors ${traffic.error_count}\nTotal tokens ${traffic.total_tokens} · Avg latency ${traffic.avg_latency_ms ?? "—"} ms`
       : "Traffic summary unavailable.";
+    const providerSummary = (this.data?.provider_summaries || [])
+      .slice(0, 3)
+      .map(
+        (item) =>
+          `${item.label} · ${item.provider} · ${item.requests} req · ${item.total_tokens} tok · ${item.error_count} err`,
+      );
+    const modelSummary = (this.data?.model_summaries || [])
+      .slice(0, 3)
+      .map(
+        (item) =>
+          `${item.model} · ${item.requests} req · ${item.total_tokens} tok · ${item.avg_latency_ms ?? "—"} ms`,
+      );
+    this.ui.requestSummary.content = [
+      "Top providers",
+      providerSummary.length ? providerSummary.join("\n") : "No provider traffic yet.",
+      "",
+      "Top models",
+      modelSummary.length ? modelSummary.join("\n") : "No model traffic yet.",
+    ].join("\n");
     this.ui.requestDetails.content = selectedLog
       ? [
           `${selectedLog.model}`,
@@ -815,7 +916,25 @@ class GunmetalTuiApp {
           `${selectedLog.endpoint} · ${selectedLog.started_at}`,
           selectedLog.error_message ? `error ${selectedLog.error_message}` : "request completed without recorded provider error",
         ].join("\n")
-      : "Use the playground or any OpenAI-compatible app and the first request will appear here.";
+      : logs.length
+        ? "Select one request from the filtered list."
+        : "Use the playground or any OpenAI-compatible app and the first request will appear here.";
+  }
+
+  providerFilterValue(provider, profileName) {
+    return `${provider}::${profileName || ""}`;
+  }
+
+  logMatchesRequestFilters(log) {
+    const providerMatches =
+      this.requestFilters.provider === "all" ||
+      this.providerFilterValue(log.provider, log.profile_name) === this.requestFilters.provider;
+    const statusMatches =
+      this.requestFilters.status === "all" ||
+      (this.requestFilters.status === "success"
+        ? (log.status_code ?? 0) < 400 && !log.error_message
+        : (log.status_code ?? 0) >= 400 || Boolean(log.error_message));
+    return providerMatches && statusMatches;
   }
 
   selectedProviderKind() {
