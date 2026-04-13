@@ -1,0 +1,56 @@
+i want to redesign the whole web landing page from scratch. completely from ground up with first principles thinking. 
+
+but to understand what the project is, you need to checkout the whole codebase. and you have to update the design.md as well. instead of the current one, you have to do npx getdesign@latest add spacex and implement that. search web wherever required. 
+
+if you have any questions for me, ask me!
+
+---
+
+also, checkout x.ai landing page as well. i like that one too. maybe you should checkout the design.md for x.ai as well.
+
+---
+
+few additions:
+- the hero section is the most important section of the whole page. it has to be the best. 
+- use react-bits. 
+- there should be animations, dynamic, interactive. but tasteful. they should be implemented very carefully, where it feels great not over. 
+- dark theme only. 
+
+cta should be greyish. maybe like the colors of spark. the thought behind that, and the overall design is, the project name is gunmetal, so yeah, you get the point right!
+
+---
+
+note this is not cosmetic change. its the full complete redesign from the ground up. so you have to do it from scratch without being limited by the structure or layout of current implementation. 
+
+- main tagline is good. the subheading should be the one that i provided. 
+- yes. but if you have an even better idea, then i am up for it. you are the best designer in the world, you know your job. 
+- subtle
+
+---
+
+1. keep mine 
+2. option B - i like the landing pages to be precise and minimal. 
+3. only display whats very necessary. keep the clutter/jargon out. 
+4. anything which feels unnecessary. keep things minimal and elegant. cut the crap!
+
+---
+
+yeah go ahead. make the best frontend design ever made. the most asthetic and best looking ui. it has to be the best. focus on little details. craft with love and utmost perfection. everything has to be the best. go ahead my design lord!!!
+
+---
+
+few things:
+- keep the dev server running all times. 
+- fix the navbar and footer. take inspiration from spacex page. use agent-browser skills.
+
+---
+
+its already running now.
+
+---
+
+its already running now.
+
+---
+
+its already running now. you have to redo the navbar. its still not upto the mark. remove anything that was made previously, redo the whole navbar from scratch
