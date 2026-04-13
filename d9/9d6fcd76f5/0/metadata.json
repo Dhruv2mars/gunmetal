@@ -1,0 +1,54 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "d99d6fcd76f5",
+  "session_id": "019d8076-5a27-73f2-8b11-ebf5bd656176",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-13T03:04:32.200973Z",
+  "branch": "feat/request-intelligence",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "docs/prompt.md",
+    "docs/plans.md",
+    "docs/documentation.md",
+    "packages/app-daemon/src/lib.rs",
+    "packages/app-daemon/src/browser_app.html",
+    "packages/app-tui/src/opentui.js",
+    "packages/app-cli/src/lib.rs"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "2954bd30dc37",
+  "checkpoint_transcript_start": 2725,
+  "transcript_lines_at_start": 2725,
+  "token_usage": {
+    "input_tokens": 10151597,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9946624,
+    "output_tokens": 34974,
+    "api_call_count": 79
+  },
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-13T03:04:26.834075Z",
+    "agent_lines": 911,
+    "agent_removed": 356,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 911,
+    "total_lines_changed": 1267,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
