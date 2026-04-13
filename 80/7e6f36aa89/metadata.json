@@ -1,0 +1,18 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "807e6f36aa89",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "DESIGN.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/80/7e6f36aa89/0/metadata.json",
+      "transcript": "/80/7e6f36aa89/0/full.jsonl",
+      "content_hash": "/80/7e6f36aa89/0/content_hash.txt",
+      "prompt": ""
+    }
+  ]
+}
