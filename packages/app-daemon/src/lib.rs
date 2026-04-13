@@ -786,15 +786,18 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
         recent_requests: log_count,
         success_count: logs
             .iter()
-            .filter(|log| log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none())
+            .filter(|log| {
+                log.status_code.is_some_and(|code| code < 400) && log.error_message.is_none()
+            })
             .count(),
         error_count: logs
             .iter()
-            .filter(|log| log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some())
+            .filter(|log| {
+                log.status_code.is_some_and(|code| code >= 400) || log.error_message.is_some()
+            })
             .count(),
-        avg_latency_ms: (!logs.is_empty()).then(|| {
-            logs.iter().map(|log| log.duration_ms).sum::<u64>() / logs.len() as u64
-        }),
+        avg_latency_ms: (!logs.is_empty())
+            .then(|| logs.iter().map(|log| log.duration_ms).sum::<u64>() / logs.len() as u64),
         input_tokens: logs
             .iter()
             .map(|log| u64::from(log.usage.input_tokens.unwrap_or_default()))
@@ -1550,7 +1553,7 @@ fn prepare_request(
                     "Model '{}' is not registered in Gunmetal. Run `gunmetal models sync <saved-provider>` or call `/v1/models`.",
                     model_id
                 ),
-        ));
+            ));
         };
         state.request_cache.insert_model(model.clone());
         model
@@ -1898,6 +1901,8 @@ mod tests {
         assert!(body.contains("setup-grid"));
         assert!(body.contains("traffic-grid"));
         assert!(body.contains("profile-form-helper"));
+        assert!(body.contains("playground-form"));
+        assert!(body.contains("playground-transcript"));
         assert!(body.contains("request-detail"));
     }
 

@@ -5,14 +5,15 @@ use std::{
     path::PathBuf,
     process::{Command as ProcessCommand, Stdio},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use futures_util::StreamExt;
 use gunmetal_core::{
-    KeyScope, KeyState, NewGunmetalKey, NewProviderProfile, ProviderAuthState, ProviderKind,
-    ProviderLoginSession,
+    ChatMessage, ChatRole, KeyScope, KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile,
+    ProviderAuthState, ProviderKind, ProviderLoginSession, TokenUsage,
 };
 use gunmetal_daemon::DaemonState;
 use gunmetal_providers::{builtin_provider_hub, builtin_providers};
@@ -30,7 +31,7 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal chat            test a key against one synced model\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 
 #[derive(Debug, Parser)]
@@ -48,6 +49,7 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     Setup(SetupArgs),
+    Chat(ChatArgs),
     Web(WebArgs),
     Start(StartArgs),
     Serve(ServeArgs),
@@ -78,6 +80,25 @@ pub enum Command {
         command: LogCommand,
     },
     Tui,
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
+pub enum ChatMode {
+    Chat,
+    Responses,
+}
+
+#[derive(Debug, clap::Args)]
+#[command(about = "Interactive local playground for one Gunmetal key and one synced model.")]
+pub struct ChatArgs {
+    #[arg(long)]
+    pub api_key: Option<String>,
+    #[arg(long)]
+    pub model: Option<String>,
+    #[arg(long, value_enum, default_value_t = ChatMode::Chat)]
+    pub mode: ChatMode,
+    #[arg(long)]
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, clap::Args)]
@@ -243,6 +264,9 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
     match command {
         Command::Setup(args) => {
             setup(paths, &providers, &mut output, args).await?;
+        }
+        Command::Chat(args) => {
+            chat(paths, &mut output, args).await?;
         }
         Command::Web(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
@@ -1072,6 +1096,333 @@ async fn setup(
     Ok(())
 }
 
+struct ChatTurnResult {
+    content: String,
+    usage: Option<TokenUsage>,
+    duration_ms: u64,
+}
+
+async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Result<()> {
+    let interactive = io::stdin().is_terminal() && args.prompt.is_none();
+    let status = ensure_default_daemon_running(paths).await?;
+    let storage = paths.storage_handle()?;
+    let models = storage.list_models()?;
+    if models.is_empty() {
+        anyhow::bail!(
+            "no synced models yet. run `gunmetal setup` or `gunmetal models sync <saved-provider>` first."
+        );
+    }
+
+    let api_key = resolve_chat_api_key(output, interactive, args.api_key)?;
+    let model = resolve_chat_model(output, interactive, args.model, &models)?;
+    let client = reqwest::Client::new();
+    let mut history = Vec::<ChatMessage>::new();
+
+    writeln!(output, "Gunmetal chat")?;
+    writeln!(output, "Base URL: {}/v1", status.url)?;
+    writeln!(
+        output,
+        "Mode: {}",
+        match args.mode {
+            ChatMode::Chat => "chat/completions",
+            ChatMode::Responses => "responses",
+        }
+    )?;
+    writeln!(output, "Model: {model}")?;
+
+    if let Some(prompt) = args.prompt {
+        history.push(ChatMessage {
+            role: ChatRole::User,
+            content: prompt,
+        });
+        let result = run_chat_turn(
+            &client,
+            &status.url,
+            &api_key,
+            &model,
+            args.mode,
+            &history,
+            output,
+        )
+        .await?;
+        writeln!(output)?;
+        write_chat_summary(output, &result)?;
+        return Ok(());
+    }
+
+    writeln!(
+        output,
+        "Commands: /clear resets the conversation, /quit exits."
+    )?;
+
+    loop {
+        let prompt = prompt_line_allow_empty(output, "you", None)?;
+        let trimmed = prompt.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if matches!(trimmed, "/quit" | "/exit") {
+            break;
+        }
+        if trimmed == "/clear" {
+            history.clear();
+            writeln!(output, "Conversation cleared.")?;
+            continue;
+        }
+
+        history.push(ChatMessage {
+            role: ChatRole::User,
+            content: prompt,
+        });
+        let result = run_chat_turn(
+            &client,
+            &status.url,
+            &api_key,
+            &model,
+            args.mode,
+            &history,
+            output,
+        )
+        .await?;
+        writeln!(output)?;
+        write_chat_summary(output, &result)?;
+        history.push(ChatMessage {
+            role: ChatRole::Assistant,
+            content: result.content,
+        });
+    }
+
+    Ok(())
+}
+
+fn resolve_chat_api_key(
+    output: &mut impl Write,
+    interactive: bool,
+    value: Option<String>,
+) -> Result<String> {
+    match value
+        .or_else(|| std::env::var("GUNMETAL_API_KEY").ok())
+        .filter(|value| !value.trim().is_empty())
+    {
+        Some(value) => Ok(value),
+        None if interactive => prompt_line(output, "Gunmetal key", None),
+        None => anyhow::bail!(
+            "missing Gunmetal key. pass `--api-key`, set `GUNMETAL_API_KEY`, or run interactively."
+        ),
+    }
+}
+
+fn resolve_chat_model(
+    output: &mut impl Write,
+    interactive: bool,
+    value: Option<String>,
+    models: &[ModelDescriptor],
+) -> Result<String> {
+    if let Some(value) = value.filter(|value| !value.trim().is_empty()) {
+        return Ok(value);
+    }
+
+    if models.len() == 1 {
+        return Ok(models[0].id.clone());
+    }
+
+    if interactive {
+        writeln!(output, "Synced models:")?;
+        for model in models.iter().take(12) {
+            writeln!(output, "- {}", model.id)?;
+        }
+        return prompt_line(output, "Model", Some(models[0].id.clone()));
+    }
+
+    anyhow::bail!(
+        "missing model. pass `--model provider/model` or run interactively after syncing models."
+    )
+}
+
+fn chat_request_payload(mode: ChatMode, model: &str, messages: &[ChatMessage]) -> Value {
+    match mode {
+        ChatMode::Chat => json!({
+            "model": model,
+            "stream": true,
+            "messages": messages,
+        }),
+        ChatMode::Responses => json!({
+            "model": model,
+            "stream": true,
+            "input": messages.iter().map(|message| {
+                let role = match message.role {
+                    ChatRole::System => "developer",
+                    ChatRole::User => "user",
+                    ChatRole::Assistant => "assistant",
+                };
+                json!({
+                    "role": role,
+                    "content": [{ "type": "input_text", "text": message.content }],
+                })
+            }).collect::<Vec<_>>(),
+        }),
+    }
+}
+
+async fn run_chat_turn(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+    mode: ChatMode,
+    messages: &[ChatMessage],
+    output: &mut impl Write,
+) -> Result<ChatTurnResult> {
+    let endpoint = match mode {
+        ChatMode::Chat => "/v1/chat/completions",
+        ChatMode::Responses => "/v1/responses",
+    };
+    let started_at = Instant::now();
+    let response = client
+        .post(format!("{base_url}{endpoint}"))
+        .bearer_auth(api_key)
+        .json(&chat_request_payload(mode, model, messages))
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let text = response.text().await.unwrap_or_default();
+        let message = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("error")
+                    .and_then(|error| error.get("message"))
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned)
+            })
+            .unwrap_or_else(|| {
+                if text.trim().is_empty() {
+                    "request failed".to_owned()
+                } else {
+                    text
+                }
+            });
+        anyhow::bail!(message);
+    }
+
+    write!(output, "assistant> ")?;
+    output.flush()?;
+
+    let mut stream = response.bytes_stream();
+    let mut buffer = String::new();
+    let mut content = String::new();
+    let mut usage = None;
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+        while let Some(boundary) = buffer.find("\n\n") {
+            let raw_event = buffer[..boundary].to_owned();
+            buffer = buffer[(boundary + 2)..].to_owned();
+            let Some((event_name, data)) = parse_sse_event(&raw_event) else {
+                continue;
+            };
+            if data == "[DONE]" {
+                continue;
+            }
+
+            let parsed: Value = serde_json::from_str(&data)?;
+            match mode {
+                ChatMode::Chat => {
+                    if let Some(delta) = parsed
+                        .get("choices")
+                        .and_then(|choices| choices.get(0))
+                        .and_then(|choice| choice.get("delta"))
+                        .and_then(|delta| delta.get("content"))
+                        .and_then(Value::as_str)
+                    {
+                        write!(output, "{delta}")?;
+                        output.flush()?;
+                        content.push_str(delta);
+                    }
+                }
+                ChatMode::Responses => {
+                    if event_name == "response.output_text.delta" {
+                        if let Some(delta) = parsed.get("delta").and_then(Value::as_str) {
+                            write!(output, "{delta}")?;
+                            output.flush()?;
+                            content.push_str(delta);
+                        }
+                    } else if event_name == "response.completed" {
+                        if let Some(text) = parsed
+                            .get("response")
+                            .and_then(|response| response.get("output_text"))
+                            .and_then(Value::as_str)
+                        {
+                            content = text.to_owned();
+                        }
+                        usage = parsed
+                            .get("response")
+                            .and_then(|response| response.get("usage"))
+                            .and_then(token_usage_from_value);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(ChatTurnResult {
+        content,
+        usage,
+        duration_ms: started_at.elapsed().as_millis() as u64,
+    })
+}
+
+fn parse_sse_event(raw_event: &str) -> Option<(String, String)> {
+    let mut event_name = "message".to_owned();
+    let mut data = Vec::new();
+    for line in raw_event.lines() {
+        if let Some(rest) = line.strip_prefix("event:") {
+            event_name = rest.trim().to_owned();
+        } else if let Some(rest) = line.strip_prefix("data:") {
+            data.push(rest.trim_start().to_owned());
+        }
+    }
+
+    (!data.is_empty()).then(|| (event_name, data.join("\n")))
+}
+
+fn token_usage_from_value(value: &Value) -> Option<TokenUsage> {
+    Some(TokenUsage {
+        input_tokens: value
+            .get("input_tokens")
+            .and_then(Value::as_u64)
+            .map(|value| value as u32),
+        output_tokens: value
+            .get("output_tokens")
+            .and_then(Value::as_u64)
+            .map(|value| value as u32),
+        total_tokens: value
+            .get("total_tokens")
+            .and_then(Value::as_u64)
+            .map(|value| value as u32),
+    })
+}
+
+fn write_chat_summary(output: &mut impl Write, result: &ChatTurnResult) -> Result<()> {
+    let usage = result.usage.as_ref().map_or_else(
+        || "tokens logged in request history".to_owned(),
+        |usage| {
+            format!(
+                "tokens in {} · out {} · total {}",
+                usage.input_tokens.unwrap_or_default(),
+                usage.output_tokens.unwrap_or_default(),
+                usage.total_tokens.unwrap_or_default()
+            )
+        },
+    );
+    writeln!(output, "{}", usage)?;
+    writeln!(output, "latency {} ms", result.duration_ms)?;
+    Ok(())
+}
+
 async fn wait_for_provider_auth(
     providers: &ProviderHub,
     profile: &gunmetal_core::ProviderProfile,
@@ -1386,8 +1737,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        AuthCommand, Cli, Command, KeyCommand, LogCommand, ModelCommand, ProfileCommand, SetupArgs,
-        StatusArgs, execute,
+        AuthCommand, ChatArgs, ChatMode, Cli, Command, KeyCommand, LogCommand, ModelCommand,
+        ProfileCommand, SetupArgs, StatusArgs, execute,
     };
 
     #[test]
@@ -1520,6 +1871,37 @@ mod tests {
     }
 
     #[test]
+    fn parses_chat_command() {
+        let cli = Cli::parse_from([
+            "gunmetal",
+            "chat",
+            "--api-key",
+            "gm_test",
+            "--model",
+            "openai/gpt-5.4",
+            "--mode",
+            "responses",
+            "--prompt",
+            "say ok",
+        ]);
+
+        match cli.command.unwrap() {
+            Command::Chat(ChatArgs {
+                api_key,
+                model,
+                mode,
+                prompt,
+            }) => {
+                assert_eq!(api_key.as_deref(), Some("gm_test"));
+                assert_eq!(model.as_deref(), Some("openai/gpt-5.4"));
+                assert_eq!(mode, ChatMode::Responses);
+                assert_eq!(prompt.as_deref(), Some("say ok"));
+            }
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
     fn parses_named_profile_selectors() {
         let cli = Cli::parse_from(["gunmetal", "auth", "status", "father-openai"]);
         match cli.command.unwrap() {
@@ -1536,6 +1918,7 @@ mod tests {
         let help = Cli::command().render_help().to_string();
 
         assert!(help.contains("gunmetal setup"));
+        assert!(help.contains("gunmetal chat"));
         assert!(help.contains("gunmetal web"));
         assert!(help.contains("gunmetal start"));
         assert!(help.contains("gunmetal status"));
