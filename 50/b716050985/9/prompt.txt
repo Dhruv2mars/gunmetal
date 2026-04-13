@@ -1,0 +1,75 @@
+okay, this is the project that i am working on. checkout the whole codebase and repo incl the history to have the complete and full context.
+
+---
+
+ok, so here is the thing. there are these things as you know in the whole project:
+- web landing page, webUI, CLI, TUI, SDK. 
+
+now complete focus right now is to redo the whole frontend from scratch. from first principles thinking. we have to make the best of the best frontend possible ever. it has to be the best UX that the world has ever seen. since you are the best and most capable design engineer in the whole world. its your job to make it happen, the best frontend ever. 
+
+we would first focus precisely on the web landing page (gunmetalapp.vercel.app). we will redo it from scratch completely. 
+
+i am also thinking to use the design.md approach, see this repo: https://github.com/VoltAgent/awesome-design-md
+i have already finalised the design which i like in terms of inspiration, its expo. see this: https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/expo
+you should check that out on this page: https://getdesign.md/expo/design-md 
+to use it, you will have to run the npx command. 
+
+get some context about the whole design md system and how to utilize it. our goal is extremely clear, making the best frontend ui ux ever built!
+
+if you have any questions, doubts, need more context, ask me.
+
+---
+
+1. do both
+2. prepare for me. overall the jist is: "Gunmetal is the middleman inference layer between your apps and AI providers. Turn your AI subscriptions and provider accounts into one local API for inference." none the less, you have the whole project context, you know it better. 
+3. your call 
+
+any more ques?
+
+---
+
+yeah, go ahead and do a full complete turnaround of the landing page. you are the best of the best, most capable and intelligent design engineer ever. its your job to make sure that our landing page is the best in the world. the best frontend ui and ux ever. 
+
+keep the dev server running. 
+
+go ahead! hail minimax!!!
+
+---
+
+firstly, run the dev server, keep it running. then i will test it and see what all things have to do
+
+---
+
+ok, a lot has to be done. its not at all upto the mark. many things have to be revamped and improved. 
+
+- firstly, i dont want light theme. just have one single dark theme. 
+- secondly, are you sure that you have followed the design.md carefully, making sure every little detail, every single part of the whole landing page was built with absolute care and perfection. be it layout, sizing, styles, font, structure, etc. everything!
+- do whatever you want, need and make this even better, a lot more better. make it with care and love, with absolute detail and perfection!
+
+---
+
+go ahead, implement. have utmost care and love towards the design. make it with absolute perfection and focus on little details.
+
+---
+
+few thoughts:
+- i dont like the current navbar. its just not pleasing to me. the only thing i like about it is the github box. thats it. 
+- please remove uneccesary pills. and i dont want that fully operational as well. 
+- the footer also has to be updated. i dont like this one. 
+
+
+you need the following context to move forward better:
+- gunmetal is a platform. the current project, and what this landing page is about, is gunmetal superapp. 
+- basically, there are 2 categories, products and developer. in products section are the stuff consumers and users will use. in dev section will be the stuff developers will use to build on top off. 
+- the current implementation right is is gunmetal. its a superapp. superapp is basically the full app, which has all the stuff and features. this is a part of products, as one of the products. other products will be, standalone tools/products which are part of gunmetal, but can be used individually, if someone wants just those functionality and not the full app. the other products are not yet implemented, but in future they will be. you can have context about the "toll booth" to know more about this. 
+- another one is developer. this will contain the sdk's. currently, it will have extention sdk. it is what powers the multi platform functionality in gunmetal. extention sdk will be made public in future, where the goal is, so that other devs who wants to implement multi provider functionality in their software can do it. 
+
+if you have any questions, doubts, need more context about the project or my vision behind the project or something else. ask me
+
+---
+
+go and do it. i have very high expectations from you. make sure you design the best of the world.
+
+---
+
+are you sure its error free. atleast not do that bro!

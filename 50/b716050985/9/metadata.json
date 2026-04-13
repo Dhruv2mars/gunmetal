@@ -1,0 +1,143 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "50b716050985",
+  "session_id": "ses_2798173e3ffeSGcEdsQihtiW7n",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-13T13:44:33.741144Z",
+  "branch": "main",
+  "checkpoints_count": 10,
+  "files_touched": [
+    "apps/web/DESIGN.md",
+    "apps/web/package.json",
+    "apps/web/postcss.config.mjs",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/page.tsx",
+    "apps/web/src/components/index.ts",
+    "apps/web/src/components/layout/Footer.tsx",
+    "apps/web/src/components/layout/Navbar.tsx",
+    "apps/web/src/components/providers/ThemeProvider.tsx",
+    "apps/web/src/components/sections/CoreValue.tsx",
+    "apps/web/src/components/sections/Features.tsx",
+    "apps/web/src/components/sections/Hero.tsx",
+    "apps/web/src/components/sections/HowItWorks.tsx",
+    "apps/web/src/components/sections/Installation.tsx",
+    "apps/web/src/components/sections/Providers.tsx",
+    "apps/web/src/components/ui/Badge.tsx",
+    "apps/web/src/components/ui/Button.tsx",
+    "apps/web/src/components/ui/Card.tsx",
+    "apps/web/src/components/ui/CodeBlock.tsx",
+    "apps/web/src/components/ui/Dropdown.tsx",
+    "apps/web/src/hooks/use-scroll-reveal.ts",
+    "apps/web/src/lib/design-tokens.ts",
+    "bun.lock"
+  ],
+  "agent": "OpenCode",
+  "model": "MiniMax-M2.7",
+  "turn_id": "d9727cd9d444",
+  "token_usage": {
+    "input_tokens": 76742,
+    "cache_creation_tokens": 926674,
+    "cache_read_tokens": 9531973,
+    "output_tokens": 80756,
+    "api_call_count": 101
+  },
+  "session_metrics": {
+    "turn_count": 10
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-13T13:44:32.963104Z",
+    "agent_lines": 1892,
+    "agent_removed": 83,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 854,
+    "total_committed": 1892,
+    "total_lines_changed": 2829,
+    "agent_percentage": 69.81265464828562,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 292,
+      "user_lines_removed": 854,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/src/app/globals.css": 188,
+        "apps/web/src/app/layout.tsx": 5,
+        "apps/web/src/app/page.tsx": 99
+      },
+      "user_removed_per_file": {
+        "apps/web/src/app/globals.css": 681,
+        "apps/web/src/app/layout.tsx": 13,
+        "apps/web/src/app/page.tsx": 160
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 292,
+      "agent_lines_removed": 854
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 292,
+      "agent_lines_removed": 854
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 292,
+      "agent_lines_removed": 854
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2656,
+      "agent_lines_removed": 942
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2656,
+      "agent_lines_removed": 942
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2656,
+      "agent_lines_removed": 942
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2775,
+      "agent_lines_removed": 933
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2775,
+      "agent_lines_removed": 933
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2894,
+      "agent_lines_removed": 933
+    }
+  ]
+}

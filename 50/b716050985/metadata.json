@@ -3,20 +3,32 @@
   "checkpoint_id": "50b716050985",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 16,
+  "checkpoints_count": 26,
   "files_touched": [
     "apps/web/DESIGN.md",
     "apps/web/package.json",
+    "apps/web/postcss.config.mjs",
     "apps/web/src/app/globals.css",
     "apps/web/src/app/layout.tsx",
     "apps/web/src/app/page.test.tsx",
     "apps/web/src/app/page.tsx",
+    "apps/web/src/components/index.ts",
     "apps/web/src/components/layout/Footer.tsx",
     "apps/web/src/components/layout/Navbar.tsx",
+    "apps/web/src/components/providers/ThemeProvider.tsx",
+    "apps/web/src/components/sections/CoreValue.tsx",
+    "apps/web/src/components/sections/Features.tsx",
     "apps/web/src/components/sections/Hero.tsx",
     "apps/web/src/components/sections/HowItWorks.tsx",
+    "apps/web/src/components/sections/Installation.tsx",
     "apps/web/src/components/sections/Providers.tsx",
+    "apps/web/src/components/ui/Badge.tsx",
     "apps/web/src/components/ui/Button.tsx",
+    "apps/web/src/components/ui/Card.tsx",
+    "apps/web/src/components/ui/CodeBlock.tsx",
+    "apps/web/src/components/ui/Dropdown.tsx",
+    "apps/web/src/hooks/use-scroll-reveal.ts",
+    "apps/web/src/lib/design-tokens.ts",
     "bun.lock"
   ],
   "sessions": [
@@ -73,13 +85,19 @@
       "transcript": "/50/b716050985/8/full.jsonl",
       "content_hash": "/50/b716050985/8/content_hash.txt",
       "prompt": "/50/b716050985/8/prompt.txt"
+    },
+    {
+      "metadata": "/50/b716050985/9/metadata.json",
+      "transcript": "/50/b716050985/9/full.jsonl",
+      "content_hash": "/50/b716050985/9/content_hash.txt",
+      "prompt": "/50/b716050985/9/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 126115278,
-    "cache_creation_tokens": 256152,
-    "cache_read_tokens": 130295096,
-    "output_tokens": 531346,
-    "api_call_count": 1014
+    "input_tokens": 126192020,
+    "cache_creation_tokens": 1182826,
+    "cache_read_tokens": 139827069,
+    "output_tokens": 612102,
+    "api_call_count": 1115
   }
 }
