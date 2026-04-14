@@ -1,0 +1,87 @@
+checkout the design decisions and frontend thoughtprocess behind implementing the navbar and footer. what all things you get from that vision.
+
+---
+
+do not take into account anything else other than the navbar and footer. based on that tell me
+
+---
+
+great. now, here is the thing. i designed the navbar and footer before. and now based on the same design principles, and brand identity, i want to redesign the remaining landing page. what are your thoughts on that
+
+---
+
+ok here is the thing, i have full trust in you that you will do a absolutely crazy job with the redesign. but only one thing, you do not need to utilize anything that was previously made, like the components, other than the stuff which are related to the navbar or footer.
+
+---
+
+change the typo:
+title: change it to what was previously there. the middleman layer one.
+subheading: use ai subscriptions as upstream providers for inference
+
+---
+
+1. Headline line 1: "The middleman layer"
+   2. Headline line 2: "for AI inference."
+   3. Body: "Use AI subscriptions as upstream providers for inference."
+   4. Action: "npm i -g @dhruv2mars/gunmetal"
+
+this is the correct one. there should be no pills or buttons. or terminal. just this box with cmd, which copies on click
+
+---
+
+now adjust the hero section according to this. the spacing and layout has shifted a bit
+
+---
+
+checkout offdex project that i have made. see there, i implemented a scroll animation for command box where bun, pnpm, npm scroll animtate. check that out, and implement the same here as well
+
+---
+
+few changes in the command box. 
+
+- the font, style of the text inside does not match. make it consistent. 
+- what shit happens when i hover over the box. that shouldnt happen. make it simpler, and minimal
+
+---
+
+there is no consistent spacing between the text as well in the box, fix that as well
+
+---
+
+why does + icon appear on hover. why you are doing so much during hover. redo it, like simple normal hover
+
+---
+
+great. no just increase the spacing in between the word in the box. this does look right
+
+---
+
+no, not that spacing. that was right. i want the spacing to be even across al words. it should be exactly like this:
+
+npm i -g @dhruv2mars/gunmetal 
+
+single space only where i have put it
+
+---
+
+but now the whole thing does scroll animation. fix this
+
+---
+
+add extra space between i , -g and @
+
+---
+
+great. now just make sure that when i click, it copies the command.
+
+---
+
+continue
+
+---
+
+there should be an indication that the cmd has been copied. something like a updated copy icon
+
+---
+
+continue
