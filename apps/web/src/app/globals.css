@@ -2,72 +2,84 @@
 
 /* ============================================
    GUNMETAL DESIGN SYSTEM
-   Inspired by SpaceX, x.ai, and the Gunmetal Brand
-   "Something that came out of a gun"
+   Inspired by Warp — warm dark, editorial, minimal
    ============================================ */
 
 @layer theme {
   :root {
     /* ----------------------------------------
-       COLOR PALETTE — Gunmetal Dark
-       Pure black canvas with white hierarchy
+       COLOR PALETTE — Warp Warm Dark
+       Warm near-black canvas, cream parchment text
+       Almost monochromatic warm grays
        ---------------------------------------- */
-    
-    /* Background — pure void */
-    --bg: #000000;
-    
-    /* Surface — gunmetal dark */
-    --surface: #0a0a0a;
-    --surface-elevated: #141414;
-    
-    /* Text hierarchy */
-    --text: #ffffff;
-    --text-secondary: #60646c;
-    --text-tertiary: #3d3d3d;
-    
-    /* Borders — barely visible */
-    --border: #1a1a1a;
-    --border-hover: #2a2a2a;
-    
-    /* Accent — functional blue */
-    --accent: #0d74ce;
-    --accent-muted: #0a5fa8;
-    --accent-glow: rgba(13, 116, 206, 0.15);
-    
-    /* CTA — "Spark" effect */
-    --cta-bg: #1a1a1a;
-    --cta-text: #ffffff;
-    --cta-border: #2a2a2a;
-    --cta-glow: rgba(255, 255, 255, 0.06);
-    --cta-hover-bg: #222222;
-    
-    /* Blueprint grid */
-    --grid-color: rgba(255, 255, 255, 0.015);
+
+    /* Background — warm near-black, not cold */
+    --bg: #0e0e0d;
+
+    /* Surface — warm dark */
+    --surface: #181816;
+    --surface-elevated: #222220;
+
+    /* Text hierarchy — warm, not pure white */
+    --text: #faf9f6;
+    --text-secondary: #afaeac;
+    --text-muted: #868584;
+    --text-faint: #666469;
+
+    /* Borders — semi-transparent warm */
+    --border: rgba(226, 226, 226, 0.18);
+    --border-strong: rgba(226, 226, 226, 0.35);
+
+    /* Buttons — earthy dark, muted text */
+    --btn-bg: #353534;
+    --btn-text: #afaeac;
+    --btn-border: rgba(255, 255, 255, 0.08);
+    --btn-hover-bg: #404040;
+    --btn-hover-text: #faf9f6;
+
+    /* CTAs — restrained, no bright accents */
+    --cta-bg: #faf9f6;
+    --cta-text: #0e0e0d;
+    --cta-hover-bg: #e8e7e4;
+
+    /* Surface overlays */
+    --frosted: rgba(255, 255, 255, 0.04);
+    --veil: rgba(255, 255, 255, 0.06);
+
+    /* Grid — barely visible warm lines */
+    --grid-color: rgba(255, 255, 255, 0.02);
     --grid-size: 64px;
-    
-    /* Font families */
-    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    /* Font families — Matter-inspired DM Sans + Inter supplement */
+    --font-matter: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-    
-    /* Border radius */
-    --radius-sm: 4px;
-    --radius-button: 6px;
-    --radius-card: 8px;
-    --radius-pill: 9999px;
-    
-    /* Spacing */
+
+    /* Border radius — Warp scale */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 14px;
+    --radius-2xl: 40px;
+    --radius-pill: 50px;
+
+    /* Spacing — 8px base, editorial-grade */
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
     --space-4: 16px;
+    --space-5: 20px;
     --space-6: 24px;
     --space-8: 32px;
+    --space-10: 40px;
     --space-12: 48px;
     --space-16: 64px;
+    --space-20: 80px;
     --space-24: 96px;
     --space-32: 128px;
-    
-    /* Animation */
+
+    /* Animation — sharp, no bounce */
     --duration-fast: 150ms;
     --duration-normal: 400ms;
     --duration-slow: 700ms;
@@ -96,47 +108,49 @@
   }
 
   body {
-    font-family: var(--font-sans);
-    font-size: 16px;
-    line-height: 1.5;
+    font-family: var(--font-matter);
+    font-size: 18px;
+    line-height: 1.4;
+    font-weight: 400;
     background-color: var(--bg);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
+    letter-spacing: -0.01em;
   }
 
-  /* Selection */
+  /* Selection — warm parchment */
   ::selection {
-    background-color: var(--accent);
-    color: #ffffff;
+    background-color: rgba(250, 249, 246, 0.15);
+    color: var(--text);
   }
 
-  /* Focus ring */
+  /* Focus — subtle, warm */
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 1px solid var(--border-strong);
     outline-offset: 2px;
   }
 
-  /* Scrollbar — minimal dark */
+  /* Scrollbar — minimal warm dark */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--bg);
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 3px;
+    background: var(--border-strong);
+    border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-tertiary);
+    background: rgba(226, 226, 226, 0.5);
   }
 
-  /* Links */
+  /* Links — muted, underline on hover */
   a {
     color: inherit;
     text-decoration: none;
@@ -146,6 +160,15 @@
   img {
     max-width: 100%;
     height: auto;
+    display: block;
+  }
+
+  /* Headings — matter weight */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-matter);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
 }
 
@@ -154,84 +177,114 @@
    ============================================ */
 
 @layer utilities {
-  /* Display — Hero headlines: clamp(3rem, 10vw, 5rem), weight 800, -0.04em tracking */
-  .text-display {
-    font-size: clamp(3rem, 10vw, 5rem);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.04em;
+  /* Display Hero — 80px Matter, max compression */
+  .text-hero {
+    font-family: var(--font-matter);
+    font-size: clamp(3.5rem, 10vw, 6rem);
+    font-weight: 400;
+    line-height: 1.00;
+    letter-spacing: -0.03em;
   }
 
-  /* Section — clamp(1.75rem, 4vw, 2.5rem), weight 600, -0.02em tracking */
+  /* Section heading — 56px Matter */
   .text-section {
-    font-size: clamp(1.75rem, 4vw, 2.5rem);
-    font-weight: 600;
+    font-family: var(--font-matter);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 400;
     line-height: 1.10;
     letter-spacing: -0.02em;
   }
 
-  /* Subheading — 1.25rem, weight 500, -0.01em tracking */
-  .text-subheading {
-    font-size: 1.25rem;
+  /* Feature heading — 40px Matter */
+  .text-feature {
+    font-family: var(--font-matter);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.10;
+    letter-spacing: -0.015em;
+  }
+
+  /* Card title — 22px Matter Medium */
+  .text-card {
+    font-family: var(--font-matter);
+    font-size: 1.375rem;
     font-weight: 500;
-    line-height: 1.25;
+    line-height: 1.14;
+    letter-spacing: 0;
+  }
+
+  /* Body large — 20px Matter */
+  .text-body-lg {
+    font-family: var(--font-matter);
+    font-size: 1.25rem;
+    font-weight: 400;
+    line-height: 1.40;
     letter-spacing: -0.01em;
   }
 
-  /* Body — 1rem, weight 400, 1.40 line-height */
+  /* Body — 18px Matter */
   .text-body {
-    font-size: 1rem;
-    font-weight: 400;
-    line-height: 1.40;
-  }
-
-  /* Body Large — 1.125rem, weight 400 */
-  .text-body-lg {
+    font-family: var(--font-matter);
     font-size: 1.125rem;
     font-weight: 400;
-    line-height: 1.40;
+    line-height: 1.50;
+    letter-spacing: -0.01em;
   }
 
-  /* Caption — 0.875rem, weight 400 */
+  /* UI / Nav — 16px Matter */
+  .text-ui {
+    font-family: var(--font-matter);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.20;
+    letter-spacing: 0;
+  }
+
+  /* Caption — 14px */
   .text-caption {
+    font-family: var(--font-matter);
     font-size: 0.875rem;
     font-weight: 400;
     line-height: 1.40;
+    letter-spacing: 0;
   }
 
-  /* Label — 0.75rem, weight 500, uppercase, 0.08em tracking */
+  /* Uppercase label — editorial signal */
   .text-label {
+    font-family: var(--font-matter);
     font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1.00;
-    letter-spacing: 0.08em;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: 2.4px;
     text-transform: uppercase;
   }
 
-  /* Code — JetBrains Mono, 0.875rem */
+  /* Step number — Warp editorial style */
+  .text-step {
+    font-family: var(--font-matter);
+    font-size: clamp(3rem, 6vw, 4rem);
+    font-weight: 400;
+    line-height: 1.00;
+    letter-spacing: -0.02em;
+    color: var(--text-faint);
+  }
+
+  /* Code — JetBrains Mono */
   .text-code {
     font-family: var(--font-mono);
     font-size: 0.875rem;
     font-weight: 400;
-    line-height: 1.40;
+    line-height: 1.60;
+    letter-spacing: -0.01em;
   }
 
-  /* Code small — 0.75rem */
-  .text-code-small {
+  /* Code large — terminal display */
+  .text-code-lg {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1.00;
-    letter-spacing: 0.02em;
-  }
-
-  /* Step number — 3rem, weight 700, monospace */
-  .text-step {
-    font-family: var(--font-mono);
-    font-size: 3rem;
-    font-weight: 700;
-    line-height: 1.00;
-    letter-spacing: 0.02em;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.50;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -240,48 +293,33 @@
    ============================================ */
 
 @layer utilities {
-  /* Fade in */
-  .animate-fade-in {
-    animation: fadeIn var(--duration-normal) var(--ease-out) forwards;
+  /* Fade in — opacity only */
+  .animate-in {
+    animation: fadeIn var(--duration-normal) var(--ease-out) both;
   }
 
-  /* Fade in up — for labels and subtle reveals */
-  .animate-fade-in-up {
-    animation: fadeInUp var(--duration-normal) var(--ease-out) forwards;
+  /* Fade in up — subtle Y shift */
+  .animate-up {
+    animation: fadeUp var(--duration-normal) var(--ease-out) both;
   }
 
-  /* Fade in scale — for CTAs */
-  .animate-fade-in-scale {
-    animation: fadeInScale var(--duration-normal) var(--ease-out) forwards;
-  }
-
-  /* Word reveal — for headline */
-  .animate-word-reveal {
-    animation: wordReveal var(--duration-normal) var(--ease-out) forwards;
-  }
-
-  /* Typewriter — for terminal */
-  .animate-typewriter {
-    animation: typewriter 800ms steps(45) forwards;
-  }
-
-  /* Bounce — for scroll indicator */
-  .animate-bounce-subtle {
-    animation: bounce 2s ease-in-out infinite;
+  /* Scale in — CTAs, cards */
+  .animate-scale {
+    animation: scaleIn var(--duration-normal) var(--ease-out) both;
   }
 
   /* Reveal on scroll */
   .reveal {
     opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity var(--duration-slow) var(--ease-out),
-      transform var(--duration-slow) var(--ease-out);
+    transform: translateY(20px);
   }
 
   .reveal.is-visible {
     opacity: 1;
     transform: translateY(0);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
   }
 
   /* Stagger delays */
@@ -293,12 +331,11 @@
   .delay-600 { animation-delay: 600ms; }
   .delay-800 { animation-delay: 800ms; }
   .delay-1000 { animation-delay: 1000ms; }
-  .delay-1200 { animation-delay: 1200ms; }
-  .delay-1600 { animation-delay: 1600ms; }
-  .delay-2000 { animation-delay: 2000ms; }
+  .delay-1400 { animation-delay: 1400ms; }
+  .delay-1800 { animation-delay: 1800ms; }
 
-  /* Initially hidden for animation */
-  .animate-ready {
+  /* Initially hidden */
+  .is-ready {
     opacity: 0;
   }
 }
@@ -312,73 +349,217 @@
   to { opacity: 1; }
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.95); }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes wordReveal {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes typewriter {
-  from { clip-path: inset(0 100% 0 0); }
-  to { clip-path: inset(0 0 0 0); }
+  from { width: 0; }
+  to { width: 100%; }
 }
 
-@keyframes bounce {
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(8px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pkg-scroll {
+  0%, 30% { transform: translateY(0); }
+  33.33%, 63.33% { transform: translateY(-1.4em); }
+  66.66%, 96.66% { transform: translateY(-2.8em); }
+  100% { transform: translateY(-4.2em); }
+}
+
+@keyframes pkg-width {
+  0%, 30% { width: 3ch; }
+  33.33%, 63.33% { width: 3ch; }
+  66.66%, 96.66% { width: 4ch; }
+  100% { width: 3ch; }
+}
+
+@layer utilities {
+  .animate-pkg-scroll {
+    animation: pkg-scroll 7.5s cubic-bezier(0.87, 0, 0.13, 1) infinite;
+  }
+  .animate-pkg-width {
+    animation: pkg-width 7.5s cubic-bezier(0.87, 0, 0.13, 1) infinite;
+  }
 }
 
 /* ============================================
    COMPONENT UTILITIES
    ============================================ */
 
-/* Glass effect — navbar backdrop on scroll */
-.glass {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* Blueprint grid pattern */
-.grid-pattern {
+/* Blueprint grid — barely visible warm lines */
+.grid-bg {
   background-image:
     linear-gradient(var(--grid-color) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
 }
 
-/* Radial glow — accent glow at bottom */
-.radial-glow {
+/* Radial glow — warm, very subtle */
+.glow-warm {
   background: radial-gradient(
-    ellipse at center bottom,
-    rgba(13, 116, 206, 0.08) 0%,
+    ellipse 80% 50% at 50% 120%,
+    rgba(250, 249, 246, 0.04) 0%,
     transparent 70%
   );
 }
 
-/* Spark effect — CTA inner glow on hover */
-.spark-hover {
-  transition: all 200ms var(--ease-out);
+/* Glass navbar on scroll */
+.glass {
+  background: rgba(14, 14, 13, 0.80);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
-.spark-hover:hover {
-  box-shadow: inset 0 0 20px var(--cta-glow);
-  transform: scale(1.02);
+/* Card — semi-transparent border containment */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Terminal window */
+.terminal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-body {
+  padding: 20px 24px;
+}
+
+/* Pill button */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-matter);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn-pill:hover {
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
+}
+
+/* CTA pill — light, on dark */
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-matter);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn-cta:hover {
   background: var(--cta-hover-bg);
 }
 
-/* Status dot pulse */
+/* Ghost pill — border only */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-matter);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: rgba(226, 226, 226, 0.55);
+}
+
+/* Cursor blink */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--text-secondary);
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+}
+
+/* Status dot */
 .status-dot {
   position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
 }
 
 .status-dot::before {
@@ -386,11 +567,6 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--accent);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.1); }
+  background: var(--text-secondary);
+  animation: pulse-ring 2s ease-out infinite;
 }

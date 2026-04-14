@@ -11,5 +11,4 @@ export { Footer } from "./layout/Footer";
 
 // Sections
 export { Hero } from "./sections/Hero";
-export { CoreValue } from "./sections/CoreValue";
-export { Installation } from "./sections/Installation";
+export { Bento } from "./sections/Bento";

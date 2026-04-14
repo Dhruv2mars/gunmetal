@@ -9,21 +9,19 @@ describe("marketing routes", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
     expect(html).toContain("Gunmetal");
-    expect(html).toContain("Local AI Inference Gateway");
-    expect(html).toContain("middleman");
-    expect(html).toContain("AI inference");
-    expect(html).toContain("Turn your AI subscriptions");
-    expect(html).toContain("Install Gunmetal");
-    expect(html).toContain("Documentation");
-    expect(html).toContain("How It Works");
-    expect(html).toContain("Three steps to full control");
-    expect(html).toContain("Mount Providers");
-    expect(html).toContain("Mint Access");
-    expect(html).toContain("Direct Apps");
-    expect(html).toContain("Connect everything");
-    expect(html).toContain("Docs");
-    expect(html).toContain("Install");
-    expect(html).toContain("Start Here");
+    expect(html).toContain("The middleman layer");
+    expect(html).toContain("for AI inference.");
+    expect(html).toContain("upstream providers");
+    expect(html).toContain("i  -g  @dhruv2mars/gunmetal");
+    expect(html).toContain("npm");
+    expect(html).toContain("bun");
+    expect(html).toContain("pnpm");
+    expect(html).toContain("Core Philosophy");
+    expect(html).toContain("Everything runs through a single, secure tunnel");
+    expect(html).toContain("Local Keys Only");
+    expect(html).toContain("Universal Protocol");
+    expect(html).toContain("Native Performance");
+    expect(html).toContain("Ready to build?");
     expect(html).toContain("GitHub");
   });
 
