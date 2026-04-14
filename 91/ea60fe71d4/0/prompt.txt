@@ -1,0 +1,46 @@
+currently, i have put in the svg as the logo of gunmetal in the navbar. but the implementation is very bad. the color is right, but it should be without background. also, i see a small dot/artifact in the svg which is on bottom right that i dont want. so to remove that, you might have to crop in from bottom and right about 5%. none the less,  i want the bg to be removed. 
+
+make this happen.
+
+---
+
+i have made another, new svg. we should use that. you can find the gml.svg on my system. 
+
+here is what we wanna do:
+- the foreground (logo fill) should be white. 
+- the background should be transparent. 
+- make sure the thickness of the ring is consistent at every section. 
+- open the updated svg in browser so that i can see it.
+
+---
+
+nope, the ring should not close. it should be cut around the bullet, like how it was in original.
+
+---
+
+the ring break is nice. but the cut should be 90 deg with respect to the image. u understadn what i mean.
+
+---
+
+great work. now just check and confirm if the logo is symmetrical vertically. if the bullet is symmetrical
+
+---
+
+yeah fix that. and make sure that the bullet is symmetrical with respect to the ring, meaning the spacing and placement is perfect
+
+---
+
+you didnt have to change the design of the bullet. u just need to make sure that it was vertically symmetrical. thats it. and fix that. no redesgin of bullet
+
+---
+
+its perfect now, just that i can see a vertical line btween the bullet. fix that. other than that, everything is fine
+
+---
+
+great. now it looks perfect. 
+
+so our svg is made. now comes the implementation part.
+- remove any previous artifacts or svg that were there. this is our final one in the repo
+- add a png version of this into the folder as well. 
+- apply this logo to our navbar. your call on which file to use (svg, png) for this, youre the design engineer.

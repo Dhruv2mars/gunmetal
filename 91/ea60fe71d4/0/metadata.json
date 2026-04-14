@@ -1,0 +1,121 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "91ea60fe71d4",
+  "session_id": "019d89f5-e001-74e3-beec-13abad2ceb60",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-14T10:06:30.974576Z",
+  "branch": "feat/landing-page-warp-redesign",
+  "checkpoints_count": 7,
+  "files_touched": [
+    "apps/web/public/logo.png",
+    "apps/web/public/logo.svg",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/page.tsx",
+    "apps/web/src/components/layout/Footer.tsx",
+    "apps/web/src/components/layout/Navbar.tsx",
+    "apps/web/src/components/sections/Hero.tsx",
+    "apps/web/src/components/sections/HowItWorks.tsx",
+    "apps/web/src/components/sections/Providers.tsx"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "dec7e5a9ac96",
+  "token_usage": {
+    "input_tokens": 8291330,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 7354240,
+    "output_tokens": 72621,
+    "api_call_count": 87
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-14T10:06:27.62368Z",
+    "agent_lines": 0,
+    "agent_removed": 169,
+    "human_added": 0,
+    "human_modified": 377,
+    "human_removed": 324,
+    "total_committed": 237,
+    "total_lines_changed": 1293,
+    "agent_percentage": 13.070378963650425,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 750,
+      "user_lines_removed": 701,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/public/logo.svg": 10,
+        "apps/web/src/app/globals.css": 328,
+        "apps/web/src/app/layout.tsx": 9,
+        "apps/web/src/app/page.test.tsx": 9,
+        "apps/web/src/app/page.tsx": 1,
+        "apps/web/src/components/layout/Footer.tsx": 23,
+        "apps/web/src/components/layout/Navbar.tsx": 92,
+        "apps/web/src/components/sections/Hero.tsx": 148,
+        "apps/web/src/components/sections/HowItWorks.tsx": 62,
+        "apps/web/src/components/sections/Providers.tsx": 68
+      },
+      "user_removed_per_file": {
+        "apps/web/src/app/globals.css": 175,
+        "apps/web/src/app/layout.tsx": 2,
+        "apps/web/src/app/page.test.tsx": 11,
+        "apps/web/src/app/page.tsx": 1,
+        "apps/web/src/components/layout/Footer.tsx": 47,
+        "apps/web/src/components/layout/Navbar.tsx": 130,
+        "apps/web/src/components/sections/Hero.tsx": 193,
+        "apps/web/src/components/sections/HowItWorks.tsx": 96,
+        "apps/web/src/components/sections/Providers.tsx": 46
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 745,
+      "agent_lines_removed": 701
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 745,
+      "agent_lines_removed": 701
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 751,
+      "agent_lines_removed": 701
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 751,
+      "agent_lines_removed": 701
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 757,
+      "agent_lines_removed": 701
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 757,
+      "agent_lines_removed": 701
+    }
+  ]
+}
