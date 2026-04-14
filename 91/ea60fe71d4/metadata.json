@@ -3,7 +3,7 @@
   "checkpoint_id": "91ea60fe71d4",
   "strategy": "manual-commit",
   "branch": "feat/landing-page-warp-redesign",
-  "checkpoints_count": 20,
+  "checkpoints_count": 24,
   "files_touched": [
     "apps/web/package.json",
     "apps/web/public/logo.png",
@@ -43,13 +43,19 @@
       "transcript": "/91/ea60fe71d4/1/full.jsonl",
       "content_hash": "/91/ea60fe71d4/1/content_hash.txt",
       "prompt": "/91/ea60fe71d4/1/prompt.txt"
+    },
+    {
+      "metadata": "/91/ea60fe71d4/2/metadata.json",
+      "transcript": "/91/ea60fe71d4/2/full.jsonl",
+      "content_hash": "/91/ea60fe71d4/2/content_hash.txt",
+      "prompt": "/91/ea60fe71d4/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 11367344,
+    "input_tokens": 11511038,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 9599850,
-    "output_tokens": 108090,
-    "api_call_count": 139
+    "cache_read_tokens": 9679952,
+    "output_tokens": 110524,
+    "api_call_count": 146
   }
 }
