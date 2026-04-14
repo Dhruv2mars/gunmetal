@@ -1,0 +1,90 @@
+this is gunmetal. checkout the entire project, codebase, git repo, git history to have the full and complete context. make sure you do this extensively, and in extreme detail. 
+
+if you have any ques, doubts, need more context, ask me!
+
+---
+
+no, our current focus and short term goal is to make the landing page better, a lot better. 
+
+i have worked on and made the navbar and footer perfect, but the remaining stuff still needs a redesign from first principles. lets do this. 
+
+here are my few thoughts:
+- the landing page has to be minimal. no jargon, clutter, excessive info. no need for that, since this is a landing page for gunmetal, if anyone wants to know more about its products, then he will move onto that specific page.
+- the navbar and footer are finalised already. i have worked on that. 
+- the most important, most critical, the best looking part of the whole landing page should be the hero section. you have to completely redesign that from scratch as well. hero section is the first impression, it has to be the best looking and feeling. the WOW! factor should be there in it. 
+
+few pointers:
+- you should use react-bits. 
+- dark theme only
+- micro interactions
+- tasteful animations
+- the focus should be to craft the best looking frontend. the best designed UI and UX ever. 
+- complete redesign from scratch other than footer and navbar. 
+
+any questions? ask me..
+
+---
+
+few notes:
+- the line should be something like, middleman layer for ai inference. 
+- you could utilize some form of bento grid to add content clutterfree.
+
+---
+
+continue
+
+---
+
+first. lets just focus on the hero section. its currently not at all upto the mark that i want. its too simple. a lot has to be done. just make the hero section way too much better. it has to be improved a lot. you are the best and most amazing designer, you should be able to do it with utmost perfection. make it with love and care. extreme details.
+
+---
+
+even more better hero section. go full nuts! 
+
+it can be improved a lot more!
+
+---
+
+lets tackle what we need to remove:
+- terminal element. i dont want that at all in hero. remove that
+- the gunmtal superapp pill. remove that
+- the grid behind in the hero section. 
+
+changes:
+- change the sub heading line to: use ai subscriptions as upstream providers for inference 
+- instead of 2 buttons in middle. just have a box like thing with the command inside it, which the user can copy on-click. 
+
+first do these changes, then we can talk and discuss more improvements.
+
+---
+
+ok, now lets just focus on how we can make our hero section the most impressive and best looking design ever. think very hard on this.
+
+---
+
+okay, few additions which can make your job easier:
+- i want whatever we do to imrove the hero section, it has to be very subtle and minimal. more like a elegant and tasteful improvement. note that its not that we dont wanna redesgin the hero, we want to do that. but the background should be elegant, tasteful asthetics. 
+
+your thoughts
+
+---
+
+no, the vibe should not be fashion show or portfolio. the vibe should be `gunmetal`.
+
+---
+
+i think you should go ahead with the eclipse vibe that you mentioned earlier. your thoughts. think harder
+
+---
+
+go ahead. but do it with extreme precision. implement it with love and care. craft everything in detail with absolute perfection. use agent browser skill to see and check yourself what you have made. until you are 100% satisfied that you have done your best, and no more improvements can be made, DO NOT STOP! go ahead! hail google! hail gemini!!!
+
+---
+
+love the concept. but the execution is not upto the mark. there has to be perfection and utmost thought to the details. 
+
+as said, the background of hero should be very subtle. change that.
+
+---
+
+/new
