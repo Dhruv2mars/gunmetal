@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Documentation",
-  description: "Guides and API references for Gunmetal.",
+  title: "Changelogs",
+  description: "Latest updates and improvements to Gunmetal.",
 };
 
-export default function DocsPage() {
+export default function ChangelogsPage() {
   return (
     <section className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl mx-auto px-6 lg:px-8 text-center">
       <p
@@ -18,7 +18,7 @@ export default function DocsPage() {
         className="text-[clamp(2rem,5vw,4rem)] leading-[1.05] tracking-[-0.03em] text-[var(--text)] mb-4"
         style={{ fontFamily: "var(--font-matter)", fontWeight: 400 }}
       >
-        Documentation
+        Changelogs
       </h1>
       <p
         className="text-[18px] text-[var(--text-muted)] max-w-lg"
