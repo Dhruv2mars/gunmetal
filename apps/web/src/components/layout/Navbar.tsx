@@ -8,7 +8,7 @@ const navItems = [
     label: "Products",
     items: [
       {
-        label: "Gunmetal SuperApp",
+        label: "Gunmetal Suite",
         desc: "The all-in-one platform for your needs.",
         href: "/products/superapp",
         icon: (
@@ -99,7 +99,7 @@ export function Navbar() {
             <img
               src="/logo.svg"
               alt="Gunmetal"
-              className="h-[22px] w-auto flex-shrink-0 relative z-10 bg-transparent brightness-110 contrast-125"
+              className="h-[22px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-200"
               style={{ display: "block" }}
             />
             {/* Mask Container */}
@@ -109,7 +109,7 @@ export function Navbar() {
               }`}
             >
               <span
-                className={`block text-[20px] leading-none tracking-tight text-[var(--text)] whitespace-nowrap transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] relative -top-[0.5px] ${
+                className={`block text-[20px] leading-none tracking-tight text-[var(--text-muted)] group-hover:text-[var(--text)] whitespace-nowrap transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] relative -top-[0.5px] ${
                   isScrolled ? "-translate-x-full" : "translate-x-0"
                 }`}
                 style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
@@ -120,12 +120,12 @@ export function Navbar() {
           </Link>
 
           {/* Nav links + GitHub — right side, tight grouping */}
-          <div className="hidden lg:flex items-center gap-6 h-full">
+          <div className="hidden lg:flex items-center gap-2 h-full">
             {navItems.map((item) => (
-              <div key={item.label} className="relative group h-full flex items-center">
+              <div key={item.label} className="relative group h-full flex items-center justify-center min-w-[110px]">
                 {item.items ? (
                   <button
-                    className="flex items-center gap-1.5 text-[14px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 h-full"
+                    className="flex items-center gap-1.5 text-[14px] text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors duration-200 h-full"
                     style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
                   >
                     {item.label}
@@ -134,7 +134,7 @@ export function Navbar() {
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
-                      strokeWidth={2}
+                      strokeWidth={3}
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
@@ -142,7 +142,7 @@ export function Navbar() {
                 ) : (
                   <Link
                     href={item.href!}
-                    className="flex items-center text-[14px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 h-full"
+                    className="flex items-center text-[14px] text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors duration-200 h-full"
                     style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
                   >
                     {item.label}
@@ -151,9 +151,9 @@ export function Navbar() {
 
                 {/* Dropdown Menu */}
                 {item.items && (
-                  <div className="absolute top-[calc(100%-0.25rem)] left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+                  <div className="absolute top-[calc(100%-0.15rem)] left-1/2 -translate-x-1/2 pt-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 ease-out transform translate-y-2 group-hover:translate-y-0 z-50">
                     <div
-                      className="rounded-xl p-1.5 min-w-[260px] grid gap-1"
+                      className="rounded-lg p-1.5 w-max min-w-[220px] grid gap-1.5"
                       style={{
                         background: "rgba(14, 14, 13, 0.85)",
                         backdropFilter: "blur(24px) saturate(200%)",
@@ -164,19 +164,19 @@ export function Navbar() {
                         <Link
                           key={subItem.href}
                           href={subItem.href}
-                          className="group/item flex items-start gap-3 p-2.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] rounded-lg transition-all duration-200"
+                          className="group/item flex items-center gap-3 p-2.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] rounded-lg transition-all duration-200"
                         >
-                          <div className="shrink-0 text-[var(--text-muted)] group-hover/item:text-[var(--text)] transition-colors duration-200 mt-0.5">
+                          <div className="shrink-0 text-[var(--text-muted)] group-hover/item:text-[var(--text)] transition-colors duration-200">
                             {subItem.icon}
                           </div>
                           <div className="flex flex-col gap-0.5">
                             <span
-                              className="text-[14px] font-medium leading-none text-[var(--text)] transition-colors duration-200"
+                              className="text-[14px] font-medium leading-none text-[var(--text-muted)] group-hover/item:text-[var(--text)] transition-colors duration-200"
                               style={{ fontFamily: "var(--font-matter)" }}
                             >
                               {subItem.label}
                             </span>
-                            <span className="text-[13px] leading-snug text-[var(--text-muted)] opacity-80">
+                            <span className="text-[13px] leading-snug text-[var(--text-muted)]">
                               {subItem.desc}
                             </span>
                           </div>
@@ -193,7 +193,7 @@ export function Navbar() {
               href="https://github.com/Dhruv2mars/gunmetal"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] transition-colors duration-200 flex-shrink-0 ml-2"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 flex-shrink-0"
               aria-label="GitHub"
             >
               <svg className="w-[20px] h-[20px]" fill="currentColor" viewBox="0 0 24 24">
@@ -226,7 +226,7 @@ export function Navbar() {
             
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] transition-colors duration-200"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200"
               aria-label="Menu"
               aria-expanded={mobileOpen}
             >
@@ -245,12 +245,12 @@ export function Navbar() {
 
         {/* Mobile menu */}
         <div
-          className={`lg:hidden grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            mobileOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+            mobileOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="overflow-hidden min-h-0">
-            <div className="px-2 py-4 flex flex-col gap-1 border-t border-[rgba(226,226,226,0.06)]">
+          <div className="bg-[rgba(14,14,13,0.98)] backdrop-blur-3xl shadow-xl">
+            <div className="px-4 py-6 flex flex-col gap-1 border-t border-[rgba(226,226,226,0.08)] min-h-screen">
             {navItems.map((item) => (
               <div key={item.label} className="flex flex-col">
                 {item.items ? (
@@ -268,7 +268,7 @@ export function Navbar() {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth={2}
+                        strokeWidth={3}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
@@ -276,11 +276,11 @@ export function Navbar() {
                     
                     {/* Mobile Accordion Content */}
                     <div
-                      className={`grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                        openAccordion === item.label ? "grid-rows-[1fr] opacity-100 mt-1 mb-2" : "grid-rows-[0fr] opacity-0 mt-0 mb-0"
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        openAccordion === item.label ? "max-h-[400px] opacity-100 mt-1 mb-3" : "max-h-0 opacity-0 mt-0 mb-0"
                       }`}
                     >
-                      <div className="overflow-hidden min-h-0 flex flex-col pl-4 border-l border-[rgba(226,226,226,0.1)] ml-6">
+                      <div className="flex flex-col pl-4 border-l border-[rgba(226,226,226,0.15)] ml-6 gap-1">
                         {item.items.map((subItem) => (
                           <Link
                             key={subItem.href}

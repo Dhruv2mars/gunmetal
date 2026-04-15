@@ -4,20 +4,20 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="border-t border-[rgba(226,226,226,0.06)] mt-auto">
+    <footer className="border-t border-[rgba(226,226,226,0.06)] mt-auto w-full">
       <div className="w-full max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex flex-wrap items-center justify-between py-4 md:py-0 md:h-14 gap-y-2">
           {/* Left: Branding & Copyright */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center group flex-shrink-0">
+            <Link href="/" className="flex items-center group flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200">
               <img
                 src="/logo.svg"
                 alt="Gunmetal"
-                className="h-[18px] w-auto flex-shrink-0 relative z-10 bg-transparent brightness-110 contrast-125"
+                className="h-[18px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ display: "block" }}
               />
               <span
-                className="ml-1.5 block text-[16px] leading-none tracking-tight text-[var(--text)] whitespace-nowrap relative -top-[0.5px]"
+                className="ml-1.5 block text-[16px] leading-none tracking-tight text-current whitespace-nowrap relative -top-[0.5px]"
                 style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
               >
                 Gunmetal
