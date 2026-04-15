@@ -2,76 +2,51 @@
 
 import Link from "next/link";
 
-const footerLinks = [
-  { href: "/docs", label: "Documentation" },
-  { href: "/install", label: "Install" },
-  { href: "https://github.com/Dhruv2mars/gunmetal", label: "GitHub" },
-  { href: "https://github.com/Dhruv2mars/gunmetal/issues", label: "Issues" },
-  { href: "/changelog", label: "Changelog" },
-];
-
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--border)]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-          {/* Brand */}
-          <div className="flex flex-col items-center lg:items-start gap-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div
-                className={[
-                  "w-8 h-8",
-                  "bg-[var(--text)]",
-                  "rounded-[var(--radius-sm)]",
-                  "flex items-center justify-center",
-                  "font-mono font-bold text-xs",
-                  "text-[var(--bg)]",
-                ].join(" ")}
+    <footer className="border-t border-[rgba(226,226,226,0.06)] mt-auto w-full">
+      <div className="w-full max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between py-4 md:py-0 md:h-14 gap-y-2">
+          {/* Left: Branding & Copyright */}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center group flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200">
+              <img
+                src="/logo.svg"
+                alt="Gunmetal"
+                className="h-[18px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                style={{ display: "block" }}
+              />
+              <span
+                className="ml-1.5 block text-[16px] leading-none tracking-tight text-current whitespace-nowrap relative -top-[0.5px]"
+                style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
               >
-                GM
-              </div>
-              <span className="text-sm font-medium text-[var(--text)]">
                 Gunmetal
               </span>
             </Link>
-            <p
-              className={[
-                "text-xs",
-                "text-[var(--text-tertiary)]",
-                "text-center lg:text-left",
-              ].join(" ")}
-            >
-              Local AI inference gateway
-            </p>
+            <span className="text-[11px] text-[var(--text-muted)] border-l border-[rgba(226,226,226,0.1)] pl-2.5 ml-0.5">
+              &copy; {new Date().getFullYear()}
+            </span>
           </div>
 
-          {/* Links - SpaceX minimal style, centered */}
-          <div className="flex flex-wrap items-center justify-center gap-6 lg:gap-8">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={[
-                  "text-xs",
-                  "text-[var(--text-tertiary)]",
-                  "hover:text-[var(--text-secondary)]",
-                  "transition-colors duration-200",
-                ].join(" ")}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Copyright */}
-          <p
-            className={[
-              "text-xs",
-              "text-[var(--text-tertiary)]",
-            ].join(" ")}
+          {/* Right: GitHub */}
+          <a
+            href="https://github.com/Dhruv2mars/gunmetal"
+            target="_blank"
+            rel="noreferrer"
+            className="group flex items-center gap-1 text-[12px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200"
+            style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
           >
-            &copy; {new Date().getFullYear()}
-          </p>
+            GitHub
+            <svg 
+              className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor" 
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+            </svg>
+          </a>
         </div>
       </div>
     </footer>

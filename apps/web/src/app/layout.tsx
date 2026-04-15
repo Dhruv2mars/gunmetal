@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-matter",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 const jetbrains = JetBrains_Mono({
@@ -49,7 +58,7 @@ export const metadata: Metadata = {
       "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 
@@ -60,8 +69,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-theme="dark">
-      <body className={`${inter.variable} ${jetbrains.variable}`}>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body
+        className={`${inter.variable} ${jetbrains.variable} ${dmSans.variable}`}
+        style={{ colorScheme: "dark" }}
+      >
+        <ThemeProvider>
+          <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] selection:bg-[#faf9f6] selection:text-[#1a1a19] relative overflow-hidden">
+            <Navbar />
+            <main className="relative z-10 flex-1 flex flex-col">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

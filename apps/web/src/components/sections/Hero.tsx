@@ -1,267 +1,125 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
-import { Button } from "@/components/ui/Button";
-
-const headlineWords = ["The", "middleman", "layer", "for", "AI", "inference."];
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+import { FilmGrain } from "@/components/ui/FilmGrain";
 
 export function Hero() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [terminalText, setTerminalText] = useState("");
-  const [showTerminal, setShowTerminal] = useState(false);
-  const terminalRef = useRef<HTMLDivElement>(null);
-  
-  const fullCommand = "npm install -g @dhruv2mars/gunmetal";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+  // Parallax effects for the eclipse elements
+  const yText = useTransform(scrollYProgress, [0, 1], [0, 150]);
+  const yEclipse = useTransform(scrollYProgress, [0, 1], [0, 80]);
+  const opacityText = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    
-    const showDelay = setTimeout(() => {
-      setShowTerminal(true);
-    }, 1200);
-
-    return () => clearTimeout(showDelay);
-  }, [isLoaded]);
-
-  useEffect(() => {
-    if (!showTerminal) return;
-    
-    let charIndex = 0;
-    const typeInterval = setInterval(() => {
-      if (charIndex <= fullCommand.length) {
-        setTerminalText(fullCommand.slice(0, charIndex));
-        charIndex++;
-      } else {
-        clearInterval(typeInterval);
-      }
-    }, 25);
-
-    return () => clearInterval(typeInterval);
-  }, [showTerminal]);
-
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollLeft = terminalRef.current.scrollWidth;
-    }
-  }, [terminalText]);
+  const handleCopy = () => {
+    navigator.clipboard.writeText("npm i -g @dhruv2mars/gunmetal");
+  };
 
   return (
-    <section
-      className={[
-        "relative",
-        "min-h-screen",
-        "flex items-center justify-center",
-        "pt-16",
-        "overflow-hidden",
-      ].join(" ")}
+    <section 
+      ref={containerRef}
+      className="relative min-h-[100vh] w-full flex flex-col items-center justify-center overflow-hidden"
+      style={{ background: "var(--bg)" }}
     >
-      {/* Blueprint grid — subtle parallax background */}
-      <div
-        className={[
-          "absolute inset-0",
-          "grid-pattern",
-          "opacity-100",
-          "pointer-events-none",
-        ].join(" ")}
-        aria-hidden="true"
-      />
-
-      {/* Radial glow — bottom center, very subtle */}
-      <div
-        className={[
-          "absolute bottom-0 left-1/2 -translate-x-1/2",
-          "w-full max-w-3xl h-96",
-          "radial-glow",
-          "pointer-events-none",
-        ].join(" ")}
-        aria-hidden="true"
-      />
-
-      {/* Content */}
-      <div
-        className={[
-          "relative z-10",
-          "max-w-4xl mx-auto",
-          "px-6 lg:px-8",
-          "text-center",
-        ].join(" ")}
+      <FilmGrain />
+      
+      {/* 
+        ========================================================================
+        THE ECLIPSE (Utterly Subtle and Refined)
+        ========================================================================
+      */}
+      <motion.div 
+        style={{ y: yEclipse }}
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
       >
-        {/* Label — uppercase, tracking wide */}
-        <div
-          className={[
-            "mb-8",
-            "opacity-0",
-            isLoaded ? "animate-fade-in-up" : "",
-          ].join(" ")}
-          style={{ animationDelay: "200ms" }}
-        >
-          <span
-            className={[
-              "text-label",
-              "text-[var(--text-secondary)]",
-            ].join(" ")}
-          >
-            Local AI Inference Gateway
-          </span>
-        </div>
-
-        {/* Headline — word by word reveal */}
-        <h1
-          className={[
-            "text-display",
-            "text-[var(--text)]",
-            "mb-8",
-            "leading-[1.05]",
-          ].join(" ")}
-        >
-          {headlineWords.map((word, index) => (
-            <span
-              key={`${word}-${index}`}
-              className={[
-                "inline-block",
-                "mr-[0.25em]",
-                "opacity-0",
-                isLoaded ? "animate-word-reveal" : "",
-              ].join(" ")}
-              style={{
-                animationDelay: `${400 + index * 60}ms`,
-              }}
-            >
-              {word}
-            </span>
-          ))}
-        </h1>
-
-        {/* Subheading */}
-        <p
-          className={[
-            "text-body-lg",
-            "text-[var(--text-secondary)]",
-            "max-w-xl mx-auto",
-            "mb-12",
-            "opacity-0",
-            isLoaded ? "animate-fade-in" : "",
-          ].join(" ")}
-          style={{ animationDelay: "1000ms" }}
-        >
-          Turn your AI subscriptions into one local API for inference.
-        </p>
-
-        {/* Terminal block — typewriter effect */}
-        <div
-          className={[
-            "mb-12",
-            "inline-flex items-center",
-            "max-w-full overflow-hidden",
-            "opacity-0",
-            isLoaded ? "animate-fade-in" : "",
-          ].join(" ")}
-          style={{ animationDelay: "1200ms" }}
-        >
-          <div
-            ref={terminalRef}
-            className={[
-              "flex items-center gap-3",
-              "px-5 py-3",
-              "bg-[var(--surface)]",
-              "border border-[var(--border)]",
-              "rounded-[var(--radius-card)]",
-              "overflow-x-auto",
-            ].join(" ")}
-          >
-            <span
-              className={[
-                "text-code-small",
-                "text-[var(--text-tertiary)]",
-                "flex-shrink-0",
-              ].join(" ")}
-            >
-              $
-            </span>
-            <code
-              className={[
-                "text-code",
-                "text-[var(--text)]",
-                "whitespace-nowrap",
-              ].join(" ")}
-            >
-              {terminalText}
-              <span
-                className={[
-                  "inline-block w-2 h-4",
-                  "bg-[var(--text-secondary)]",
-                  "ml-0.5",
-                  "animate-pulse",
-                ].join(" ")}
-                aria-hidden="true"
-              />
-            </code>
-          </div>
-        </div>
-
-        {/* CTAs — spark effect on hover */}
-        <div
-          className={[
-            "flex flex-col sm:flex-row",
-            "items-center justify-center",
-            "gap-4",
-            "opacity-0",
-            isLoaded ? "animate-fade-in-scale" : "",
-          ].join(" ")}
-          style={{ animationDelay: "1600ms" }}
-        >
-          <Link href="/install" className="w-full sm:w-auto">
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full sm:w-auto spark-hover"
-            >
-              Install Gunmetal
-            </Button>
-          </Link>
-          <Link href="/docs" className="w-full sm:w-auto">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-full sm:w-auto"
-            >
-              Documentation
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Scroll indicator — subtle bounce, delayed */}
-      <div
-        className={[
-          "absolute bottom-8 left-1/2 -translate-x-1/2",
-          "opacity-0",
-          isLoaded ? "animate-fade-in" : "",
-          "animate-bounce-subtle",
-        ].join(" ")}
-        style={{ animationDelay: "2000ms" }}
-        aria-hidden="true"
-      >
-        <svg
-          className="w-5 h-5 text-[var(--text-tertiary)]"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M19 9l-7 7-7-7"
+        <div className="relative w-[1000px] h-[1000px] flex items-center justify-center">
+          
+          {/* Barely perceptible ambient corona */}
+          <div 
+            className="absolute inset-0 rounded-full opacity-[0.04]"
+            style={{
+              background: "radial-gradient(circle, rgba(250,249,246,1) 0%, transparent 65%)",
+              filter: "blur(80px)",
+            }}
           />
-        </svg>
-      </div>
+
+          {/* The Proxy Sphere */}
+          <motion.div 
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute w-[700px] h-[700px] sm:w-[800px] sm:h-[800px] rounded-full z-10"
+            style={{
+              background: "var(--bg)",
+              // A single, microscopic 1px inner rim light and ultra-soft outer glow
+              boxShadow: `
+                inset 0 1px 1px rgba(250,249,246, 0.02),
+                inset 0 40px 80px -40px rgba(250,249,246, 0.015),
+                0 -20px 120px -20px rgba(250,249,246, 0.03)
+              `,
+            }}
+          />
+        </div>
+      </motion.div>
+
+      {/* 
+        ========================================================================
+        THE FOREGROUND (Typography & Actions)
+        ========================================================================
+      */}
+      <motion.div 
+        style={{ y: yText, opacity: opacityText }}
+        className="relative z-20 container mx-auto px-6 flex flex-col items-center text-center mt-[-8vh]"
+      >
+        <motion.h1 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-8 max-w-[1000px] text-[52px] sm:text-[64px] md:text-[88px] font-normal leading-[0.96] tracking-[-0.04em] text-[#faf9f6]"
+          style={{ fontFamily: "var(--font-matter)" }}
+        >
+          <span className="block drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">The middleman layer</span>
+          <span className="block text-[#868584]">for AI inference.</span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="mx-auto mb-16 max-w-[600px] text-[18px] md:text-[22px] text-[#afaeac] leading-[1.5] tracking-[-0.01em]"
+          style={{ fontFamily: "var(--font-matter)" }}
+        >
+          Use AI subscriptions as upstream providers for inference.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="flex justify-center w-full"
+        >
+          <button 
+            onClick={handleCopy}
+            className="group relative flex items-center justify-between gap-6 rounded-[8px] border border-[rgba(250,249,246,0.08)] bg-[rgba(250,249,246,0.01)] backdrop-blur-sm px-6 py-[16px] transition-all duration-500 hover:border-[rgba(250,249,246,0.15)] hover:bg-[rgba(250,249,246,0.03)] w-full max-w-[440px] cursor-pointer"
+          >
+            <div className="relative flex items-center gap-4 z-10">
+              <span className="text-[#868584] font-mono text-[14px] select-none">$</span>
+              <span className="text-[#faf9f6] font-mono text-[15px] tracking-tight">npm i -g @dhruv2mars/gunmetal</span>
+            </div>
+            
+            <div className="relative flex-shrink-0 text-[#868584] group-hover:text-[#faf9f6] transition-colors h-4 w-4 z-10">
+              <svg className="w-4 h-4 opacity-100 group-active:opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </button>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
