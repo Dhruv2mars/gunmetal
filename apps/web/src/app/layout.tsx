@@ -58,7 +58,7 @@ export const metadata: Metadata = {
       "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 
