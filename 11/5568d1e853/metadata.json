@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "115568d1e853",
+  "strategy": "manual-commit",
+  "branch": "feat/landing-page-warp-redesign",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "current_navbar.png",
+    "finalized_navbar.png",
+    "updated_navbar.png"
+  ],
+  "sessions": [
+    {
+      "metadata": "/11/5568d1e853/0/metadata.json",
+      "transcript": "/11/5568d1e853/0/full.jsonl",
+      "content_hash": "/11/5568d1e853/0/content_hash.txt",
+      "prompt": "/11/5568d1e853/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 310505,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 983190,
+    "output_tokens": 53383,
+    "api_call_count": 25
+  }
+}

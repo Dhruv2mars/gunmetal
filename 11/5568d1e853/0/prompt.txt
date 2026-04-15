@@ -1,0 +1,51 @@
+i am currently in process of revamping the landing page. 
+i have already made few chagnes in the current branch. but i want you to make the others. here are the things that i want:
+
+first focus is on the navbar:
+- make sure that the layout, styling, fonts, etc is perfect. make sure the gunmetal font, size, style is perfect. 
+- keep the buttons and content in the navbar same. just change docs to resources. 
+- products, developer, resources will be a dropdown menu. in which the content will open the new page. download is a new page. 
+- products section will have gunmetal SuperApp. developer section will have extention SDK. resources will have docs and changelogs. 
+- then i want animation with the gunmetal text. where, on scroll, it will hide (scroll-left) behind the gunmetal logo. like a mask. on page scroll up or down, it will come in or out.
+
+---
+
+yeah, you can go ahead now:
+
+- make sure that the fonts, styling, spacing, layout, and structure is consistent across the navbar. 
+- on smaller screens (mobile), there should be the menu and github icon. the logo-text and its animation will remain same. 
+
+go ahead! make the best ux possible
+
+---
+
+changes:
+- the animation is too fast and trigger too quickly. both for scroll up and down. 
+- i can see the text behind the logo slightly as the logo has transparent section. so the mask should be a vertical line just a few pixels right of the logo. 
+- i dont like the current dropdowns for product/dev/resources. like, for example, the width is less as per my view. but you are the more capable and better design engineer, you should make the overall dropdown experience much much better. even better than how it is right now. 
+- is the gunmetal text the correct font, style, and size? i feel its a bit smaller? do you think the same?
+
+---
+
+few changes:
+- the scroll trigger at 30 is fine. but make it extremely smooth in and out, very tasteful and elegant. also, the mask implementation is fine, just it gets behind slightly early, meaning the mask is a few pixels right. make it a bit left. 
+- does the navbar follow the design principles, like spacing padding, and have consistent uniformity? few things that i noticed:
+1. it feels like the space below the text in navbar is more than that on top. you knnow what i mean right. spacing and layout issues. 
+2. there should be uniformity and consistency between the gunmetal logo, gunmetal text, and github icon. see how its done as an industry standard, search web or other projects. make it better and consistent.
+
+---
+
+yeah, go ahead. make sure you do your best job, since you are the best and most capable design engineer, i have very high hopes from you!
+
+hail gemini!!
+
+---
+
+great. but dont u think that the github icon is a bit small? tell me according to industry design principles, if its small or not. coz i feel that its small. 
+also, is the gunmetal text size and gunmetal logo complementing each other with size consistency? i thought that the text is small. 
+
+but as i said, you are the best designer ever. you know what is the best. so use agent browser skill and see yourself
+
+---
+
+what all did you changed?

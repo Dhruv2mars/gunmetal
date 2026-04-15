@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.5.4",
+  "checkpoint_id": "115568d1e853",
+  "session_id": "ses_2758735d9ffezT2P5HzpkPq8EG",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-15T03:23:37.735606Z",
+  "branch": "feat/landing-page-warp-redesign",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "current_navbar.png",
+    "finalized_navbar.png",
+    "updated_navbar.png"
+  ],
+  "agent": "OpenCode",
+  "model": "gemini-3.1-pro-preview",
+  "turn_id": "dc06e8c94e46",
+  "token_usage": {
+    "input_tokens": 310505,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 983190,
+    "output_tokens": 53383,
+    "api_call_count": 25
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-15T03:23:37.19061Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 38,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 38,
+    "total_lines_changed": 173,
+    "agent_percentage": 0,
+    "metric_version": 2
+  }
+}
