@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 
 export function Footer() {
@@ -12,7 +10,8 @@ export function Footer() {
             <Link href="/" className="flex items-center group flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200">
               <img
                 src="/logo.svg"
-                alt="Gunmetal"
+                alt=""
+                aria-hidden="true"
                 className="h-[18px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ display: "block" }}
               />
@@ -24,7 +23,7 @@ export function Footer() {
               </span>
             </Link>
             <span className="text-[11px] text-[var(--text-muted)] border-l border-[rgba(226,226,226,0.1)] pl-2.5 ml-0.5">
-              &copy; {new Date().getFullYear()}
+              &copy; 2026
             </span>
           </div>
 

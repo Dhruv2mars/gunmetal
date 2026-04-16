@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 
 const navItems = [
   {
@@ -65,7 +65,10 @@ const navItems = [
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const pendingAccordionRef = useRef<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -78,13 +81,40 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (pendingAccordionRef.current) window.clearTimeout(pendingAccordionRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!openDropdown) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!navRef.current) return;
+      if (e.target instanceof Node && navRef.current.contains(e.target)) return;
+      setOpenDropdown(null);
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [openDropdown]);
+
   const toggleAccordion = (label: string) => {
+    if (pendingAccordionRef.current) window.clearTimeout(pendingAccordionRef.current);
+
+    // If switching sections, close first to avoid layout "bulge" from simultaneous expand/collapse.
+    if (openAccordion && openAccordion !== label) {
+      setOpenAccordion(null);
+      pendingAccordionRef.current = window.setTimeout(() => setOpenAccordion(label), 220);
+      return;
+    }
+
     setOpenAccordion(openAccordion === label ? null : label);
   };
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      className="fixed top-0 left-0 right-0 z-[100] transition-all duration-300 pointer-events-auto"
       style={{
         background: "rgba(14, 14, 13, 0.70)",
         backdropFilter: "blur(20px) saturate(180%)",
@@ -92,13 +122,20 @@ export function Navbar() {
         boxShadow: "0 0 0 1px rgba(226, 226, 226, 0.06)",
       }}
     >
-      <nav className="w-full max-w-7xl mx-auto px-6 lg:px-8">
+      <nav
+        ref={(node) => {
+          navRef.current = node;
+        }}
+        className="w-full max-w-7xl mx-auto px-6 lg:px-8"
+        aria-label="Primary"
+      >
         <div className="flex items-center justify-between h-14">
           {/* Logo — left */}
-          <Link href="/" className="flex items-center group flex-shrink-0 h-full">
+          <Link href="/" className="flex items-center group flex-shrink-0 h-full" aria-label="Gunmetal Home">
             <img
               src="/logo.svg"
-              alt="Gunmetal"
+              alt=""
+              aria-hidden="true"
               className="h-[22px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-200"
               style={{ display: "block" }}
             />
@@ -122,15 +159,58 @@ export function Navbar() {
           {/* Nav links + GitHub — right side, tight grouping */}
           <div className="hidden lg:flex items-center gap-2 h-full">
             {navItems.map((item) => (
-              <div key={item.label} className="relative group h-full flex items-center justify-center min-w-[110px]">
+              <div
+                key={item.label}
+                className="relative h-full flex items-center justify-center min-w-[110px]"
+                onMouseEnter={() => {
+                  if (item.items) setOpenDropdown(item.label);
+                  else setOpenDropdown(null);
+                }}
+                onMouseLeave={() => {
+                  if (openDropdown === item.label) setOpenDropdown(null);
+                }}
+                onFocus={() => {
+                  if (item.items) setOpenDropdown(item.label);
+                }}
+                onBlurCapture={(e) => {
+                  if (!item.items) return;
+                  const next = e.relatedTarget;
+                  if (next instanceof Node && e.currentTarget.contains(next)) return;
+                  if (openDropdown === item.label) setOpenDropdown(null);
+                }}
+              >
                 {item.items ? (
                   <button
-                    className="flex items-center gap-1.5 text-[14px] text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors duration-200 h-full"
+                    className="flex items-center gap-1.5 text-[14px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 h-full"
                     style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={openDropdown === item.label}
+                    aria-controls={`navmenu-${item.label.toLowerCase()}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setOpenDropdown(null);
+                      }
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOpenDropdown((cur) => (cur === item.label ? null : item.label));
+                      }
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setOpenDropdown(item.label);
+                        const first = document.querySelector<HTMLAnchorElement>(
+                          `#navmenu-${item.label.toLowerCase()} a`,
+                        );
+                        first?.focus();
+                      }
+                    }}
                   >
                     {item.label}
                     <svg
-                      className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform duration-300 group-hover:rotate-180"
+                      className={[
+                        "w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-300",
+                        openDropdown === item.label ? "rotate-180 text-[var(--text)]" : "",
+                      ].join(" ")}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -142,7 +222,7 @@ export function Navbar() {
                 ) : (
                   <Link
                     href={item.href!}
-                    className="flex items-center text-[14px] text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors duration-200 h-full"
+                    className="flex items-center text-[14px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 h-full"
                     style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
                   >
                     {item.label}
@@ -151,7 +231,27 @@ export function Navbar() {
 
                 {/* Dropdown Menu */}
                 {item.items && (
-                  <div className="absolute top-[calc(100%-0.15rem)] left-1/2 -translate-x-1/2 pt-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 ease-out transform translate-y-2 group-hover:translate-y-0 z-50">
+                  <div
+                    id={`navmenu-${item.label.toLowerCase()}`}
+                    role="menu"
+                    aria-label={item.label}
+                    hidden={openDropdown !== item.label}
+                    className={[
+                      "absolute top-[calc(100%-0.15rem)] left-1/2 -translate-x-1/2 pt-1 transition-all duration-200 ease-out transform z-50",
+                      openDropdown === item.label
+                        ? "opacity-100 pointer-events-auto translate-y-0"
+                        : "opacity-0 pointer-events-none translate-y-2",
+                    ].join(" ")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setOpenDropdown(null);
+                        const btn = document.querySelector<HTMLButtonElement>(
+                          `button[aria-controls="navmenu-${item.label.toLowerCase()}"]`,
+                        );
+                        btn?.focus();
+                      }
+                    }}
+                  >
                     <div
                       className="rounded-lg p-1.5 w-max min-w-[220px] grid gap-1.5"
                       style={{
@@ -164,7 +264,9 @@ export function Navbar() {
                         <Link
                           key={subItem.href}
                           href={subItem.href}
-                          className="group/item flex items-center gap-3 p-2.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] rounded-lg transition-all duration-200"
+                          role="menuitem"
+                          className="group/item flex items-center gap-3 p-2.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--frosted)] rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,249,246,0.18)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(14,14,13,0.85)]"
+                          onClick={() => setOpenDropdown(null)}
                         >
                           <div className="shrink-0 text-[var(--text-muted)] group-hover/item:text-[var(--text)] transition-colors duration-200">
                             {subItem.icon}

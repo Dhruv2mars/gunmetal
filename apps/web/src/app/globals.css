@@ -386,19 +386,9 @@
   100% { transform: translateY(-4.2em); }
 }
 
-@keyframes pkg-width {
-  0%, 30% { width: 3ch; }
-  33.33%, 63.33% { width: 3ch; }
-  66.66%, 96.66% { width: 4ch; }
-  100% { width: 3ch; }
-}
-
 @layer utilities {
   .animate-pkg-scroll {
     animation: pkg-scroll 7.5s cubic-bezier(0.87, 0, 0.13, 1) infinite;
-  }
-  .animate-pkg-width {
-    animation: pkg-width 7.5s cubic-bezier(0.87, 0, 0.13, 1) infinite;
   }
 }
 

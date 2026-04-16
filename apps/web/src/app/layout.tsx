@@ -68,15 +68,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="dark">
+    <html lang="en" data-theme="dark" data-scroll-behavior="smooth">
       <body
         className={`${inter.variable} ${jetbrains.variable} ${dmSans.variable}`}
         style={{ colorScheme: "dark" }}
       >
         <ThemeProvider>
           <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] selection:bg-[#faf9f6] selection:text-[#1a1a19] relative overflow-hidden">
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:rounded-lg focus:bg-[rgba(14,14,13,0.95)] focus:px-3 focus:py-2 focus:text-[14px] focus:text-[var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,249,246,0.18)]"
+            >
+              Skip to content
+            </a>
             <Navbar />
-            <main className="relative z-10 flex-1 flex flex-col">
+            <main id="main" className="relative z-10 flex-1 flex flex-col">
               {children}
             </main>
             <Footer />
