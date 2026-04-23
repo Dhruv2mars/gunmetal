@@ -106,7 +106,7 @@ gunmetal logs list
 ## Structure
 
 ```
-apps/gunmetal/      # native CLI/TUI entrypoint
+apps/gunmetal/      # native CLI entrypoint
 apps/web/           # landing page, docs
 packages/sdk/       # internal SDK powering provider extensions
 packages/sdk-core/  # shared SDK-facing types + contracts
@@ -114,7 +114,6 @@ packages/extensions/ # first-party provider extensions
 packages/app-cli/   # CLI command layer
 packages/app-daemon/ # local OpenAI-compatible API server
 packages/app-storage/ # sqlite + local state
-packages/app-tui/   # terminal UI
 packages/npm/       # npm install wrapper for the native binary
 ```
 

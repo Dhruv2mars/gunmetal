@@ -4,103 +4,83 @@ This document is the execution plan and ongoing notes for the current task. Keep
 
 ## Verification Checklist
 - `sed -n '1,220p' docs/prompt.md`
-- `sed -n '1,320p' docs/plans.md`
+- `sed -n '1,260p' docs/plans.md`
 - `sed -n '1,220p' docs/implement.md`
-- `sed -n '1,320p' docs/documentation.md`
-- targeted daemon/web/tui/cli/sdk/provider tests as milestones land
+- `sed -n '1,260p' docs/documentation.md`
+- `rg -n "tui|TUI|OpenTUI|app-tui|gunmetal tui|@opentui|gunmetal-tui" . -S`
+- `cargo test -p gunmetal-cli`
+- `cargo test --workspace`
 - `bun run test`
 - `bun run check`
-- `cargo test --workspace`
+- `cargo run -p gunmetal -- --help`
+- `cargo run -p gunmetal`
+- `cargo run -p gunmetal -- status`
 - `git status --short --branch`
-- Last verified: 2026-04-13
+- Last verified: 2026-04-23
 
 ## Milestones
-- `[done]` Milestone 1: refresh durable memory and branch for the GA shipping pass
-  - Scope: replace the older Phase 2 wording with shipping-mode goals and the user-specified surface order
+- `[done]` Milestone 1: durable memory retarget
+  - Scope: replace old GA/TUI plan with TUI-removal architecture.
   - Key areas: `docs/prompt.md`, `docs/plans.md`, `docs/documentation.md`
-  - Acceptance criteria: docs reflect landing page -> CLI -> TUI -> Web UI -> GA verification
-  - Verification steps: direct review of the updated docs
-- `[done]` Milestone 2: public landing page polish
-  - Scope: rewrite the hosted front door so the super app story, install path, and supported surfaces are clear and public-ready
-  - Key areas: `apps/web/src/app/page.tsx`, related marketing copy/tests/styles
-  - Acceptance criteria: the landing page feels like a public product page, not internal project scaffolding
-  - Verification steps: web tests, lint, browser check
-- `[done]` Milestone 3: CLI shipping polish
-  - Scope: tighten first-run help, command ergonomics, and recovery/error copy for public users
-  - Key areas: `packages/app-cli`
-  - Acceptance criteria: the CLI is clear and reliable for first-time public use
-  - Verification steps: targeted CLI tests and command smokes
-- `[done]` Milestone 4: TUI shipping polish
-  - Scope: tighten the terminal UX, empty states, navigation, and parity with the browser flow
-  - Key areas: `packages/app-tui`
-  - Acceptance criteria: the TUI feels production-ready and coherent with the rest of the super app
-  - Verification steps: TUI smoke and targeted tests
-- `[done]` Milestone 5: Web UI shipping polish
-  - Scope: tighten the local browser operator flow for screenshots, demos, and real use
-  - Key areas: `packages/app-daemon` browser shell and operator state shaping
-  - Acceptance criteria: the Web UI feels finished and public-usable
-  - Verification steps: daemon tests and live browser checks
-- `[done]` Milestone 6: final GA verification and release cleanup
-  - Scope: run the full public-surface test pass, clean the repo, and move the checkpoint to `main`
-  - Key areas: web, CLI, TUI, Web UI, docs, git state
-  - Acceptance criteria: the full super app is coherent enough for public release
-  - Verification steps: `bun run test`, `bun run check`, `cargo test --workspace`, live smokes, `git status`
+  - Acceptance criteria: docs say CLI + Web UI are canonical; TUI is out.
+- `[done]` Milestone 2: remove TUI code and command surface
+  - Scope: delete `packages/app-tui`, remove workspace/dependency entries, remove `gunmetal tui`.
+  - Key areas: `Cargo.toml`, `Cargo.lock`, `apps/gunmetal`, `packages/app-cli`
+  - Acceptance criteria: Rust workspace builds without any TUI crate or command.
+- `[done]` Milestone 3: cleanup docs/site/npm/tests
+  - Scope: remove public TUI references and OpenTUI JS workspace metadata.
+  - Key areas: `README.md`, `AGENTS.md`, `packages/npm/package.json`, `test/repo-structure.test.js`, `bun.lock`
+  - Acceptance criteria: repo copy and tests reflect CLI + Web UI only.
+- `[done]` Milestone 4: dead-reference scan and verification
+  - Scope: search for stale TUI/dead references, run focused and full verification.
+  - Key areas: full repo
+  - Acceptance criteria: no TUI references remain except historical lock/test output if tool-generated; tests/checks pass or blockers are documented.
+- `[done]` Milestone 5: web scaffold cleanup
+  - Scope: remove placeholder marketing routes, unused UI components, unused assets, unused site content module, unused JS deps, unused Rust workspace deps, and stale CLI public helpers.
+  - Key areas: `apps/web`, `apps/web/package.json`, `bun.lock`, `Cargo.toml`, `packages/app-cli`, `test/repo-structure.test.js`
+  - Acceptance criteria: web app exposes only current real routes and tests/checks pass.
 
 ## Acceptance Checks
-- The landing page clearly sells the Gunmetal super app and its local-first value.
-- The CLI is understandable and trustworthy for first-time public users.
-- The TUI is polished enough to stand beside the Web UI rather than feel secondary.
-- The Web UI is clean enough for public demos and real operation.
-- The full install-to-first-request path is strong across the public surfaces.
-- The repo stays focused on the Gunmetal super app during this pass.
-
-## Validation
-- `git status --short --branch`
-- targeted `sed -n` reads across docs and touched files
-- focused crate/package tests for the milestone being worked
-- `bun run test`
-- `bun run check`
-- `cargo test --workspace`
-- smoke `gunmetal logs summary`, `gunmetal tui`, and the local browser shell via daemon tests
-- push to `origin/main` when the slice is coherent and verified
-- final verification completed with:
-  - `bun run test`
-  - `bun run check`
-  - live desktop and mobile browser captures for `/app`
-  - live Web UI request check showing the current upstream Codex usage-limit failure and the matching request-history entry
+- No TUI package, Rust crate, command, docs, npm keyword, or web copy remains.
+- `gunmetal` with no subcommand shows help instead of launching a UI.
+- `gunmetal web` remains the canonical graphical setup/control surface.
+- Repo-structure guard expects the reduced workspace.
+- Lockfiles no longer include OpenTUI workspace/dependencies.
+- Web app no longer carries unused motion/component/template scaffolding.
+- Placeholder `Coming soon` product/developer/download/changelog pages are gone.
 
 ## Decisions
-- This pass is shipping work, not open-ended product expansion.
-- The Gunmetal super app is the only product in scope for now.
-- Work order is fixed by surface:
-  - landing page
-  - CLI
-  - TUI
-  - Web UI
-- Public usability matters more than adding new features during this pass.
-- The TUI pass must hold up at a normal 80-column terminal width, not just wide desktop terminals.
-- The Web UI pass must keep the first-run path visible even when the local state already contains many old models and requests.
+- TUI is removed, not hidden.
+- CLI handles setup, service control, auth, keys, models, chat, and logs.
+- Web UI handles graphical control and setup.
+- `apps/gunmetal` is now the native CLI entrypoint.
 
-## Implementation Notes
-- Active work should land through a feature branch and only move `main` once the slice is coherent and verified.
-- Start with the hosted landing page because it becomes the public front door.
-- Each later surface pass should keep the same product story and golden path.
-- Canonical hosted truth for this product:
-  - public landing page host is `gunmetalapp.vercel.app`
-  - public Web UI marketing route is `/webui`
-  - `gunmetal.vercel.app` is not this product and must not be used in copy or metadata
+## Validation
+- `rg -n "packages/app-tui|@gunmetal/tui|gunmetal-tui|GUNMETAL_TUI|OpenTUI|@opentui|gunmetal tui|terminal UI|terminal experience|\\bTUI\\b|\\btui\\b" . -S --glob '!docs/**'`
+  - clean except one negative CLI help assertion.
+- `cargo run -p gunmetal -- --help`
+  - no `tui` command; root invocation is CLI help.
+- `cargo run -p gunmetal`
+  - prints CLI help instead of launching a TUI.
+- `cargo run -p gunmetal -- status`
+  - stopped recovery says `gunmetal start` or `gunmetal web`.
+- `npm exec --yes bun@1.3.5 -- run test`
+  - pass.
+- `npm exec --yes bun@1.3.5 -- run check`
+  - pass.
+- `npm exec --yes bun@1.3.5 -- run --filter @gunmetal/web build`
+  - pass; static routes are `/`, `/webui`, `/start-here`, `/docs`, and `/install`.
+- `cargo test -p gunmetal-cli`
+  - pass.
+- `rg -n "framer-motion|clsx|tailwind-merge|@/lib/utils|tokio-stream|tokio_stream|arboard|tower-http|tower_http|tracing-subscriber|tracing_subscriber|gunmetal-tui|app-tui|@opentui" apps packages Cargo.toml Cargo.lock bun.lock -S`
+  - clean except `tower-http` remains as a transitive lockfile dependency.
+- `rg -n "products/suite|developer/sdk|/download|/changelogs|Coming soon|site-content|components/sections|file\\.svg|globe\\.svg|next\\.svg|vercel\\.svg|window\\.svg" apps/web test README.md docs -S`
+  - clean outside this cleanup documentation.
 
 ## Risks
-- Risk: the landing page sounds clever but still leaves the product unclear.
-  - Mitigation: keep the copy concrete: install, connect provider, mint key, use anywhere.
-- Risk: surface-by-surface polish drifts into different product stories.
-  - Mitigation: keep one canonical super-app thesis and reuse it across surfaces.
-- Risk: public polish work stops at visuals and misses operational usability.
-  - Mitigation: verify the real golden path, not just static rendering.
-
-## Architecture
-- Product: local-first inference middle layer for individuals.
-- Canonical flow: `app/tool -> Gunmetal key -> Gunmetal -> provider extension -> upstream provider`.
-- Product taxonomy:
-  - `Products`: super app now, standalone user products later
-  - `Developer`: internal engines now, standalone SDKs later
+- Risk: stale TUI references linger in public docs or tests.
+  - Mitigation: run full-repo `rg` scans with TUI/OpenTUI/package names.
+- Risk: lockfiles retain removed packages.
+  - Mitigation: regenerate Bun and Cargo lockfiles after manifest edits.
+- Risk: web nav links drift to deleted routes.
+  - Mitigation: nav is flat and points only at real routes.
