@@ -24,10 +24,12 @@ export function PackageManagerCommandBox({
   packageName,
   tail = "i -g",
   cycleMs = 2500,
+  className = "",
 }: {
   packageName: string;
   tail?: string;
   cycleMs?: number;
+  className?: string;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [managerIndex, setManagerIndex] = useState(0); // 0..3 (last item is duplicate for seamless loop)
@@ -80,7 +82,7 @@ export function PackageManagerCommandBox({
   };
 
   return (
-    <div className="relative z-10 mb-16 px-2">
+    <div className={`relative z-10 px-2 ${className}`}>
       <button
         onClick={handleCopy}
         type="button"

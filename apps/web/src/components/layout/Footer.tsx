@@ -6,7 +6,6 @@ export function Footer() {
     <footer className="border-t border-[rgba(226,226,226,0.06)] mt-auto w-full">
       <div className="w-full max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between py-4 md:py-0 md:h-14 gap-y-2">
-          {/* Left: Branding & Copyright */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center group flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200">
               <Image
@@ -20,7 +19,7 @@ export function Footer() {
               />
               <span
                 className="ml-1.5 block text-[16px] leading-none tracking-tight text-current whitespace-nowrap relative -top-[0.5px]"
-                style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+                style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}
               >
                 Gunmetal
               </span>
@@ -30,13 +29,12 @@ export function Footer() {
             </span>
           </div>
 
-          {/* Right: GitHub */}
           <a
             href="https://github.com/Dhruv2mars/gunmetal"
             target="_blank"
             rel="noreferrer"
             className="group flex items-center gap-1 text-[12px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200"
-            style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+            style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
           >
             GitHub
             <svg 

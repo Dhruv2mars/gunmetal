@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const navItems = [
-  { href: "/webui", label: "Web UI" },
-  { href: "/start-here", label: "Start Here" },
-  { href: "/docs", label: "Docs" },
   { href: "/install", label: "Install" },
+  { href: "/start-here", label: "Start" },
+  { href: "/webui", label: "Web UI" },
+  { href: "/docs", label: "Docs" },
 ];
 
 function GitHubLink({ className = "" }: { className?: string }) {
@@ -17,7 +17,7 @@ function GitHubLink({ className = "" }: { className?: string }) {
       href="https://github.com/Dhruv2mars/gunmetal"
       target="_blank"
       rel="noreferrer"
-      className={`inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200 ${className}`}
+      className={`inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)] ${className}`}
       aria-label="GitHub"
     >
       <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -44,9 +44,9 @@ export function Navbar() {
 
   return (
     <header
-      className="fixed left-0 right-0 top-0 z-[100] transition-all duration-300 pointer-events-auto"
+      className="pointer-events-auto fixed left-0 right-0 top-0 z-[100] transition-all duration-300"
       style={{
-        background: "rgba(14, 14, 13, 0.70)",
+        background: "rgba(17, 17, 15, 0.78)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
         boxShadow: "0 0 0 1px rgba(226, 226, 226, 0.06)",
@@ -64,7 +64,7 @@ export function Navbar() {
               className="relative z-10 h-[22px] w-auto flex-shrink-0 bg-transparent opacity-70 transition-opacity duration-200 group-hover:opacity-100"
             />
             <div
-              className={`ml-1.5 flex items-center overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`ml-1.5 flex items-center overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 isScrolled ? "max-w-0 opacity-0" : "max-w-[150px] opacity-100"
               }`}
             >
@@ -72,7 +72,7 @@ export function Navbar() {
                 className={`relative -top-[0.5px] block whitespace-nowrap text-[20px] leading-none tracking-tight text-[var(--text-muted)] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:text-[var(--text)] ${
                   isScrolled ? "-translate-x-full" : "translate-x-0"
                 }`}
-                style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+                style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}
               >
                 Gunmetal
               </span>
@@ -85,7 +85,7 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className="flex h-full items-center px-2 text-[14px] text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
-                style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+                style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
               >
                 {item.label}
               </Link>
@@ -120,7 +120,7 @@ export function Navbar() {
             mobileOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="min-h-screen border-t border-[rgba(226,226,226,0.08)] bg-[rgba(14,14,13,0.98)] px-4 py-6 shadow-xl backdrop-blur-3xl">
+          <div className="min-h-[100dvh] border-t border-[rgba(226,226,226,0.08)] bg-[rgba(17,17,15,0.98)] px-4 py-6 shadow-xl backdrop-blur-3xl">
             <div className="flex flex-col gap-1">
               {navItems.map((item) => (
                 <Link
@@ -128,7 +128,7 @@ export function Navbar() {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className="rounded-lg px-4 py-3 text-[14px] text-[var(--text)] transition-colors duration-200 hover:bg-[var(--frosted)]"
-                  style={{ fontFamily: "var(--font-matter)", fontWeight: 500 }}
+                  style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
                 >
                   {item.label}
                 </Link>

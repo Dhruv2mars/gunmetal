@@ -1,53 +1,53 @@
 # Prompt
 
 ## Task
-- Remove the TUI surface completely.
-- Make CLI plus Web UI the canonical control/setup path.
-- Clean dead, obsolete, and misleading code/docs after TUI removal.
-- Continue cleanup by removing dead web marketing scaffolding and unused dependencies.
+- Rebuild Gunmetal UX quality from first principles after the refactor that removed TUI and dead surfaces.
+- Current target surfaces:
+  - hosted marketing/docs site in `apps/web`
+  - local browser Web UI served by `packages/app-daemon`
+  - CLI in `packages/app-cli`
 
 ## Core Goal
-- Gunmetal ships as a local-first API daemon with:
-  - CLI for install/setup/service/scripted control
-  - Web UI for operator workflows
-  - SDK/provider/storage internals behind those surfaces
-- No `gunmetal tui`, OpenTUI package, TUI crate, TUI dependency, or TUI docs should remain.
+- Make Gunmetal feel obvious, calm, and trustworthy for a first-time individual user.
+- The product story must be concrete:
+  - install Gunmetal
+  - connect one provider
+  - sync models
+  - mint one local key
+  - point apps at the OpenAI-compatible local API
+  - inspect traffic when something succeeds or fails
 
-## Tracks
-- Track A: durable docs and product wording
-  - replace old GA/TUI milestone language
-  - document CLI + Web UI as the product surface
-- Track B: Rust workspace cleanup
-  - remove `packages/app-tui`
-  - remove `gunmetal-tui` dependency and launch path
-  - make no-command CLI behavior useful without the TUI
-- Track C: JS/web/npm cleanup
-  - remove OpenTUI workspace and lockfile entries
-  - remove TUI copy from public site, README, npm metadata, and repo tests
-- Track D: verification
-  - run focused CLI/workspace checks
-  - run full repo test/check when feasible
-- Track E: post-TUI cleanup
-  - remove placeholder web routes not part of current product
-  - remove unused components, assets, helper modules, and JS deps
-  - keep only real public routes: home, Web UI, start-here, docs, install
+## UX Principles
+- Local-first stays central. No team, cloud account, or hosted control-plane framing.
+- Use simple terms: `provider`, `model`, `key`, `request`.
+- Prefer guided next steps over feature lists.
+- Show real commands and real URLs before abstract copy.
+- Treat empty states and error recovery as primary UX, not fallback text.
+- Keep the Web UI dense enough for operators, but not visually noisy.
+- Keep the CLI readable in normal terminals and useful when copied into logs.
+
+## Taste Direction
+- Technical software UI: no serif, no Inter, no purple/blue AI-gradient look.
+- Use restrained neutral surfaces with one calibrated accent.
+- Avoid centered generic hero patterns and equal three-card marketing rows.
+- Motion must be purposeful, transform/opacity-only, and reduced-motion aware.
+- UI controls need stable dimensions and no mobile text overlap.
 
 ## Non-Goals
-- Do not add new product surfaces.
-- Do not publish packages.
-- Do not change provider behavior unless cleanup requires it.
+- Do not reintroduce TUI.
+- Do not publish SDK packages.
+- Do not add auth, accounts, teams, hosted sync, or multi-tenant concepts.
+- Do not widen beyond the super-app Web UI and CLI path.
 
-## Constraints
-- Be concise.
-- Verify before reporting back when possible.
-- Use durable-memory files as source of truth.
-- Keep user-facing terminology simple: `provider`, `model`, `key`, `request`.
-- Product remains local-first and individual-first.
+## Deliverables
+- Updated durable memory for this UX pass.
+- Stronger hosted marketing/docs routes.
+- Stronger local browser Web UI hierarchy, empty states, and action flow.
+- Stronger CLI first-run and diagnosis ergonomics.
+- Verification notes from tests and live checks where possible.
 
 ## Done When
-- TUI code/package/crate/command/docs are gone.
-- Default `gunmetal` invocation no longer launches a TUI.
-- CLI help points users to setup, web, start, status, chat, and logs.
-- Workspace manifests and tests match the smaller architecture.
-- Verification passes or failures are clearly reported.
-- Unused web scaffolding no longer ships or bloats lockfiles.
+- A new user can understand what Gunmetal is and how to try it from the site.
+- The local Web UI makes the next setup/action obvious at every state.
+- The CLI can answer “what should I do next?” without making users inspect storage manually.
+- Tests pass for touched surfaces.

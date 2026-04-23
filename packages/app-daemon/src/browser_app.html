@@ -7,18 +7,18 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg: #060708;
-        --panel: rgba(19, 22, 26, 0.88);
-        --panel-2: rgba(12, 15, 18, 0.94);
-        --line: rgba(255, 255, 255, 0.1);
-        --line-strong: rgba(255, 255, 255, 0.18);
-        --text: #f4f4ee;
-        --muted: #9aa3ad;
-        --accent: #d8b26e;
-        --accent-2: #7dd3c8;
+        --bg: #11110f;
+        --panel: rgba(30, 30, 27, 0.88);
+        --panel-2: rgba(17, 17, 15, 0.94);
+        --line: rgba(244, 240, 230, 0.12);
+        --line-strong: rgba(244, 240, 230, 0.24);
+        --text: #f4f0e6;
+        --muted: #969085;
+        --accent: #d7b46a;
+        --accent-2: #7dbeb3;
         --danger: #ff8d78;
-        --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
-        --radius: 24px;
+        --shadow: 0 24px 80px rgba(6, 7, 8, 0.34);
+        --radius: 22px;
       }
 
       * {
@@ -27,13 +27,14 @@
 
       body {
         margin: 0;
-        min-height: 100vh;
-        font-family: "IBM Plex Sans", "SF Pro Display", system-ui, sans-serif;
+        min-height: 100dvh;
+        font-family: "Geist", "SF Pro Display", system-ui, sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at top left, rgba(216, 178, 110, 0.16), transparent 34%),
-          radial-gradient(circle at top right, rgba(125, 211, 200, 0.12), transparent 28%),
-          linear-gradient(180deg, #0d1013, var(--bg) 34%);
+          linear-gradient(rgba(244, 240, 230, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(244, 240, 230, 0.045) 1px, transparent 1px),
+          linear-gradient(180deg, #171713, var(--bg) 36%);
+        background-size: 48px 48px, 48px 48px, auto;
       }
 
       a {
@@ -78,6 +79,7 @@
         background: linear-gradient(180deg, var(--panel), var(--panel-2));
         box-shadow: var(--shadow);
         backdrop-filter: blur(18px);
+        box-shadow: inset 0 1px 0 rgba(244, 240, 230, 0.08), var(--shadow);
       }
 
       .hero {
@@ -90,9 +92,7 @@
         content: "";
         position: absolute;
         inset: 0;
-        background:
-          linear-gradient(120deg, rgba(216, 178, 110, 0.16), transparent 32%),
-          radial-gradient(circle at 80% 10%, rgba(125, 211, 200, 0.16), transparent 24%);
+        background: linear-gradient(120deg, rgba(215, 180, 106, 0.14), transparent 36%);
         pointer-events: none;
       }
 
@@ -116,6 +116,7 @@
         font-size: clamp(3rem, 8vw, 6.4rem);
         line-height: 0.9;
         letter-spacing: -0.04em;
+        font-weight: 650;
       }
 
       .lede {
@@ -156,8 +157,22 @@
         border-color: rgba(216, 178, 110, 0.58);
       }
 
+      .btn:active,
+      .ghost-btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled,
+      .ghost-btn:disabled,
+      input:disabled,
+      select:disabled,
+      textarea:disabled {
+        cursor: not-allowed;
+        opacity: 0.58;
+      }
+
       .btn.primary {
-        background: linear-gradient(135deg, rgba(216, 178, 110, 0.2), rgba(216, 178, 110, 0.08));
+        background: linear-gradient(135deg, rgba(215, 180, 106, 0.24), rgba(215, 180, 106, 0.08));
         border-color: rgba(216, 178, 110, 0.48);
       }
 
@@ -208,7 +223,7 @@
       }
 
       .mono {
-        font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
       }
 
       .command-block {
@@ -259,6 +274,35 @@
       .setup-step.done {
         border-color: rgba(125, 211, 200, 0.32);
         background: rgba(125, 211, 200, 0.08);
+      }
+
+      .next-action {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(215, 180, 106, 0.36);
+        background: rgba(215, 180, 106, 0.08);
+      }
+
+      .next-action strong,
+      .next-action span,
+      .next-action code {
+        display: block;
+      }
+
+      .next-action span {
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .next-action code {
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(6, 7, 8, 0.28);
+        color: var(--text);
       }
 
       .snapshot-value {
@@ -339,8 +383,15 @@
         border: 1px solid var(--line-strong);
         border-radius: 14px;
         padding: 12px 14px;
-        background: rgba(0, 0, 0, 0.24);
+        background: rgba(6, 7, 8, 0.24);
         color: var(--text);
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 1px solid rgba(215, 180, 106, 0.55);
+        outline-offset: 2px;
       }
 
       .table {
@@ -533,7 +584,7 @@
         border: 1px solid var(--line-strong);
         border-radius: 14px;
         padding: 12px 14px;
-        background: rgba(0, 0, 0, 0.24);
+        background: rgba(6, 7, 8, 0.24);
         color: var(--text);
         font: inherit;
         resize: vertical;
@@ -590,6 +641,8 @@
       .playground-empty {
         border-style: dashed;
         color: var(--muted);
+        min-height: 86px;
+        align-content: center;
       }
 
       .request-row {
@@ -616,6 +669,39 @@
         .playground-toolbar {
           grid-template-columns: 1fr;
         }
+
+        h1 {
+          max-width: 14ch;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .shell {
+          width: min(100vw - 20px, 1480px);
+          padding-top: 10px;
+        }
+
+        .hero,
+        .hero-side,
+        .panel {
+          border-radius: 18px;
+        }
+
+        .hero,
+        .hero-side,
+        .panel {
+          padding: 16px;
+        }
+
+        .stat-value {
+          font-size: 2rem;
+        }
+
+        .table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
       }
     </style>
   </head>
@@ -625,7 +711,7 @@
         <div class="brand-row">
           <section class="hero">
             <p class="eyebrow">Gunmetal Web</p>
-            <h1>Local inference. Browser comfort.</h1>
+            <h1>Your local gateway is running.</h1>
             <p class="lede">
               Same daemon. Same keys. Same providers. This is the browser face
               of Gunmetal, served straight from your local gateway with request
@@ -647,6 +733,7 @@
               <strong>Loading local state...</strong>
               <span class="subtle">Reading providers, models, keys, and recent request history from your local Gunmetal home.</span>
             </div>
+            <div class="next-action" id="next-action"></div>
             <div class="banner success" id="secret-banner" hidden></div>
           </aside>
         </div>
@@ -995,6 +1082,42 @@
           "<strong>Traffic flowing.</strong><span class=\"subtle\">Review recent logs below or keep refining keys and provider coverage.</span>";
       }
 
+      function nextActionForSetup(data) {
+        if (!data.profiles.length) {
+          return {
+            title: "Next: connect one provider",
+            detail: "Use the form below. Browser providers open auth; API-key providers store upstream keys locally.",
+            command: "gunmetal setup",
+          };
+        }
+        if (!data.models.length) {
+          return {
+            title: "Next: sync models",
+            detail: "Pick the provider card, then sync so apps can target provider/model ids.",
+            command: "gunmetal models sync <saved-provider>",
+          };
+        }
+        if (!data.keys.length) {
+          return {
+            title: "Next: create one Gunmetal key",
+            detail: "Use a provider card. Paste that local key into apps, not your upstream provider key.",
+            command: "gunmetal keys create --name default",
+          };
+        }
+        if (!data.logs.length) {
+          return {
+            title: "Next: send one request",
+            detail: "Use the playground or point a client at the local OpenAI-compatible API.",
+            command: "gunmetal chat",
+          };
+        }
+        return {
+          title: "Next: inspect or keep routing",
+          detail: "Traffic exists. Review request history, errors, latency, and token use before changing providers.",
+          command: "gunmetal logs summary",
+        };
+      }
+
       async function fetchJson(url, options) {
         const response = await fetch(url, {
           headers: { "Content-Type": "application/json" },
@@ -1254,6 +1377,13 @@
           appState.selectedLogId = data.logs[0].id;
         }
         syncBanner(data);
+
+        const nextAction = nextActionForSetup(data);
+        $("next-action").innerHTML = `
+          <strong>${escapeHtml(nextAction.title)}</strong>
+          <span>${escapeHtml(nextAction.detail)}</span>
+          <code class="mono">${escapeHtml(nextAction.command)}</code>
+        `;
 
         $("provider-strip").innerHTML = data.providers
           .map(

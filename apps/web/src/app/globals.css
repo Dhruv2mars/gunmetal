@@ -2,19 +2,21 @@
 
 @layer theme {
   :root {
-    --bg: #0e0e0d;
-    --surface: #181816;
-    --surface-elevated: #222220;
-    --text: #faf9f6;
-    --text-secondary: #afaeac;
-    --text-muted: #868584;
-    --text-faint: #666469;
-    --border: rgba(226, 226, 226, 0.18);
-    --border-strong: rgba(226, 226, 226, 0.35);
-    --frosted: rgba(255, 255, 255, 0.04);
-    --font-matter: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+    --bg: #11110f;
+    --surface: #191916;
+    --surface-elevated: #23231f;
+    --text: #f4f0e6;
+    --text-secondary: #b9b2a4;
+    --text-muted: #8d887d;
+    --text-faint: #6a665f;
+    --accent: #d7b46a;
+    --accent-soft: rgba(215, 180, 106, 0.12);
+    --success: #7dbeb3;
+    --border: rgba(244, 240, 230, 0.14);
+    --border-strong: rgba(244, 240, 230, 0.28);
+    --frosted: rgba(244, 240, 230, 0.045);
+    --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: var(--font-geist-mono), ui-monospace, monospace;
     --duration-normal: 400ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -37,18 +39,18 @@
   }
 
   body {
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     background-color: var(--bg);
     color: var(--text);
-    font-family: var(--font-matter);
-    font-size: 18px;
+    font-family: var(--font-sans);
+    font-size: 16px;
     font-weight: 400;
     line-height: 1.4;
   }
 
   ::selection {
-    background-color: rgba(250, 249, 246, 0.15);
+    background-color: rgba(215, 180, 106, 0.22);
     color: var(--text);
   }
 
@@ -92,8 +94,8 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-matter);
-    font-weight: 400;
+    font-family: var(--font-sans);
+    font-weight: 500;
     letter-spacing: -0.02em;
     line-height: 1.1;
   }
@@ -111,5 +113,20 @@
 @layer utilities {
   .animate-in {
     animation: fade-in var(--duration-normal) var(--ease-out) both;
+  }
+
+  .gunmetal-panel {
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(35, 35, 31, 0.72), rgba(18, 18, 16, 0.84));
+    box-shadow: inset 0 1px 0 rgba(244, 240, 230, 0.08), 0 24px 80px rgba(6, 7, 8, 0.32);
+    backdrop-filter: blur(16px);
+  }
+
+  .hairline-grid {
+    background-image:
+      linear-gradient(rgba(244, 240, 230, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244, 240, 230, 0.055) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, rgba(6, 7, 8, 0.9), transparent 75%);
   }
 }

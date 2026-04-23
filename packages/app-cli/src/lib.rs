@@ -110,7 +110,8 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal chat            test a key against one synced model\n  gunmetal logs summary    inspect recent provider/model traffic\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal doctor          show what is missing and the next command\n  gunmetal chat            test a key against one synced model\n  gunmetal logs summary    inspect recent provider/model traffic\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const DOCTOR_HELP_FOOTER: &str = "Use this when you are unsure what is missing.\nIt checks local service state plus saved providers, synced models, keys, and recent requests.";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
 const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/app\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
@@ -133,6 +134,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    Doctor(DoctorArgs),
     Setup(SetupArgs),
     Chat(ChatArgs),
     #[command(about = "Open the local browser UI. Starts Gunmetal if needed.")]
@@ -187,6 +189,18 @@ pub enum ChatMode {
 pub enum LogStatus {
     Success,
     Error,
+}
+
+#[derive(Debug, clap::Args)]
+#[command(
+    about = "Diagnose local setup and print the next useful command.",
+    after_help = DOCTOR_HELP_FOOTER
+)]
+pub struct DoctorArgs {
+    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the local Gunmetal service.")]
+    pub host: IpAddr,
+    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
+    pub port: u16,
 }
 
 #[derive(Debug, clap::Args)]
@@ -469,6 +483,9 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
     let providers = builtin_provider_hub(paths.clone());
 
     match command {
+        Command::Doctor(args) => {
+            doctor(paths, &mut output, args).await?;
+        }
         Command::Setup(args) => {
             setup(paths, &providers, &mut output, args).await?;
         }
@@ -855,6 +872,97 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
     }
 
     Ok(())
+}
+
+async fn doctor(paths: &AppPaths, output: &mut impl Write, args: DoctorArgs) -> Result<()> {
+    let storage = paths.storage_handle()?;
+    let profiles = storage.list_profiles()?;
+    let models = storage.list_models()?;
+    let keys = storage.list_keys()?;
+    let logs = storage.list_request_logs(24)?;
+    let status = daemon_status(paths, args.host, args.port).await?;
+    let active_keys = keys
+        .iter()
+        .filter(|key| matches!(key.state, KeyState::Active))
+        .count();
+    let next = doctor_next_step(
+        status.running,
+        profiles.len(),
+        models.len(),
+        active_keys,
+        logs.len(),
+    );
+
+    writeln!(output, "Gunmetal doctor")?;
+    writeln!(
+        output,
+        "Service: {} ({}/v1)",
+        if status.running { "running" } else { "stopped" },
+        status.url
+    )?;
+    if let Some(note) = &status.note {
+        writeln!(output, "Service note: {note}")?;
+    }
+    writeln!(output, "Providers: {}", profiles.len())?;
+    writeln!(output, "Models: {}", models.len())?;
+    writeln!(
+        output,
+        "Keys: {} active / {} total",
+        active_keys,
+        keys.len()
+    )?;
+    writeln!(output, "Recent requests: {}", logs.len())?;
+    writeln!(output, "Next: {}", next.reason)?;
+    writeln!(output, "Command: {}", next.command)?;
+    Ok(())
+}
+
+struct DoctorNextStep {
+    reason: &'static str,
+    command: &'static str,
+}
+
+fn doctor_next_step(
+    service_running: bool,
+    profiles: usize,
+    models: usize,
+    active_keys: usize,
+    logs: usize,
+) -> DoctorNextStep {
+    if profiles == 0 {
+        return DoctorNextStep {
+            reason: "connect one provider",
+            command: "gunmetal setup",
+        };
+    }
+    if models == 0 {
+        return DoctorNextStep {
+            reason: "sync models for a saved provider",
+            command: "gunmetal models sync <saved-provider>",
+        };
+    }
+    if active_keys == 0 {
+        return DoctorNextStep {
+            reason: "create one active Gunmetal key",
+            command: "gunmetal keys create --name default",
+        };
+    }
+    if !service_running {
+        return DoctorNextStep {
+            reason: "start the local API",
+            command: "gunmetal web",
+        };
+    }
+    if logs == 0 {
+        return DoctorNextStep {
+            reason: "send one test request",
+            command: "gunmetal chat",
+        };
+    }
+    DoctorNextStep {
+        reason: "inspect recent traffic",
+        command: "gunmetal logs summary",
+    }
 }
 
 async fn ensure_daemon_running(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
@@ -2197,8 +2305,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        AuthCommand, ChatArgs, ChatMode, Cli, Command, KeyCommand, LogCommand, ModelCommand,
-        ProfileCommand, SetupArgs, StatusArgs, execute, provider_definition_fixture,
+        AuthCommand, ChatArgs, ChatMode, Cli, Command, DoctorArgs, KeyCommand, LogCommand,
+        ModelCommand, ProfileCommand, SetupArgs, StatusArgs, execute, provider_definition_fixture,
     };
 
     #[test]
@@ -2292,6 +2400,9 @@ mod tests {
         let cli = Cli::parse_from(["gunmetal", "start"]);
         assert!(matches!(cli.command.unwrap(), Command::Start(_)));
 
+        let cli = Cli::parse_from(["gunmetal", "doctor"]);
+        assert!(matches!(cli.command.unwrap(), Command::Doctor(_)));
+
         let cli = Cli::parse_from(["gunmetal", "web", "--no-open"]);
         assert!(matches!(cli.command.unwrap(), Command::Web(_)));
 
@@ -2300,6 +2411,27 @@ mod tests {
 
         let cli = Cli::parse_from(["gunmetal", "status"]);
         assert!(matches!(cli.command.unwrap(), Command::Status(_)));
+    }
+
+    #[test]
+    fn doctor_next_step_prioritizes_setup_gaps() {
+        let next = super::doctor_next_step(false, 0, 0, 0, 0);
+        assert_eq!(next.command, "gunmetal setup");
+
+        let next = super::doctor_next_step(false, 1, 0, 0, 0);
+        assert_eq!(next.command, "gunmetal models sync <saved-provider>");
+
+        let next = super::doctor_next_step(false, 1, 1, 0, 0);
+        assert_eq!(next.command, "gunmetal keys create --name default");
+
+        let next = super::doctor_next_step(false, 1, 1, 1, 0);
+        assert_eq!(next.command, "gunmetal web");
+
+        let next = super::doctor_next_step(true, 1, 1, 1, 0);
+        assert_eq!(next.command, "gunmetal chat");
+
+        let next = super::doctor_next_step(true, 1, 1, 1, 1);
+        assert_eq!(next.command, "gunmetal logs summary");
     }
 
     #[test]
@@ -2417,6 +2549,7 @@ mod tests {
         let help = Cli::command().render_help().to_string();
 
         assert!(help.contains("gunmetal setup"));
+        assert!(help.contains("gunmetal doctor"));
         assert!(help.contains("gunmetal chat"));
         assert!(help.contains("gunmetal logs summary"));
         assert!(help.contains("gunmetal web"));
@@ -2425,6 +2558,32 @@ mod tests {
         assert!(help.contains("http://127.0.0.1:4684/v1"));
         assert!(help.contains("provider/model"));
         assert!(help.contains("/v1/models"));
+    }
+
+    #[tokio::test]
+    async fn doctor_reports_setup_gap_and_next_command() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let mut output = Vec::new();
+
+        execute(
+            Command::Doctor(DoctorArgs {
+                host: "127.0.0.1".parse().unwrap(),
+                port: 46859,
+            }),
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("Gunmetal doctor"));
+        assert!(text.contains("Service: stopped"));
+        assert!(text.contains("Providers: 0"));
+        assert!(text.contains("Next: connect one provider"));
+        assert!(text.contains("Command: gunmetal setup"));
     }
 
     #[test]

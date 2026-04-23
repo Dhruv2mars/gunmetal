@@ -8,9 +8,9 @@ describe("marketing routes", () => {
   test("home page sells the full product", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
-    expect(html).toContain("The middleman layer");
-    expect(html).toContain("for AI inference.");
-    expect(html).toContain("upstream providers");
+    expect(html).toContain("One local API");
+    expect(html).toContain("OpenAI-compatible endpoint");
+    expect(html).toContain("provider/model");
     expect(html).toContain("i -g @dhruv2mars/gunmetal");
     expect(html).toContain("@dhruv2mars/gunmetal");
     expect(html).toContain("npm");
@@ -24,6 +24,6 @@ describe("marketing routes", () => {
     expect(html).toContain("Web UI");
     expect(html).toContain("gunmetal web");
     expect(html).toContain("127.0.0.1");
-    expect(html).toContain("open it in your browser");
+    expect(html).toContain("Browser control");
   });
 });
