@@ -1,0 +1,83 @@
+{
+  "cli_version": "0.5.5",
+  "checkpoint_id": "76e2c1cc3907",
+  "session_id": "019db9dc-620d-7f51-a6ec-724a5cd8da9c",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-23T12:10:32.254247Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/documentation.md",
+    "docs/plans.md",
+    "docs/prompt.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.4",
+  "turn_id": "16c2c36209ea",
+  "checkpoint_transcript_start": 1035,
+  "transcript_lines_at_start": 1035,
+  "token_usage": {
+    "input_tokens": 2830425,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2775680,
+    "output_tokens": 13255,
+    "api_call_count": 46
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-23T12:10:32.187159Z",
+    "agent_lines": 0,
+    "agent_removed": 179,
+    "human_added": 438,
+    "human_modified": 165,
+    "human_removed": 0,
+    "total_committed": 558,
+    "total_lines_changed": 974,
+    "agent_percentage": 18.37782340862423,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 287,
+      "user_lines_removed": 165,
+      "agent_lines_added": 120,
+      "agent_lines_removed": 179,
+      "user_added_per_file": {
+        "apps/web/src/app/docs/page.tsx": 25,
+        "apps/web/src/app/globals.css": 36,
+        "apps/web/src/app/install/page.tsx": 39,
+        "apps/web/src/app/layout.tsx": 8,
+        "apps/web/src/app/page.test.tsx": 5,
+        "apps/web/src/app/page.tsx": 90,
+        "apps/web/src/app/start-here/page.tsx": 39,
+        "apps/web/src/app/webui/page.tsx": 30,
+        "apps/web/src/components/layout/Footer.tsx": 2,
+        "apps/web/src/components/layout/Navbar.tsx": 10,
+        "apps/web/src/components/ui/PackageManagerCommandBox.tsx": 3
+      },
+      "user_removed_per_file": {
+        "apps/web/src/app/docs/page.tsx": 24,
+        "apps/web/src/app/globals.css": 19,
+        "apps/web/src/app/install/page.tsx": 19,
+        "apps/web/src/app/layout.tsx": 17,
+        "apps/web/src/app/page.test.tsx": 5,
+        "apps/web/src/app/page.tsx": 22,
+        "apps/web/src/app/start-here/page.tsx": 26,
+        "apps/web/src/app/webui/page.tsx": 18,
+        "apps/web/src/components/layout/Footer.tsx": 4,
+        "apps/web/src/components/layout/Navbar.tsx": 10,
+        "apps/web/src/components/ui/PackageManagerCommandBox.tsx": 1
+      }
+    }
+  ]
+}
