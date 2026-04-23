@@ -32,7 +32,6 @@
     "ai",
     "gateway",
     "cli",
-    "tui",
     "rust"
   ],
   "engines": {

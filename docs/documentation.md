@@ -3,90 +3,76 @@
 This document is updated continuously as milestones land so it reflects reality.
 
 ## What This Work Is
-- This is the GA shipping pass for the Gunmetal super app.
-- The focus is now public readiness of the product surfaces, not broadening scope.
+- This is the TUI removal and repo cleanup pass.
+- Gunmetal now concentrates on two user-facing control surfaces:
+  - CLI for setup, service control, auth, keys, models, chat, logs, and scripted use
+  - Web UI for graphical setup and operator workflows
 
 ## Current Status
-- Durable memory exists and is updated for the GA shipping pass.
+- Durable memory has been retargeted from the older GA/TUI pass to TUI removal.
 - Product thesis remains: Gunmetal is the local-first inference middle layer that turns AI subscriptions and provider accounts into one programmable API.
-- Product taxonomy remains explicit:
-  - `Products`: consumer-facing Gunmetal products, with the super app as the current product
-  - `Developer`: internal engines that later become public developer products, starting with the provider/extension SDK
-- The current public-shipping order is fixed:
-  - landing page
-  - CLI
-  - TUI
-  - Web UI
-- Hosted truth is now explicit:
-  - canonical public host is `gunmetalapp.vercel.app`
-  - public Web UI marketing route is `/webui`
-  - `gunmetal.vercel.app` belongs to an unrelated old site and must not be used
-- The current active milestone is complete for this shipping pass.
-
-## Status By Milestone
-- Milestone 1 complete: durable-memory refresh and shipping branch.
-- Milestone 2 complete: public landing page polish.
-- Milestone 3 complete: CLI shipping polish.
-- Milestone 4 complete: TUI shipping polish.
-- Milestone 5 complete: Web UI shipping polish.
-- Milestone 6 complete: final GA verification and release cleanup.
+- The TUI is no longer a product surface.
+- The native app entrypoint behaves like a CLI, not a terminal UI launcher.
+- Canonical public host remains `gunmetalapp.vercel.app`.
+- Public Web UI marketing route remains `/webui`.
+- `gunmetal.vercel.app` belongs to an unrelated old site and must not be used.
 
 ## Current Implementation Focus
-- The foundation from earlier phases remains in place:
-  - shared provider metadata
-  - aligned daemon, CLI, and OpenTUI provider behavior
-  - stronger request inspection
-- Shipping work completed so far in this pass:
-  - landing page rewritten around the real super-app story
-  - canonical public host corrected to `gunmetalapp.vercel.app`
-  - public Web UI route moved to `/webui` with a redirect from `/web-ui`
-  - CLI help and recovery paths tightened for first-time public users
-  - OpenTUI tightened for public use, including clearer setup-to-playground flow and narrower 80-column terminal copy
-  - browser Web UI tightened around the real golden path:
-    - Gunmetal-key-only playground copy
-    - provider-scoped playground model selection
-    - calmer request-history range controls
-    - narrower models-in-view presentation
-    - streamed playground requests now persist into request history correctly
-- The current task is the final GA verification pass.
+- `packages/app-tui` has been removed.
+- `gunmetal tui` has been removed.
+- `gunmetal-tui`, OpenTUI, and TUI lockfile dependencies have been removed.
+- Stale TUI copy has been removed from README, site content, npm metadata, repo tests, and repo guidance.
+- Daemon, storage, CLI, SDK, providers, web, and npm wrapper remain intact.
+- Web lint cleanup removed an unused package-manager array and converted logo `<img>` tags to `next/image`.
+- Post-TUI cleanup removed unused web scaffold:
+  - placeholder product/developer/download/changelog pages
+  - dropdown navbar complexity
+  - unused section/UI components
+  - unused demo SVG assets
+  - unused `framer-motion`, `clsx`, and `tailwind-merge` deps
+  - unused Rust workspace deps from older app scaffolding
+  - no-longer-public CLI daemon helper types/functions
 
-## Why This Matters
-- The public front door needs to explain the product cleanly before broader launch.
-- The later CLI, TUI, and Web UI passes should inherit one clear product story rather than drifting.
-- Public readiness depends on both presentation quality and real usability.
+## Architecture
+- Product: local-first inference middle layer for individuals.
+- Canonical flow: `app/tool -> Gunmetal key -> Gunmetal -> provider extension -> upstream provider`.
+- Control surfaces:
+  - CLI: `gunmetal setup`, `gunmetal web`, `gunmetal start`, `gunmetal status`, `gunmetal chat`, `gunmetal logs ...`
+- Web UI: local browser app at `http://127.0.0.1:4684/app`
+- Public web routes:
+  - `/`
+  - `/webui`
+  - `/start-here`
+  - `/docs`
+  - `/install`
+- Internal layers:
+  - daemon: local OpenAI-compatible API and Web UI shell
+  - storage: SQLite/local state
+  - SDK/core/extensions: provider contracts and built-in providers
+  - npm package: native binary install wrapper
 
 ## Validation Results
-- Last completed full-repo verification before this shipping pass:
-  - `bun run test`
-  - `bun run check`
-  - `cargo test --workspace`
-- Landing page verification completed:
-  - `bun run --filter @gunmetal/web test`
-  - `bun run --filter @gunmetal/web lint`
-  - live browser checks on desktop and mobile with agent-browser
-  - route verification for `/install`, `/start-here`, `/docs`, `/webui`, and redirect from `/web-ui`
-- CLI verification completed:
-  - `cargo test -p gunmetal-cli`
-  - command help smokes for root, setup, web, start, status, logs list, providers list, and chat
-  - live command smokes for `gunmetal status`, `gunmetal profiles list`, and `gunmetal providers list`
-- TUI verification completed:
-  - `cargo test -p gunmetal-tui`
-  - live `gunmetal tui` launcher smokes, including a constrained `80x24` terminal check
-- Web UI verification completed:
-  - `cargo test -p gunmetal-daemon`
-  - desktop and mobile screenshot captures against `/app`
-  - live browser interaction against `/app` using a Gunmetal key
-  - live browser verification of the current Codex upstream failure path and request-detail update
-- Final GA verification completed:
-  - `bun run test`
-  - `bun run check`
-  - `cargo run -p gunmetal -- status`
-  - `cargo run -p gunmetal -- logs list`
+- `rg -n "packages/app-tui|@gunmetal/tui|gunmetal-tui|GUNMETAL_TUI|OpenTUI|@opentui|gunmetal tui|terminal UI|terminal experience|\\bTUI\\b|\\btui\\b" . -S --glob '!docs/**'`
+  - clean except one negative CLI help assertion.
+- `cargo run -p gunmetal -- --help`
+  - no TUI command.
+- `cargo run -p gunmetal`
+  - prints CLI help instead of launching a TUI.
+- `cargo run -p gunmetal -- status`
+  - stopped recovery points to `gunmetal start` or `gunmetal web`.
+- `npm exec --yes bun@1.3.5 -- run test`
+  - pass.
+- `npm exec --yes bun@1.3.5 -- run check`
+  - pass.
+- `npm exec --yes bun@1.3.5 -- run --filter @gunmetal/web build`
+  - pass; static routes are `/`, `/webui`, `/start-here`, `/docs`, and `/install`.
+- `cargo test -p gunmetal-cli`
+  - pass.
+- Dead-code scans for removed web scaffold, placeholder routes, direct JS deps, app TUI crates, and OpenTUI packages:
+  - clean, except `tower-http` remains as a transitive lockfile dependency.
 
 ## Decisions
-- The Gunmetal super app is the only product in scope for this pass.
-- Surface order is fixed and should not be skipped.
-- Public polish should improve the real golden path, not just copy or visuals.
-
-## Next Steps
-- Clean the repo, commit, and move the checkpoint to `main`.
+- TUI is removed instead of kept as an alternate setup path.
+- No-command `gunmetal` should show CLI help.
+- `gunmetal web` is the graphical surface.
+- `gunmetal start` is the API-only service path.

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function Footer() {
@@ -8,9 +9,11 @@ export function Footer() {
           {/* Left: Branding & Copyright */}
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center group flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-200">
-              <img
+              <Image
                 src="/logo.svg"
                 alt=""
+                width={18}
+                height={18}
                 aria-hidden="true"
                 className="h-[18px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ display: "block" }}

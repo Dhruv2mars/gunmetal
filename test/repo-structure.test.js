@@ -8,7 +8,6 @@ const expectedPaths = [
   "packages/app-cli/Cargo.toml",
   "packages/app-daemon/Cargo.toml",
   "packages/app-storage/Cargo.toml",
-  "packages/app-tui/Cargo.toml",
   "packages/extensions/Cargo.toml",
   "packages/npm/package.json",
   "packages/sdk/Cargo.toml",
@@ -33,7 +32,6 @@ test("workspace manifests point at the new layout", () => {
     "packages/app-cli",
     "packages/app-daemon",
     "packages/app-storage",
-    "packages/app-tui",
     "packages/extensions",
     "packages/sdk",
     "packages/sdk-core"
@@ -68,10 +66,10 @@ test("release workflow supports manual reruns and npm auth paths", () => {
 test("install docs point at npm, not source-only fallback", () => {
   const rootReadme = readFileSync("README.md", "utf8");
   const npmReadme = readFileSync("packages/npm/README.md", "utf8");
-  const siteContent = readFileSync("apps/web/src/lib/site-content.ts", "utf8");
   const installPage = readFileSync("apps/web/src/app/install/page.tsx", "utf8");
   const docsPage = readFileSync("apps/web/src/app/docs/page.tsx", "utf8");
   const startHerePage = readFileSync("apps/web/src/app/start-here/page.tsx", "utf8");
+  const webUiPage = readFileSync("apps/web/src/app/webui/page.tsx", "utf8");
 
   assert.doesNotMatch(rootReadme, /not published yet/);
   assert.doesNotMatch(rootReadme, /run Gunmetal from source/i);
@@ -86,17 +84,14 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.match(npmReadme, /gunmetal setup/);
   assert.match(npmReadme, /Gunmetal works when the app talks to Gunmetal/i);
 
-  assert.doesNotMatch(siteContent, /not published yet/);
-  assert.match(siteContent, /npm i -g @dhruv2mars\/gunmetal/);
-  assert.match(siteContent, /gunmetal setup/);
-  assert.match(siteContent, /OpenAI-compatible/);
-
   assert.doesNotMatch(installPage, /npm install -g gunmetal/);
   assert.match(installPage, /@dhruv2mars\/gunmetal/);
   assert.match(docsPage, /compatibility/i);
   assert.match(startHerePage, /Start here/i);
   assert.match(startHerePage, /\/v1\/models/);
   assert.match(startHerePage, /\/v1\/chat\/completions/);
+  assert.match(webUiPage, /gunmetal web/);
+  assert.match(webUiPage, /127\.0\.0\.1:4684\/app/);
 });
 
 test("web app pins Vercel to the Next.js build path", () => {

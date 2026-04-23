@@ -1,95 +1,24 @@
 @import "tailwindcss";
 
-/* ============================================
-   GUNMETAL DESIGN SYSTEM
-   Inspired by Warp — warm dark, editorial, minimal
-   ============================================ */
-
 @layer theme {
   :root {
-    /* ----------------------------------------
-       COLOR PALETTE — Warp Warm Dark
-       Warm near-black canvas, cream parchment text
-       Almost monochromatic warm grays
-       ---------------------------------------- */
-
-    /* Background — warm near-black, not cold */
     --bg: #0e0e0d;
-
-    /* Surface — warm dark */
     --surface: #181816;
     --surface-elevated: #222220;
-
-    /* Text hierarchy — warm, not pure white */
     --text: #faf9f6;
     --text-secondary: #afaeac;
     --text-muted: #868584;
     --text-faint: #666469;
-
-    /* Borders — semi-transparent warm */
     --border: rgba(226, 226, 226, 0.18);
     --border-strong: rgba(226, 226, 226, 0.35);
-
-    /* Buttons — earthy dark, muted text */
-    --btn-bg: #353534;
-    --btn-text: #afaeac;
-    --btn-border: rgba(255, 255, 255, 0.08);
-    --btn-hover-bg: #404040;
-    --btn-hover-text: #faf9f6;
-
-    /* CTAs — restrained, no bright accents */
-    --cta-bg: #faf9f6;
-    --cta-text: #0e0e0d;
-    --cta-hover-bg: #e8e7e4;
-
-    /* Surface overlays */
     --frosted: rgba(255, 255, 255, 0.04);
-    --veil: rgba(255, 255, 255, 0.06);
-
-    /* Grid — barely visible warm lines */
-    --grid-color: rgba(255, 255, 255, 0.02);
-    --grid-size: 64px;
-
-    /* Font families — Matter-inspired DM Sans + Inter supplement */
     --font-matter: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-
-    /* Border radius — Warp scale */
-    --radius-xs: 4px;
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 14px;
-    --radius-2xl: 40px;
-    --radius-pill: 50px;
-
-    /* Spacing — 8px base, editorial-grade */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-20: 80px;
-    --space-24: 96px;
-    --space-32: 128px;
-
-    /* Animation — sharp, no bounce */
-    --duration-fast: 150ms;
     --duration-normal: 400ms;
-    --duration-slow: 700ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
-
-/* ============================================
-   BASE STYLES
-   ============================================ */
 
 @layer base {
   *,
@@ -108,30 +37,26 @@
   }
 
   body {
-    font-family: var(--font-matter);
-    font-size: 18px;
-    line-height: 1.4;
-    font-weight: 400;
-    background-color: var(--bg);
-    color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
-    letter-spacing: -0.01em;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-matter);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.4;
   }
 
-  /* Selection — warm parchment */
   ::selection {
     background-color: rgba(250, 249, 246, 0.15);
     color: var(--text);
   }
 
-  /* Focus — subtle, warm */
   :focus-visible {
     outline: 1px solid var(--border-strong);
     outline-offset: 2px;
   }
 
-  /* Scrollbar — minimal warm dark */
   ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -150,21 +75,23 @@
     background: rgba(226, 226, 226, 0.5);
   }
 
-  /* Links — muted, underline on hover */
   a {
     color: inherit;
     text-decoration: none;
   }
 
-  /* Images */
   img {
+    display: block;
     max-width: 100%;
     height: auto;
-    display: block;
   }
 
-  /* Headings — matter weight */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-matter);
     font-weight: 400;
     letter-spacing: -0.02em;
@@ -172,391 +99,17 @@
   }
 }
 
-/* ============================================
-   TYPOGRAPHY UTILITIES
-   ============================================ */
-
-@layer utilities {
-  /* Display Hero — 80px Matter, max compression */
-  .text-hero {
-    font-family: var(--font-matter);
-    font-size: clamp(3.5rem, 10vw, 6rem);
-    font-weight: 400;
-    line-height: 1.00;
-    letter-spacing: -0.03em;
-  }
-
-  /* Section heading — 56px Matter */
-  .text-section {
-    font-family: var(--font-matter);
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 400;
-    line-height: 1.10;
-    letter-spacing: -0.02em;
-  }
-
-  /* Feature heading — 40px Matter */
-  .text-feature {
-    font-family: var(--font-matter);
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
-    font-weight: 400;
-    line-height: 1.10;
-    letter-spacing: -0.015em;
-  }
-
-  /* Card title — 22px Matter Medium */
-  .text-card {
-    font-family: var(--font-matter);
-    font-size: 1.375rem;
-    font-weight: 500;
-    line-height: 1.14;
-    letter-spacing: 0;
-  }
-
-  /* Body large — 20px Matter */
-  .text-body-lg {
-    font-family: var(--font-matter);
-    font-size: 1.25rem;
-    font-weight: 400;
-    line-height: 1.40;
-    letter-spacing: -0.01em;
-  }
-
-  /* Body — 18px Matter */
-  .text-body {
-    font-family: var(--font-matter);
-    font-size: 1.125rem;
-    font-weight: 400;
-    line-height: 1.50;
-    letter-spacing: -0.01em;
-  }
-
-  /* UI / Nav — 16px Matter */
-  .text-ui {
-    font-family: var(--font-matter);
-    font-size: 1rem;
-    font-weight: 400;
-    line-height: 1.20;
-    letter-spacing: 0;
-  }
-
-  /* Caption — 14px */
-  .text-caption {
-    font-family: var(--font-matter);
-    font-size: 0.875rem;
-    font-weight: 400;
-    line-height: 1.40;
-    letter-spacing: 0;
-  }
-
-  /* Uppercase label — editorial signal */
-  .text-label {
-    font-family: var(--font-matter);
-    font-size: 0.75rem;
-    font-weight: 400;
-    line-height: 1.35;
-    letter-spacing: 2.4px;
-    text-transform: uppercase;
-  }
-
-  /* Step number — Warp editorial style */
-  .text-step {
-    font-family: var(--font-matter);
-    font-size: clamp(3rem, 6vw, 4rem);
-    font-weight: 400;
-    line-height: 1.00;
-    letter-spacing: -0.02em;
-    color: var(--text-faint);
-  }
-
-  /* Code — JetBrains Mono */
-  .text-code {
-    font-family: var(--font-mono);
-    font-size: 0.875rem;
-    font-weight: 400;
-    line-height: 1.60;
-    letter-spacing: -0.01em;
-  }
-
-  /* Code large — terminal display */
-  .text-code-lg {
-    font-family: var(--font-mono);
-    font-size: 1rem;
-    font-weight: 400;
-    line-height: 1.50;
-    letter-spacing: -0.02em;
-  }
-}
-
-/* ============================================
-   ANIMATION UTILITIES
-   ============================================ */
-
-@layer utilities {
-  /* Fade in — opacity only */
-  .animate-in {
-    animation: fadeIn var(--duration-normal) var(--ease-out) both;
-  }
-
-  /* Fade in up — subtle Y shift */
-  .animate-up {
-    animation: fadeUp var(--duration-normal) var(--ease-out) both;
-  }
-
-  /* Scale in — CTAs, cards */
-  .animate-scale {
-    animation: scaleIn var(--duration-normal) var(--ease-out) both;
-  }
-
-  /* Reveal on scroll */
-  .reveal {
+@keyframes fade-in {
+  from {
     opacity: 0;
-    transform: translateY(20px);
   }
-
-  .reveal.is-visible {
+  to {
     opacity: 1;
-    transform: translateY(0);
-    transition:
-      opacity var(--duration-slow) var(--ease-out),
-      transform var(--duration-slow) var(--ease-out);
   }
-
-  /* Stagger delays */
-  .delay-100 { animation-delay: 100ms; }
-  .delay-200 { animation-delay: 200ms; }
-  .delay-300 { animation-delay: 300ms; }
-  .delay-400 { animation-delay: 400ms; }
-  .delay-500 { animation-delay: 500ms; }
-  .delay-600 { animation-delay: 600ms; }
-  .delay-800 { animation-delay: 800ms; }
-  .delay-1000 { animation-delay: 1000ms; }
-  .delay-1400 { animation-delay: 1400ms; }
-  .delay-1800 { animation-delay: 1800ms; }
-
-  /* Initially hidden */
-  .is-ready {
-    opacity: 0;
-  }
-}
-
-/* ============================================
-   KEYFRAMES
-   ============================================ */
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes pkg-scroll {
-  0%, 30% { transform: translateY(0); }
-  33.33%, 63.33% { transform: translateY(-1.4em); }
-  66.66%, 96.66% { transform: translateY(-2.8em); }
-  100% { transform: translateY(-4.2em); }
 }
 
 @layer utilities {
-  .animate-pkg-scroll {
-    animation: pkg-scroll 7.5s cubic-bezier(0.87, 0, 0.13, 1) infinite;
+  .animate-in {
+    animation: fade-in var(--duration-normal) var(--ease-out) both;
   }
-}
-
-/* ============================================
-   COMPONENT UTILITIES
-   ============================================ */
-
-/* Blueprint grid — barely visible warm lines */
-.grid-bg {
-  background-image:
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-}
-
-/* Radial glow — warm, very subtle */
-.glow-warm {
-  background: radial-gradient(
-    ellipse 80% 50% at 50% 120%,
-    rgba(250, 249, 246, 0.04) 0%,
-    transparent 70%
-  );
-}
-
-/* Glass navbar on scroll */
-.glass {
-  background: rgba(14, 14, 13, 0.80);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
-
-/* Card — semi-transparent border containment */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-}
-
-.card:hover {
-  border-color: var(--border-strong);
-}
-
-/* Terminal window */
-.terminal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.terminal-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.terminal-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.terminal-body {
-  padding: 20px 24px;
-}
-
-/* Pill button */
-.btn-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: var(--btn-bg);
-  color: var(--btn-text);
-  border: 1px solid var(--btn-border);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-matter);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-  white-space: nowrap;
-}
-
-.btn-pill:hover {
-  background: var(--btn-hover-bg);
-  color: var(--btn-hover-text);
-}
-
-/* CTA pill — light, on dark */
-.btn-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: var(--cta-bg);
-  color: var(--cta-text);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-matter);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-  white-space: nowrap;
-}
-
-.btn-cta:hover {
-  background: var(--cta-hover-bg);
-}
-
-/* Ghost pill — border only */
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-matter);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-  white-space: nowrap;
-}
-
-.btn-ghost:hover {
-  color: var(--text);
-  border-color: rgba(226, 226, 226, 0.55);
-}
-
-/* Cursor blink */
-.cursor {
-  display: inline-block;
-  width: 2px;
-  height: 1.1em;
-  background: var(--text-secondary);
-  margin-left: 1px;
-  vertical-align: text-bottom;
-  animation: blink 1s step-end infinite;
-}
-
-/* Status dot */
-.status-dot {
-  position: relative;
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.status-dot::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--text-secondary);
-  animation: pulse-ring 2s ease-out infinite;
 }

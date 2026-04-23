@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type PackageManager = "npm" | "bun" | "pnpm";
 
-const managers: PackageManager[] = ["npm", "bun", "pnpm"];
 const loopManagers: PackageManager[] = ["npm", "bun", "pnpm", "npm"];
 
 function usePrefersReducedMotion() {
@@ -153,4 +152,3 @@ export function PackageManagerCommandBox({
     </div>
   );
 }
-

@@ -114,7 +114,7 @@ const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a pr
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
 const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/app\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
-const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web` / `gunmetal tui`.";
+const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web`.";
 const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start` or open `gunmetal web`.";
 const PROVIDERS_LIST_HELP_FOOTER: &str = "Lists built-in provider support, auth mode, request modes, and priority.\nUse `gunmetal profiles list` for the providers you already saved locally.";
 const LOGS_LIST_HELP_FOOTER: &str = "Examples:\n  gunmetal logs list\n  gunmetal logs list --provider codex\n  gunmetal logs list --query timeout --status error\n  gunmetal logs list --model openai/gpt-5.4";
@@ -175,8 +175,6 @@ pub enum Command {
         #[command(subcommand)]
         command: LogCommand,
     },
-    #[command(about = "Open the terminal UI.")]
-    Tui,
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
@@ -854,17 +852,12 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                 }
             }
         },
-        Command::Tui => {}
     }
 
     Ok(())
 }
 
-pub async fn ensure_daemon_running(
-    paths: &AppPaths,
-    host: IpAddr,
-    port: u16,
-) -> Result<ServiceStatus> {
+async fn ensure_daemon_running(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
     let current = daemon_status(paths, host, port).await?;
     if current.running {
         ensure_daemon_matches_home(&current, paths)?;
@@ -890,7 +883,7 @@ pub async fn ensure_daemon_running(
     anyhow::bail!("{}", diagnose_start_failure(paths, port))
 }
 
-pub async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus> {
+async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus> {
     ensure_daemon_running(
         paths,
         DEFAULT_HOST.parse::<IpAddr>().expect("default host"),
@@ -931,7 +924,7 @@ async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Servic
     Ok(stop_timeout_status(daemon_status(paths, host, port).await?))
 }
 
-pub async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
+async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
     let url = format!("http://{host}:{port}");
     let health_url = format!("{url}/health");
     let pid = managed_daemon_pid(paths)?;
@@ -1170,14 +1163,14 @@ fn terminate_pid(pid: u32) -> Result<()> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ServiceStatus {
-    pub state: String,
-    pub running: bool,
-    pub pid: Option<u32>,
-    pub url: String,
-    pub health: Option<String>,
-    pub home: Option<String>,
-    pub note: Option<String>,
+struct ServiceStatus {
+    state: String,
+    running: bool,
+    pid: Option<u32>,
+    url: String,
+    health: Option<String>,
+    home: Option<String>,
+    note: Option<String>,
 }
 
 fn ensure_daemon_matches_home(status: &ServiceStatus, paths: &AppPaths) -> Result<()> {
@@ -2093,10 +2086,7 @@ fn write_service_report(
         writeln!(output, "Health: {health}")?;
     }
     if !status.running {
-        writeln!(
-            output,
-            "Next: run `gunmetal start`, `gunmetal web`, or `gunmetal tui`."
-        )?;
+        writeln!(output, "Next: run `gunmetal start` or `gunmetal web`.")?;
     }
     Ok(())
 }
@@ -2238,7 +2228,7 @@ mod tests {
     }
 
     #[test]
-    fn defaults_to_no_command_for_tui_launch() {
+    fn defaults_to_no_command_for_help() {
         let cli = Cli::parse_from(["gunmetal"]);
         assert!(cli.command.is_none());
     }
@@ -2467,7 +2457,7 @@ mod tests {
         let start_help = start.render_help().to_string();
         assert!(start_help.contains("Start the local Gunmetal API in the background."));
         assert!(start_help.contains("gunmetal web"));
-        assert!(start_help.contains("gunmetal tui"));
+        assert!(!start_help.contains("gunmetal tui"));
 
         let mut command = Cli::command();
         let status = command
@@ -2562,7 +2552,7 @@ mod tests {
 
         let text = String::from_utf8(output).unwrap();
         assert!(text.contains("Gunmetal is not running."));
-        assert!(text.contains("Next: run `gunmetal start`, `gunmetal web`, or `gunmetal tui`."));
+        assert!(text.contains("Next: run `gunmetal start` or `gunmetal web`."));
         assert!(text.contains(&format!("http://127.0.0.1:{port}/v1")));
     }
 
