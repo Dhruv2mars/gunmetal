@@ -1,0 +1,5 @@
+ok, we have refactored the codebase, and removed TUI and other dead stuff as well. 
+
+now, our target is to focus on creating the best ux and frontend for the web UI and CLI. use the taste-skill to do it from the fundamnetal level from scratch with first principles thinking. 
+
+[$caveman](/Users/dhruv2mars/.agents/skills/caveman/SKILL.md) ultra.
