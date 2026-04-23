@@ -1,9 +1,1 @@
-do 1 and push
-
----
-
-shouldnt you follow what the instructions about git and version control are.
-
----
-
-bro, push to main. no draft.
+should have pushed these with the PR as well.
