@@ -1,5 +1,1 @@
-you have to do a full cleanup and refactor of the whole codebase in the project. primary target is to remove the TUI altogether. my thought has been, if we already have a webui and a way to control and setup everything in gunmetal, we dont actually require the tui. since to start the webui and setup everything else, it can be done via the cli as well. so firstly, do a cleanup of that. and post that, i want you to go on a cleanup and thourough check of the codebase, removing unwanted, dead, unnecessary code and parts which are no longer relevant.
-
----
-
-great, that now our TUI is fully removed. now go on and continue on the cleanup spree. [$caveman](/Users/dhruv2mars/.agents/skills/caveman/SKILL.md) ultra enabled.
+do 1 and push
