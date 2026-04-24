@@ -3,7 +3,7 @@
 ## Task
 - Rebuild Gunmetal UX quality from first principles after the refactor that removed TUI and dead surfaces.
 - Current target surfaces:
-  - hosted marketing/docs site in `apps/web`
+  - hosted docs/product routes in `apps/web`, but keep landing page + shared landing navbar on pre-2026-04-23 state unless user explicitly asks
   - local browser Web UI served by `packages/app-daemon`
   - CLI in `packages/app-cli`
 
@@ -38,6 +38,7 @@
 - Do not publish SDK packages.
 - Do not add auth, accounts, teams, hosted sync, or multi-tenant concepts.
 - Do not widen beyond the super-app Web UI and CLI path.
+- Do not redesign or tweak landing page/navbar unless user explicitly asks.
 
 ## Deliverables
 - Updated durable memory for this UX pass.

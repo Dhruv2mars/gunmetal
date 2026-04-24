@@ -41,6 +41,19 @@ Updated continuously during the UX pass.
 - Public Web UI marketing route remains `/webui`.
 - Local browser UI remains `http://127.0.0.1:4684/app`.
 - Local API remains `http://127.0.0.1:4684/v1`.
+- Landing page and shared landing navbar were restored to pre-2026-04-23 state after scope correction.
+- Local browser Web UI now has a clearer next-action rail, refined mobile behavior, and safer narrow-screen containment.
+- CLI now includes `gunmetal doctor` for setup diagnosis and next-command guidance.
 
 ## Validation Results
-- Current UX pass validation pending.
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web test`
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web lint`
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web build`
+- `cargo fmt --all --check`
+- `cargo test -p gunmetal-cli`
+- `cargo test -p gunmetal-daemon`
+- `cargo run -p gunmetal -- --help`
+- `cargo run -p gunmetal -- doctor`
+- `cargo run -p gunmetal -- web --no-open`
+- agent-browser live check for hosted `/` and `/webui`
+- agent-browser live check for local `/app` desktop and mobile

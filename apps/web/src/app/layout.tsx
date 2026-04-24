@@ -1,20 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
-const geist = Geist({
-  variable: "--font-geist",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSans = DM_Sans({
+  variable: "--font-matter",
   subsets: ["latin"],
   display: "swap",
+  weight: ["400", "500"],
+});
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -61,11 +70,11 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark" data-scroll-behavior="smooth">
       <body
-        className={`${geist.variable} ${geistMono.variable}`}
+        className={`${inter.variable} ${jetbrains.variable} ${dmSans.variable}`}
         style={{ colorScheme: "dark" }}
       >
         <ThemeProvider>
-          <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)] selection:bg-[#f2ead7] selection:text-[#171716]">
+          <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] selection:bg-[#faf9f6] selection:text-[#1a1a19] relative overflow-hidden">
             <a
               href="#main"
               className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:rounded-lg focus:bg-[rgba(14,14,13,0.95)] focus:px-3 focus:py-2 focus:text-[14px] focus:text-[var(--text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(250,249,246,0.18)]"
@@ -73,7 +82,7 @@ export default function RootLayout({
               Skip to content
             </a>
             <Navbar />
-            <main id="main" className="relative z-10 flex flex-1 flex-col">
+            <main id="main" className="relative z-10 flex-1 flex flex-col">
               {children}
             </main>
             <Footer />

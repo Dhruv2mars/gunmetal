@@ -67,6 +67,13 @@
         gap: 16px;
       }
 
+      .brand-row > *,
+      .status-row > *,
+      .command-row > *,
+      .section-grid > * {
+        min-width: 0;
+      }
+
       .brand-row {
         grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
       }
@@ -74,6 +81,7 @@
       .hero,
       .hero-side,
       .panel {
+        min-width: 0;
         border: 1px solid var(--line);
         border-radius: var(--radius);
         background: linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -112,11 +120,12 @@
       }
 
       h1 {
-        max-width: 11ch;
+        max-width: min(11ch, 100%);
         font-size: clamp(3rem, 8vw, 6.4rem);
         line-height: 0.9;
         letter-spacing: -0.04em;
         font-weight: 650;
+        overflow-wrap: break-word;
       }
 
       .lede {
@@ -325,6 +334,12 @@
       .stack {
         display: grid;
         gap: 16px;
+        min-width: 0;
+      }
+
+      .stack > *,
+      .profile-grid > * {
+        min-width: 0;
       }
 
       .profile-grid {
@@ -671,7 +686,7 @@
         }
 
         h1 {
-          max-width: 14ch;
+          max-width: 100%;
         }
       }
 

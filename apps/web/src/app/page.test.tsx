@@ -8,9 +8,9 @@ describe("marketing routes", () => {
   test("home page sells the full product", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
-    expect(html).toContain("One local API");
-    expect(html).toContain("OpenAI-compatible endpoint");
-    expect(html).toContain("provider/model");
+    expect(html).toContain("The middleman layer");
+    expect(html).toContain("for AI inference.");
+    expect(html).toContain("upstream providers");
     expect(html).toContain("i -g @dhruv2mars/gunmetal");
     expect(html).toContain("@dhruv2mars/gunmetal");
     expect(html).toContain("npm");
