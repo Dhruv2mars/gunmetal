@@ -1,0 +1,6 @@
+# In app browser:
+- The user has the in-app browser open.
+- Current URL: http://localhost:3000/
+
+## My request for Codex:
+Great, now you have to work on populating the sub pages like pro uh developer and product pages. Also including the docs and download page. You should take inspiration from offdex (github.com/dhruv2mars/offdex) to see how the changelogs are implemented there, the docs should be like minify. Make sure you follow the Brand identity and design.md for all the frontend ui and ux. you should take a look at offdex just for internal workings, and overall concept, but design and brand identity should follow our landing page specifically how we made our navbar and its content, footer, etc. use the [$emil-design-eng](/Users/dhruv2mars/.agents/skills/emil-design-eng/SKILL.md) skill for the frontend. [$caveman](/Users/dhruv2mars/.agents/skills/caveman/SKILL.md) ultra.

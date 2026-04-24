@@ -1,0 +1,66 @@
+{
+  "cli_version": "0.5.5",
+  "checkpoint_id": "4e0e88e1e9d0",
+  "session_id": "019dc098-ee63-78e0-a57d-ee7b5be04c25",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-24T18:30:43.325099Z",
+  "branch": "ux-web-cli-first-principles",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "DESIGN.md",
+    "apps/web/src/app/changelog/page.tsx",
+    "apps/web/src/app/changelogs/page.tsx",
+    "apps/web/src/app/changelogs/releases.ts",
+    "apps/web/src/app/developer/sdk/page.tsx",
+    "apps/web/src/app/docs/page.tsx",
+    "apps/web/src/app/download/page.tsx",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/products/suite/page.tsx",
+    "apps/web/src/components/ui/MarketingPrimitives.tsx",
+    "docs/documentation.md",
+    "docs/plans.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.5",
+  "turn_id": "83bbc2fe3ad1",
+  "checkpoint_transcript_start": 382,
+  "transcript_lines_at_start": 382,
+  "token_usage": {
+    "input_tokens": 6382443,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5939968,
+    "output_tokens": 18965,
+    "api_call_count": 36
+  },
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-24T18:30:43.221655Z",
+    "agent_lines": 724,
+    "agent_removed": 39,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 724,
+    "total_lines_changed": 763,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 724,
+      "agent_lines_removed": 39
+    }
+  ]
+}

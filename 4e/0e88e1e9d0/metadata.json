@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.5.5",
+  "checkpoint_id": "4e0e88e1e9d0",
+  "strategy": "manual-commit",
+  "branch": "ux-web-cli-first-principles",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "DESIGN.md",
+    "apps/web/src/app/changelog/page.tsx",
+    "apps/web/src/app/changelogs/page.tsx",
+    "apps/web/src/app/changelogs/releases.ts",
+    "apps/web/src/app/developer/sdk/page.tsx",
+    "apps/web/src/app/docs/page.tsx",
+    "apps/web/src/app/download/page.tsx",
+    "apps/web/src/app/page.test.tsx",
+    "apps/web/src/app/products/suite/page.tsx",
+    "apps/web/src/components/ui/MarketingPrimitives.tsx",
+    "docs/documentation.md",
+    "docs/plans.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/4e/0e88e1e9d0/0/metadata.json",
+      "transcript": "/4e/0e88e1e9d0/0/full.jsonl",
+      "content_hash": "/4e/0e88e1e9d0/0/content_hash.txt",
+      "prompt": "/4e/0e88e1e9d0/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 6382443,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5939968,
+    "output_tokens": 18965,
+    "api_call_count": 36
+  }
+}
