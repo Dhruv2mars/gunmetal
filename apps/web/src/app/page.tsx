@@ -11,7 +11,7 @@ export default function HomePage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[rgba(250,249,246,0.02)] blur-[120px] rounded-full pointer-events-none" />
 
       <h1 
-        className="text-[clamp(2.5rem,8vw,6.5rem)] leading-[0.95] tracking-[-0.04em] text-[var(--text)] mb-4 relative z-10 w-full max-w-[14ch] mx-auto"
+        className="text-[clamp(2.5rem,8vw,6.5rem)] leading-[0.95] tracking-[0] text-[var(--text)] mb-4 relative z-10 w-full max-w-[17ch] mx-auto"
         style={{ fontFamily: "var(--font-matter)", fontWeight: 400 }}
       >
         The middleman layer for AI inference.

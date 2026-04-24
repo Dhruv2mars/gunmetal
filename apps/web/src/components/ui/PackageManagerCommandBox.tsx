@@ -74,8 +74,27 @@ export function PackageManagerCommandBox({
     };
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(copyCommand);
+  const handleCopy = async () => {
+    let didCopy = false;
+
+    try {
+      await navigator.clipboard.writeText(copyCommand);
+      didCopy = true;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = copyCommand;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      document.body.appendChild(textarea);
+      textarea.select();
+      didCopy = document.execCommand("copy");
+      textarea.remove();
+    }
+
+    if (!didCopy) return;
+
     setCopied(true);
     if (copiedTimeoutRef.current) window.clearTimeout(copiedTimeoutRef.current);
     copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000);
@@ -86,7 +105,7 @@ export function PackageManagerCommandBox({
       <button
         onClick={handleCopy}
         type="button"
-        className="flex items-center justify-between gap-4 md:gap-6 px-4 py-3 md:px-5 md:py-3.5 bg-[rgba(14,14,13,0.8)] border border-[rgba(226,226,226,0.12)] rounded-xl transition-colors duration-200 backdrop-blur-md hover:bg-[rgba(255,255,255,0.05)] cursor-pointer w-full max-w-[420px] overflow-hidden"
+        className="flex items-center justify-between gap-4 md:gap-6 px-4 py-3 md:px-5 md:py-3.5 bg-[rgba(14,14,13,0.8)] border border-[rgba(226,226,226,0.12)] rounded-xl transition-colors duration-200 backdrop-blur-md hover:bg-[rgba(255,255,255,0.05)] cursor-pointer w-full max-w-[500px] overflow-hidden"
         aria-label={`Copy install command: ${copyCommand}`}
       >
         <div className="flex items-center gap-[1.5ch] min-w-0">
@@ -116,7 +135,7 @@ export function PackageManagerCommandBox({
               </span>
             </span>
 
-            <span className="truncate whitespace-pre">{displayTail}</span>
+            <span className="whitespace-pre">{displayTail}</span>
             <span className="sr-only">{copyCommand}</span>
           </code>
         </div>

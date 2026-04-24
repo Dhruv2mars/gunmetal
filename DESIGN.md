@@ -1,253 +1,347 @@
-# Design System Inspired by Warp
+# Gunmetal Landing Design
 
-## 1. Visual Theme & Atmosphere
+This file is the source of truth for the current landing page, navbar, footer, and brand direction in `apps/web`.
 
-Warp's website feels like sitting at a campfire in a deep forest — warm, dark, and alive with quiet confidence. Unlike the cold, blue-tinted blacks favored by most developer tools, Warp wraps everything in a warm near-black that feels like charred wood or dark earth. The text isn't pure white either — it's Warm Parchment (`#faf9f6`), a barely-perceptible cream that softens every headline and makes the dark canvas feel inviting rather than austere.
+## Brand Identity
 
-The typography is the secret weapon: Matter, a geometric sans-serif with distinctive character, deployed at Regular weight across virtually all text. The font choice is unusual for a developer tool — Matter has a softness and humanity that signals "this terminal is for everyone, not just greybeards." Combined with tight line-heights and controlled negative letter-spacing on headlines, the effect is refined and approachable simultaneously. Nature photography is woven between terminal screenshots, creating a visual language that says: this tool brings you closer to flow, to calm productivity.
+Gunmetal should feel calm, dark, precise, and quietly technical.
 
-The overall design philosophy is restraint through warmth. Minimal color (almost monochromatic warm grays), minimal ornamentation, and a focus on product showcases set against cinematic dark landscapes. It's a terminal company that markets like a lifestyle brand.
+The landing page is intentionally minimal: one strong statement, one animated command surface, one restrained navbar, and a quiet footer. It should not feel like a broad SaaS dashboard, a colorful AI startup, or a generic docs template. It should feel like a local-first developer tool with confidence in its own simplicity.
 
-**Key Characteristics:**
-- Warm dark background — not cold black, but earthy near-black with warm gray undertones
-- Warm Parchment (`#faf9f6`) text instead of pure white — subtle cream warmth
-- Matter font family (Regular weight) — geometric but approachable, not the typical developer-tool typeface
-- Nature photography interleaved with product screenshots — lifestyle meets developer tool
-- Almost monochromatic warm gray palette — no bold accent colors
-- Uppercase labels with wide letter-spacing (2.4px) for categorization — editorial signaling
-- Pill-shaped dark buttons (`#353534`, 50px radius) — restrained, muted CTAs
+Core traits:
 
-## 2. Color Palette & Roles
+- Warm near-black canvas.
+- Off-white, not pure white, typography.
+- Muted gray navigation and secondary text.
+- Very little color.
+- No purple/blue AI-gradient look.
+- No noisy cards, product grids, or feature blocks on the landing page.
+- One central visual idea: a command line install box.
+- Polished micro-interactions over heavy decoration.
 
-### Primary
-- **Warm Parchment** (`#faf9f6`): Primary text color — a barely-cream off-white that softens every surface
-- **Earth Gray** (`#353534`): Button backgrounds, dark interactive surfaces — warm, not cold
-- **Deep Void** (near-black, page background): The warm dark canvas derived from the body background
+## Current Landing Page
 
-### Secondary & Accent
-- **Stone Gray** (`#868584`): Secondary text, muted descriptions — warm mid-gray
-- **Ash Gray** (`#afaeac`): Body text, button text — the workhorse reading color
-- **Purple-Tint Gray** (`#666469`): Link text with subtle purple undertone — underlined links in content
+Route: `/`
 
-### Surface & Background
-- **Frosted Veil** (`rgba(255, 255, 255, 0.04)`): Ultra-subtle white overlay for surface differentiation
-- **Mist Border** (`rgba(226, 226, 226, 0.35)` / `rgba(227, 227, 227, 0.337)`): Semi-transparent borders for card containment
-- **Translucent Parchment** (`rgba(250, 249, 246, 0.9)`): Slightly transparent primary surface, allowing depth
+Current composition:
 
-### Neutrals & Text
-- **Warm Parchment** (`#faf9f6`): Headlines, high-emphasis text
-- **Ash Gray** (`#afaeac`): Body paragraphs, descriptions
-- **Stone Gray** (`#868584`): Secondary labels, subdued information
-- **Muted Purple** (`#666469`): Underlined links, tertiary content
-- **Dark Charcoal** (`#454545` / `#353534`): Borders, button backgrounds
+- Fixed top navbar.
+- Centered hero section.
+- H1: `The middleman layer for AI inference.`
+- Subcopy: `Use AI subscriptions as upstream providers for inference.`
+- Animated install command box.
+- Minimal footer.
 
-### Semantic & Accent
-- Warp operates as an almost monochromatic system — no bold accent colors
-- Interactive states are communicated through opacity changes and underline decorations rather than color shifts
-- Any accent color would break the warm, restrained palette
+The page is allowed to be sparse. Empty space is part of the design. Do not add extra CTAs, cards, proof blocks, feature rows, diagrams, or screenshots unless explicitly requested.
 
-### Gradient System
-- No explicit gradients on the marketing site
-- Depth is created through layered semi-transparent surfaces and photography rather than color gradients
+## Landing Decisions
 
-## 3. Typography Rules
+Keep:
 
-### Font Family
-- **Display & Body**: `Matter Regular` — geometric sans-serif with soft character. Fallbacks: `Matter Regular Placeholder`, system sans-serif
-- **Medium**: `Matter Medium` — weight 500 variant for emphasis. Fallbacks: `Matter Medium Placeholder`
-- **Square**: `Matter SQ Regular` — squared variant for select display contexts. Fallbacks: `Matter SQ Regular Placeholder`
-- **UI Supplement**: `Inter` — used for specific UI elements. Fallbacks: `Inter Placeholder`
-- **Monospace Display**: `Geist Mono` — for code/terminal display headings
-- **Monospace Body**: `Matter Mono Regular` — custom mono companion. Fallbacks: `Matter Mono Regular Placeholder`
+- Current headline and subcopy.
+- Current navbar structure and labels.
+- Current footer simplicity.
+- Current dark minimal atmosphere.
+- Command box as primary landing interaction.
+- Animated package-manager cycling in command box.
+- Copy-to-clipboard behavior.
 
-### Hierarchy
+Do not add:
 
-| Role | Font | Size | Weight | Line Height | Letter Spacing | Notes |
-|------|------|------|--------|-------------|----------------|-------|
-| Display Hero | Matter Regular | 80px | 400 | 1.00 | -2.4px | Maximum compression, hero impact |
-| Section Display | Matter Regular | 56px | 400 | 1.20 | -0.56px | Feature section headings |
-| Section Heading | Matter Regular | 48px | 400 | 1.20 | -0.48px to -0.96px | Alternate heading weight |
-| Feature Heading | Matter Regular | 40px | 400 | 1.10 | -0.4px | Feature block titles |
-| Sub-heading Large | Matter Regular | 36px | 400 | 1.15 | -0.72px | Sub-section headers |
-| Card Display | Matter SQ Regular | 42px | 400 | 1.00 | 0px | Squared variant for special display |
-| Sub-heading | Matter Regular | 32px | 400 | 1.19 | 0px | Content sub-headings |
-| Body Heading | Matter Regular | 24px | 400 | 1.20 | -0.72px to 0px | Bold content intros |
-| Card Title | Matter Medium | 22px | 500 | 1.14 | 0px | Emphasized card headers |
-| Body Large | Matter Regular | 20px | 400 | 1.40 | -0.2px | Primary body text, relaxed |
-| Body | Matter Regular | 18px | 400 | 1.30 | -0.18px | Standard body paragraphs |
-| Nav/UI | Matter Regular | 16px | 400 | 1.20 | 0px | Navigation links, UI text |
-| Button Text | Matter Medium | 16px | 500 | 1.20 | 0px | Button labels |
-| Caption | Matter Regular | 14px | 400 | 1.00 | 1.4px | Uppercase labels (transform: uppercase) |
-| Small Label | Matter Regular | 12px | 400 | 1.35 | 2.4px | Uppercase micro-labels (transform: uppercase) |
-| Micro | Matter Regular | 11px | 400 | 1.20 | 0px | Smallest text elements |
-| Code UI | Geist Mono | 16px | 400 | 1.00 | 0px | Terminal/code display |
-| Code Body | Matter Mono Regular | 16px | 400 | 1.00 | -0.2px | Code content |
-| UI Supplement | Inter | 16px | 500 | 1.00 | -0.2px | Specific UI elements |
+- Extra install CTAs under the command box.
+- Secondary hero buttons.
+- Marketing feature grids.
+- New copy explaining the product in the landing hero.
+- Visual assets or screenshots on the landing page.
+- Bright accent colors.
+- Gradients, blobs, or decorative orbs.
 
-### Principles
-- **Regular weight dominance**: Nearly all text uses weight 400 (Regular) — even headlines. Matter Medium (500) appears only for emphasis moments like card titles and buttons. This creates a remarkably even, calm typographic texture
-- **Uppercase as editorial signal**: Small labels and categories use uppercase transform with wide letter-spacing (1.4px–2.4px), creating a magazine-editorial categorization system
-- **Warm legibility**: The combination of Matter's geometric softness + warm text colors (#faf9f6) + controlled negative tracking creates text that reads as effortlessly human on dark surfaces
-- **No bold display**: Zero use of bold (700+) weight anywhere — restraint is the philosophy
+## Layout
 
-## 4. Component Stylings
+Page shell:
 
-### Buttons
-- **Dark Pill**: `#353534` background, Ash Gray (`#afaeac`) text, pill shape (50px radius), `10px` padding. The primary CTA — warm, muted, understated
-- **Frosted Tag**: `rgba(255, 255, 255, 0.16)` background, black text (`rgb(0, 0, 0)`), rectangular (6px radius), `1px 6px` padding. Small inline tag-like buttons
-- **Ghost**: No visible background, text-only with underline decoration on hover
-- **Hover**: Subtle opacity or brightness shift — no dramatic color changes
+- Full viewport dark surface.
+- `Navbar` fixed at top.
+- `Footer` sits at bottom when content is short.
+- Main content uses flex center alignment.
+- Hero content is horizontally centered.
+- Landing max width follows site container rhythm: `max-w-7xl`, `px-6`, `lg:px-8`.
 
-### Cards & Containers
-- **Photography Cards**: Full-bleed nature imagery with overlay text, 8px–12px border-radius
-- **Terminal Screenshot Cards**: Product UI embedded in dark containers with rounded corners (8px–12px)
-- **Bordered Cards**: Semi-transparent border (`rgba(226, 226, 226, 0.35)`) for containment, 12px–14px radius
-- **Hover**: Minimal — content cards don't dramatically change on hover, maintaining the calm aesthetic
+Hero:
 
-### Inputs & Forms
-- Minimal form presence on the marketing site
-- Dark background inputs with warm gray text
-- Focus: Border brightness increase, no colored rings (consistent with the monochromatic palette)
+- Main section: `flex-1 flex flex-col items-center justify-center`.
+- Text alignment: center.
+- H1 max width: about `17ch`.
+- H1 line-height: `0.95`.
+- H1 letter-spacing: `0`.
+- H1 weight: `400`.
+- Subcopy sits close under H1, with enough gap before command box.
 
-### Navigation
-- **Top nav**: Dark background, warm parchment brand text, Matter Regular at 16px for links
-- **Link color**: Stone Gray (`#868584`) for muted nav, Warm Parchment for active/hover
-- **CTA button**: Dark pill (#353534) at nav end — restrained, not attention-grabbing
-- **Mobile**: Collapses to simplified navigation
-- **Sticky**: Nav stays fixed on scroll
+Background:
 
-### Image Treatment
-- **Nature photography**: Landscapes, forests, golden-hour scenes — completely unique for a developer tool
-- **Terminal screenshots**: Product UI shown in realistic terminal window frames
-- **Mixed composition**: Nature images and terminal screenshots are interleaved, creating a lifestyle-meets-tool narrative
-- **Full-bleed**: Images often span full container width with 8px radius
-- **Video**: Video elements present with 10px border-radius
+- Warm dark base from `--bg`.
+- One very subtle warm glow behind hero:
+  - `rgba(250,249,246,0.02)`
+  - large blurred oval
+  - no visible colored gradient
+  - no separate decorative blobs
 
-### Testimonial Section
-- Social proof area ("Don't take our word for it") with quotes
-- Muted styling consistent with overall restraint
+## Typography
 
-## 5. Layout Principles
+Primary landing font:
 
-### Spacing System
-- **Base unit**: 8px
-- **Scale**: 1px, 4px, 5px, 8px, 10px, 12px, 14px, 15px, 16px, 18px, 24px, 26px, 30px, 32px, 36px
-- **Section padding**: 80px–120px vertical between major sections
-- **Card padding**: 16px–32px internal spacing
-- **Component gaps**: 8px–16px between related elements
+- `var(--font-matter)` for hero and nav.
+- Current implementation maps this to `DM Sans`.
+- Weight should stay mostly `400`.
+- Brand/nav accents may use `500`.
 
-### Grid & Container
-- **Max width**: ~1500px container (breakpoint at 1500px), centered
-- **Column patterns**: Full-width hero, 2-column feature sections with photography, single-column testimonials
-- **Cinematic layout**: Wide containers that let photography breathe
+Rules:
 
-### Whitespace Philosophy
-- **Vast and warm**: Generous spacing between sections — the dark background creates a warm void that feels contemplative rather than empty
-- **Photography as whitespace**: Nature images serve as visual breathing room between dense product information
-- **Editorial pacing**: The layout reads like a magazine — each section is a deliberate page-turn moment
+- No negative letter-spacing on landing H1.
+- No bold display weight.
+- Hero text should be large, quiet, and legible.
+- Secondary text uses muted gray, not strong white.
+- Code uses `var(--font-jetbrains)`.
 
-### Border Radius Scale
-- **4px**: Small interactive elements — buttons, tags
-- **5px–6px**: Standard components — links, small containers
-- **8px**: Images, video containers, standard cards
-- **10px**: Video elements, medium containers
-- **12px**: Feature cards, large images
-- **14px**: Large containers, prominent cards
-- **40px**: Large rounded sections
-- **50px**: Pill buttons — primary CTAs
-- **200px**: Progress bars — full pill shape
+Current key sizes:
 
-## 6. Depth & Elevation
+- H1: `clamp(2.5rem, 8vw, 6.5rem)`.
+- Subcopy: `18px`, `22px` from `md`.
+- Command text: `14px` mono.
+- Navbar links: `14px`.
+- Footer text: `11px` to `16px`.
 
-| Level | Treatment | Use |
-|-------|-----------|-----|
-| Level 0 (Flat) | No shadow, dark background | Page canvas, most surfaces |
-| Level 1 (Veil) | `rgba(255, 255, 255, 0.04)` overlay | Subtle surface differentiation |
-| Level 2 (Border) | `rgba(226, 226, 226, 0.35) 1px` border | Card containment, section separation |
-| Level 3 (Ambient) | `rgba(0, 0, 0, 0.2) 0px 5px 15px` (inferred from design) | Image containers, floating elements |
+## Color
 
-### Shadow Philosophy
-Warp's elevation system is remarkably flat — almost zero shadow usage on the marketing site. Depth is communicated through:
-- **Semi-transparent borders** instead of shadows — borders at 35% opacity create a ghostly containment
-- **Photography layering** — images create natural depth without artificial shadows
-- **Surface opacity shifts** — `rgba(255, 255, 255, 0.04)` overlays create barely-perceptible layer differences
-- The effect is calm and grounded — nothing floats, everything rests
+Use warm, restrained colors from `apps/web/src/app/globals.css`.
 
-### Decorative Depth
-- **Photography as depth**: Nature images create atmospheric depth that shadows cannot
-- **No glass or blur effects**: The design avoids trendy glassmorphism entirely
-- **Warm ambient**: Any glow comes from the photography's natural lighting, not artificial CSS
+Primary tokens:
 
-## 7. Do's and Don'ts
+- Background: `--bg` = `#0e0e0d`.
+- Primary text: `--text` = `#faf9f6`.
+- Muted text: `--text-muted` = `#868584`.
+- Subtle border: low-opacity `rgba(226,226,226,...)`.
+- Frosted hover: `--frosted` = `rgba(255,255,255,0.04)`.
 
-### Do
-- Use warm off-white (`#faf9f6`) for text instead of pure white — the cream undertone is essential
-- Keep buttons restrained and muted — dark fill (#353534) with muted text (#afaeac), no bright CTAs
-- Apply Matter Regular (weight 400) for nearly everything — even headlines. Reserve Medium (500) for emphasis only
-- Use uppercase labels with wide letter-spacing (1.4px–2.4px) for categorization
-- Interleave nature photography with product screenshots — this is core to the brand identity
-- Maintain the almost monochromatic warm gray palette — no bold accent colors
-- Use semi-transparent borders (`rgba(226, 226, 226, 0.35)`) for card containment instead of shadows
-- Keep negative letter-spacing on headlines (-0.4px to -2.4px) for Matter's compressed display treatment
+Color rules:
 
-### Don't
-- Use pure white (#ffffff) for text — it's always warm parchment (#faf9f6)
-- Add bold accent colors (blue, red, green) — the system is deliberately monochromatic warm grays
-- Apply bold weight (700+) to any text — Warp never goes above Medium (500)
-- Use heavy drop shadows — depth comes from borders, photography, and opacity shifts
-- Create cold or blue-tinted dark backgrounds — the warmth is essential
-- Add decorative gradients or glow effects — the photography provides all visual interest
-- Use tight, compressed layouts — the editorial spacing is generous and contemplative
-- Mix in additional typefaces beyond the Matter family + Inter supplement
+- Avoid pure white.
+- Avoid blue/purple gradients.
+- Avoid strong accent CTAs.
+- Hover states should be opacity/color shifts within warm neutral scale.
+- Borders should be subtle, usually below `0.18` alpha.
 
-## 8. Responsive Behavior
+## Navbar
 
-### Breakpoints
-| Name | Width | Key Changes |
-|------|-------|-------------|
-| Mobile | <810px | Single column, stacked sections, hero text reduces to ~48px, hamburger nav |
-| Tablet | 810px–1500px | 2-column features begin, photography scales, nav links partially visible |
-| Desktop | >1500px | Full cinematic layout, 80px hero display, side-by-side photography + text |
+The navbar is part of the landing identity. Keep it.
 
-### Touch Targets
-- Pill buttons: 50px radius with 10px padding — comfortable touch targets
-- Nav links: 16px text with surrounding padding for accessibility
-- Mobile CTAs: Full-width pills on mobile for easy thumb reach
+Current structure:
 
-### Collapsing Strategy
-- **Navigation**: Full horizontal nav → simplified mobile navigation
-- **Hero text**: 80px display → 56px → 48px across breakpoints
-- **Feature sections**: Side-by-side photography + text → stacked vertically
-- **Photography**: Scales within containers, maintains cinematic aspect ratios
-- **Section spacing**: Reduces proportionally — generous desktop → compact mobile
+- Left: logo mark + `Gunmetal`.
+- Right desktop nav:
+  - `Products`
+  - `Developer`
+  - `Resources`
+  - `Download`
+  - GitHub icon
+- Mobile:
+  - logo
+  - GitHub icon
+  - menu button
+  - accordion nav
 
-### Image Behavior
-- Nature photography scales responsively, maintaining wide cinematic ratios
-- Terminal screenshots maintain aspect ratios within responsive containers
-- Video elements scale with 10px radius maintained
-- No art direction changes — same compositions across breakpoints
+Current dropdown content:
 
-## 9. Agent Prompt Guide
+- Products:
+  - `Gunmetal Suite`
+  - `The all-in-one platform for your needs.`
+- Developer:
+  - `Extension SDK`
+  - `Build powerful native integrations.`
+- Resources:
+  - `Documentation`
+  - `Guides and API references.`
+  - `Changelogs`
+  - `Latest updates and improvements.`
 
-### Quick Color Reference
-- Primary Text: Warm Parchment (`#faf9f6`)
-- Secondary Text: Ash Gray (`#afaeac`)
-- Tertiary Text: Stone Gray (`#868584`)
-- Button Background: Earth Gray (`#353534`)
-- Border: Mist Border (`rgba(226, 226, 226, 0.35)`)
-- Background: Deep warm near-black (page background)
+Navbar visual rules:
 
-### Example Component Prompts
-- "Create a hero section on warm dark background with 80px Matter Regular heading in warm parchment (#faf9f6), line-height 1.0, letter-spacing -2.4px, and a dark pill button (#353534, 50px radius, #afaeac text)"
-- "Design a feature card with semi-transparent border (rgba(226,226,226,0.35)), 12px radius, warm dark background, Matter Regular heading at 24px, and ash gray (#afaeac) body text at 18px"
-- "Build a category label using Matter Regular at 12px, uppercase transform, letter-spacing 2.4px, stone gray (#868584) color — editorial magazine style"
-- "Create a testimonial section with warm parchment quotes in Matter Regular 24px, attributed in stone gray (#868584), on dark background with minimal ornamentation"
-- "Design a navigation bar with warm dark background, Matter Regular links at 16px in stone gray (#868584), hover to warm parchment (#faf9f6), and a dark pill CTA button (#353534) at the right"
+- Fixed top.
+- Height: `56px`.
+- Background: `rgba(14,14,13,0.70)`.
+- Backdrop blur is allowed.
+- One faint bottom border via box shadow.
+- Nav text stays muted until hover/open.
+- Dropdowns use warm dark translucent panels.
+- Dropdowns may have subtle shadow, but no colorful glow.
+- Keep labels and dropdown copy unless explicitly changed.
 
-### Iteration Guide
-When refining existing screens generated with this design system:
-1. Verify text color is warm parchment (#faf9f6) not pure white — the warmth is subtle but essential
-2. Ensure all buttons use the restrained dark palette (#353534) — no bright or colorful CTAs
-3. Check that Matter Regular (400) is the default weight — Medium (500) only for emphasis
-4. Confirm uppercase labels have wide letter-spacing (1.4px–2.4px) — tight uppercase feels wrong here
-5. The overall tone should feel warm and calm, like a well-designed magazine — not aggressive or tech-flashy
+Known route state:
+
+- Some navbar routes may not exist yet. Do not remove nav items only because route pages are pending.
+
+## Command Box
+
+The command box is the main landing-page object.
+
+Purpose:
+
+- Communicate install/start energy without adding more hero CTAs.
+- Feel like a compact terminal command.
+- Be clickable and copy the currently displayed command.
+
+Current behavior:
+
+- Cycles package manager labels:
+  - `npm`
+  - `bun`
+  - `pnpm`
+  - duplicate `npm` for seamless loop
+- Tail remains:
+  - `i -g  @dhruv2mars/gunmetal`
+- Visible command should not show ellipsis on desktop.
+- Copy command matches active package manager.
+- Reduced-motion users do not get cycling animation.
+- Clipboard write is wrapped in `try/catch`.
+- Fallback copy uses temporary hidden textarea + `document.execCommand("copy")`.
+- Show `Copied` only when copy succeeds.
+
+Current visual:
+
+- Dark translucent box.
+- Subtle border.
+- `12px` radius.
+- Mono text.
+- `$` prompt at left.
+- Animated package manager slot.
+- Copy icon at right.
+- Max width: `500px`.
+- No external CTA text.
+
+Rules:
+
+- Preserve animation concept.
+- Preserve compact command-line feel.
+- Do not replace with large button CTA.
+- Do not add package-manager tabs unless requested.
+- Do not let desktop command truncate.
+- On very narrow mobile, graceful containment is acceptable; avoid layout overflow.
+
+## Footer
+
+Footer stays quiet.
+
+Current structure:
+
+- Left: logo + `Gunmetal`.
+- Year: `© 2026`.
+- Right: GitHub text link with small arrow.
+
+Footer rules:
+
+- Do not expand into a sitemap by default.
+- Keep border subtle.
+- Keep text muted.
+- Match navbar warmth.
+
+## Motion
+
+Motion should be small and purposeful.
+
+Allowed:
+
+- Navbar logo text compressing on scroll.
+- Dropdown fade/translate.
+- Mobile accordion open/close.
+- Command package-manager vertical loop.
+- Copy success swap.
+- Subtle icon hover translate in footer.
+
+Rules:
+
+- Use transform/opacity where possible.
+- Respect `prefers-reduced-motion`.
+- No bounce.
+- No large page entrance animations.
+- No background animation.
+
+## Responsive Guidance
+
+Desktop:
+
+- Hero can be large and sparse.
+- Command should show full visible command.
+- Navbar shows full nav.
+
+Mobile:
+
+- Navbar collapses.
+- H1 remains centered and legible.
+- Command box may shrink, but must not break layout.
+- Prefer horizontal padding over text collision.
+- Mobile menu should feel like a full-height overlay panel if it is refined later.
+
+Suggested future mobile fix:
+
+- Change mobile menu panel to fixed overlay:
+  - `fixed inset-x-0 top-14 bottom-0 overflow-y-auto`
+- Avoid placing `min-h-screen` inside the header flow.
+- Keep GitHub + menu button in mobile header.
+
+## Accessibility
+
+Current expectations:
+
+- Skip link remains.
+- Navbar has `aria-label="Primary"`.
+- Dropdown buttons expose `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+- Dropdown links use `role="menuitem"`.
+- Command box has descriptive `aria-label`.
+- Copy success uses `aria-live`.
+- Decorative logo images use empty alt + `aria-hidden`.
+
+Do:
+
+- Preserve keyboard access for dropdowns.
+- Keep visible focus rings subtle but present.
+- Avoid changing command animation in ways that confuse screen readers.
+
+## Implementation Anchors
+
+Landing files:
+
+- `apps/web/src/app/page.tsx`
+- `apps/web/src/components/ui/PackageManagerCommandBox.tsx`
+- `apps/web/src/components/layout/Navbar.tsx`
+- `apps/web/src/components/layout/Footer.tsx`
+- `apps/web/src/app/globals.css`
+
+Current verified behavior:
+
+- Landing page served at `http://localhost:3000/`.
+- Command box full command visible on desktop.
+- Copy click does not throw an unhandled clipboard error.
+- Web tests pass.
+- Web lint passes with one existing Navbar `<img>` warning.
+
+## Do / Do Not
+
+Do:
+
+- Keep landing sparse.
+- Keep current copy.
+- Keep navbar and footer as designed.
+- Preserve command-box animation.
+- Use warm neutral palette.
+- Use crisp alignment and stable dimensions.
+- Verify in browser after visual edits.
+
+Do not:
+
+- Rewrite brand copy without explicit request.
+- Add explanatory sections to landing.
+- Add new CTAs beside the command box.
+- Replace navbar labels.
+- Remove pending nav items because pages are not created yet.
+- Add colorful accents, gradients, or visual clutter.
+- Reintroduce negative H1 letter-spacing on the landing page.
