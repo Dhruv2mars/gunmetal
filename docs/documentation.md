@@ -39,9 +39,15 @@ Updated continuously during the UX pass.
 - TUI is out of scope and should not be referenced as an active public surface.
 - Hosted truth remains `gunmetalapp.vercel.app`.
 - Public Web UI marketing route remains `/webui`.
+- Product route `/products/suite` explains providers, models, keys, requests, and local API flow.
+- Developer route `/developer/sdk` explains extension surfaces and points to SDK/extension packages.
+- Download route `/download` gives install command, setup, Web UI, start, status, and GitHub releases.
+- Docs route `/docs` is a compact quick-start with sticky step navigation and API contract.
+- Changelog routes `/changelogs` and `/changelog` load GitHub Releases with a local fallback state.
 - Local browser UI remains `http://127.0.0.1:4684/app`.
 - Local API remains `http://127.0.0.1:4684/v1`.
 - Landing page and shared landing navbar were restored to pre-2026-04-23 state after scope correction.
+- `DESIGN.md` now defines landing and subpage brand/design rules.
 - Local browser Web UI now has a clearer next-action rail, refined mobile behavior, and safer narrow-screen containment.
 - CLI now includes `gunmetal doctor` for setup diagnosis and next-command guidance.
 
@@ -57,3 +63,6 @@ Updated continuously during the UX pass.
 - `cargo run -p gunmetal -- web --no-open`
 - agent-browser live check for hosted `/` and `/webui`
 - agent-browser live check for local `/app` desktop and mobile
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web test`
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web lint`
+- `npx --yes bun@1.3.5 run --filter @gunmetal/web build`

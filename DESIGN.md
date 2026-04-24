@@ -244,6 +244,44 @@ Footer rules:
 - Keep text muted.
 - Match navbar warmth.
 
+## Subpage Design
+
+Subpages should extend the landing identity without copying the landing composition.
+
+Current route families:
+
+- Product: `/products/suite`
+- Developer: `/developer/sdk`
+- Resources: `/docs`, `/changelogs`, `/changelog`
+- Download: `/download`
+
+Subpage layout rules:
+
+- Use a restrained `1000px` content column, not a wide marketing canvas.
+- Start with a top border, mono eyebrow, large calm title, and muted intro.
+- Prefer row-based documentation and settings-pane layouts over card grids.
+- Use panels sparingly for code, key diagrams, and changelog release notes.
+- Keep headings `font-normal`, `tracking-[0]`, and warm.
+- Use subtle borders and local command snippets as visual structure.
+- Do not use colorful badges, blue release dots, or bright status accents from Offdex.
+
+Docs direction:
+
+- Docs should be compact and quick-start oriented.
+- Use sticky sidebar navigation on desktop.
+- Each section should have a step number, direct explanation, code block, and two short notes.
+- API contract should be visible in the same page.
+
+Changelog direction:
+
+- Follow Offdex internal model: fetch GitHub Releases, normalize draft/prerelease/title/date/body, show fallback if GitHub is unavailable.
+- Adapt visual style to Gunmetal: dark timeline, muted dots, warm panels, no bright release colors.
+
+Download direction:
+
+- Treat install as a short settings-pane flow: install CLI, run setup, open Web UI.
+- Keep package-manager command animation consistent with landing.
+
 ## Motion
 
 Motion should be small and purposeful.

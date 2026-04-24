@@ -58,6 +58,9 @@ Keep this current while the UX pass moves.
 ## Active Notes
 - Current branch: `ux-web-cli-first-principles`.
 - Current source-of-truth: Web UI + CLI UX, no TUI.
-- Hosted site live-checked at `http://localhost:3008`.
+- Hosted site live-checked at `http://localhost:3000`.
 - Local browser UI live-checked at `http://127.0.0.1:4684/app`.
 - Screenshot evidence saved under `.codex/screenshots/`.
+- Landing design source-of-truth is now `DESIGN.md`.
+- Added hosted subpages for `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/changelogs`, and `/changelog`.
+- Changelog implementation follows Offdex's GitHub Releases fetch/normalize/fallback model, restyled for Gunmetal.
