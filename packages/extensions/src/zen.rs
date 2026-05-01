@@ -491,7 +491,7 @@ fn build_zen_request_body(model: &str, request: &ChatCompletionRequest) -> Value
 fn parse_chat_completion_body(text: &str, fallback_model: &str) -> Result<ChatCompletionResult> {
     match serde_json::from_str::<ChatCompletionResponse>(text) {
         Ok(payload) => completion_from_response(payload, fallback_model),
-        Err(error)
+        Err(_error)
             if text
                 .lines()
                 .any(|line| line.trim_start().starts_with("data:")) =>
