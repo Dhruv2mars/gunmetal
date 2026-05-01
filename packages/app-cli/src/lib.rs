@@ -114,7 +114,8 @@ const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a pr
 const DOCTOR_HELP_FOOTER: &str = "Use this when you are unsure what is missing.\nIt checks local service state plus saved providers, synced models, keys, and recent requests.";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
 const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
-const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/app\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
+const WEB_UI_PATH: &str = "/webui";
+const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/webui\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
 const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web`.";
 const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start` or open `gunmetal web`.";
 const PROVIDERS_LIST_HELP_FOOTER: &str = "Lists built-in provider support, auth mode, request modes, and priority.\nUse `gunmetal profiles list` for the providers you already saved locally.";
@@ -494,7 +495,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         }
         Command::Web(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
-            let app_url = format!("{}/app", status.url);
+            let app_url = format!("{}{}", status.url, WEB_UI_PATH);
             writeln!(output, "Gunmetal browser UI")?;
             if let Some(note) = &status.note {
                 writeln!(output, "{note}")?;
@@ -1088,7 +1089,7 @@ async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<Serv
 }
 
 async fn daemon_home(url: &str) -> Option<String> {
-    let response = reqwest::get(format!("{url}/app/api/state")).await.ok()?;
+    let response = reqwest::get(format!("{url}/webui/api/state")).await.ok()?;
     let body = response.json::<serde_json::Value>().await.ok()?;
     body.get("service")
         .and_then(|service| service.get("home"))
@@ -1112,7 +1113,9 @@ async fn start_browser_auth_via_service(
 ) -> Result<ProviderLoginSession> {
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("{service_url}/app/api/profiles/{profile_id}/auth"))
+        .post(format!(
+            "{service_url}/webui/api/profiles/{profile_id}/auth"
+        ))
         .send()
         .await?;
     let response_status = response.status();
@@ -2607,7 +2610,7 @@ mod tests {
         let web = command.find_subcommand_mut("web").expect("web subcommand");
         let web_help = web.render_help().to_string();
         assert!(web_help.contains("Open the local browser UI"));
-        assert!(web_help.contains("http://127.0.0.1:4684/app"));
+        assert!(web_help.contains("http://127.0.0.1:4684/webui"));
 
         let mut command = Cli::command();
         let start = command

@@ -76,7 +76,7 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.match(rootReadme, /npm i -g @dhruv2mars\/gunmetal/);
   assert.match(rootReadme, /gunmetal setup/);
   assert.match(rootReadme, /gunmetal web/);
-  assert.match(rootReadme, /127\.0\.0\.1:4684\/app/);
+  assert.match(rootReadme, /127\.0\.0\.1:4684\/webui/);
   assert.match(rootReadme, /curl .*\/v1\/models/s);
 
   assert.doesNotMatch(npmReadme, /not published yet/);
@@ -91,7 +91,7 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.match(startHerePage, /\/v1\/models/);
   assert.match(startHerePage, /\/v1\/chat\/completions/);
   assert.match(webUiPage, /gunmetal web/);
-  assert.match(webUiPage, /127\.0\.0\.1:4684\/app/);
+  assert.match(webUiPage, /127\.0\.0\.1:4684\/webui/);
 });
 
 test("web app pins Vercel to the Next.js build path", () => {

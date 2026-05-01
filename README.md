@@ -23,14 +23,14 @@ gunmetal status
 
 `gunmetal setup` is the golden path. It connects one provider, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
 
-`gunmetal web` opens the local browser surface at `http://127.0.0.1:4684/app`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
+`gunmetal web` opens the local browser surface at `http://127.0.0.1:4684/webui`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
 
 ## Start Here
 
 1. Install: `npm i -g @dhruv2mars/gunmetal`
 2. Run `gunmetal setup`
 3. Run `gunmetal web` for the local browser UI, or `gunmetal start` for the API only
-4. Open `http://127.0.0.1:4684/app` if you want the local browser UI
+4. Open `http://127.0.0.1:4684/webui` if you want the local browser UI
 5. Call `GET /v1/models`
 6. Call `POST /v1/chat/completions`
 

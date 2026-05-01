@@ -23,7 +23,7 @@ export default function WebUiPage() {
       <div className="gunmetal-panel rounded-[22px] p-5">
         <pre className="overflow-x-auto whitespace-pre-wrap rounded-[16px] bg-[rgba(6,7,8,0.32)] p-5 font-mono text-[13px] leading-6 text-[var(--text-secondary)]">{`gunmetal web
 
-Open: http://127.0.0.1:4684/app
+Open: http://127.0.0.1:4684/webui
 API:  http://127.0.0.1:4684/v1`}</pre>
         <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr]">
           {[

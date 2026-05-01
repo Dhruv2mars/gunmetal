@@ -13,9 +13,9 @@ Keep this current while the UX pass moves.
 - `cargo test -p gunmetal-daemon`
 - `cargo run -p gunmetal -- --help`
 - `cargo run -p gunmetal -- doctor`
-- live browser check for hosted pages or local `/app` when server checks are available
+- live browser check for hosted pages or local `/webui` when server checks are available
 - `git status --short --branch`
-- Last verified: 2026-04-23
+- Last verified: 2026-04-25
 
 ## Milestones
 - `[done]` Milestone 1: reset durable memory and UX direction
@@ -59,7 +59,7 @@ Keep this current while the UX pass moves.
 - Current branch: `ux-web-cli-first-principles`.
 - Current source-of-truth: Web UI + CLI UX, no TUI.
 - Hosted site live-checked at `http://localhost:3000`.
-- Local browser UI live-checked at `http://127.0.0.1:4684/app`.
+- Local browser UI live-checked at `http://127.0.0.1:4684/webui`.
 - Screenshot evidence saved under `.codex/screenshots/`.
 - Landing design source-of-truth is now `DESIGN.md`.
 - Added hosted subpages for `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/changelogs`, and `/changelog`.

@@ -44,11 +44,11 @@ Updated continuously during the UX pass.
 - Download route `/download` gives install command, setup, Web UI, start, status, and GitHub releases.
 - Docs route `/docs` is a compact quick-start with sticky step navigation and API contract.
 - Changelog routes `/changelogs` and `/changelog` load GitHub Releases with a local fallback state.
-- Local browser UI remains `http://127.0.0.1:4684/app`.
+- Local browser UI is `http://127.0.0.1:4684/webui`.
 - Local API remains `http://127.0.0.1:4684/v1`.
 - Landing page and shared landing navbar were restored to pre-2026-04-23 state after scope correction.
 - `DESIGN.md` now defines landing and subpage brand/design rules.
-- Local browser Web UI now has a clearer next-action rail, refined mobile behavior, and safer narrow-screen containment.
+- Local browser Web UI now uses the `/webui` route, a calm Gunmetal-branded operator shell, a clearer setup/action flow, clipboard fallback handling, and safer narrow-screen containment.
 - CLI now includes `gunmetal doctor` for setup diagnosis and next-command guidance.
 
 ## Validation Results
@@ -62,7 +62,7 @@ Updated continuously during the UX pass.
 - `cargo run -p gunmetal -- doctor`
 - `cargo run -p gunmetal -- web --no-open`
 - agent-browser live check for hosted `/` and `/webui`
-- agent-browser live check for local `/app` desktop and mobile
+- agent-browser live check for local `/webui` desktop and mobile
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web test`
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web lint`
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web build`

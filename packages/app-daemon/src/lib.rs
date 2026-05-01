@@ -37,6 +37,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 const BROWSER_APP_HTML: &str = include_str!("browser_app.html");
+const WEB_UI_PATH: &str = "/webui";
 
 #[derive(Clone)]
 pub struct DaemonState {
@@ -133,16 +134,16 @@ impl RequestLogger {
 pub fn app(state: DaemonState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/app", get(browser_app))
-        .route("/app/api/state", get(operator_state))
-        .route("/app/api/profiles", post(create_profile))
-        .route("/app/api/profiles/{id}/auth", post(auth_profile))
-        .route("/app/api/profiles/{id}/sync", post(sync_profile))
-        .route("/app/api/profiles/{id}/logout", post(logout_profile))
-        .route("/app/api/profiles/{id}/keys", post(create_profile_key))
-        .route("/app/api/profiles/{id}", delete(delete_profile))
-        .route("/app/api/keys/{id}/state", post(set_key_state))
-        .route("/app/api/keys/{id}", delete(delete_key))
+        .route(WEB_UI_PATH, get(browser_app))
+        .route("/webui/api/state", get(operator_state))
+        .route("/webui/api/profiles", post(create_profile))
+        .route("/webui/api/profiles/{id}/auth", post(auth_profile))
+        .route("/webui/api/profiles/{id}/sync", post(sync_profile))
+        .route("/webui/api/profiles/{id}/logout", post(logout_profile))
+        .route("/webui/api/profiles/{id}/keys", post(create_profile_key))
+        .route("/webui/api/profiles/{id}", delete(delete_profile))
+        .route("/webui/api/keys/{id}/state", post(set_key_state))
+        .route("/webui/api/keys/{id}", delete(delete_key))
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(chat_completions))
         .route("/v1/responses", post(responses))
@@ -867,7 +868,7 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             version: state.version.clone(),
             home: state.paths.root.display().to_string(),
             api_base_url: "/v1".to_owned(),
-            web_url: "/app".to_owned(),
+            web_url: WEB_UI_PATH.to_owned(),
         },
         counts: OperatorCountRow {
             profiles: profile_count,
@@ -2209,7 +2210,7 @@ mod tests {
         let response = app(fixture.state())
             .oneshot(
                 Request::builder()
-                    .uri("/app")
+                    .uri("/webui")
                     .body(axum::body::Body::empty())
                     .unwrap(),
             )
@@ -2219,8 +2220,8 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_text(response).await;
         assert!(body.contains("Gunmetal Web"));
-        assert!(body.contains("/app/api/state"));
-        assert!(body.contains("Loading local state"));
+        assert!(body.contains("/webui/api"));
+        assert!(body.contains("Local WebUI"));
         assert!(body.contains("setup-grid"));
         assert!(body.contains("traffic-grid"));
         assert!(body.contains("profile-form-helper"));
@@ -2282,7 +2283,7 @@ mod tests {
         let response = app(fixture.state())
             .oneshot(
                 Request::builder()
-                    .uri("/app/api/state")
+                    .uri("/webui/api/state")
                     .body(axum::body::Body::empty())
                     .unwrap(),
             )
@@ -2292,6 +2293,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_json(response).await;
         assert_eq!(body["counts"]["profiles"], 1);
+        assert_eq!(body["service"]["web_url"], "/webui");
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
         assert_eq!(body["counts"]["logs"], 2);
@@ -2355,7 +2357,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/app/api/profiles")
+                    .uri("/webui/api/profiles")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({
@@ -2376,7 +2378,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(format!("/app/api/profiles/{}/auth", profile.id))
+                    .uri(format!("/webui/api/profiles/{}/auth", profile.id))
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from("{}"))
                     .unwrap(),
@@ -2391,7 +2393,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(format!("/app/api/profiles/{}/keys", profile.id))
+                    .uri(format!("/webui/api/profiles/{}/keys", profile.id))
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({
@@ -2419,7 +2421,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/app/api/profiles")
+                    .uri("/webui/api/profiles")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({
@@ -2440,7 +2442,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/app/api/profiles")
+                    .uri("/webui/api/profiles")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({
@@ -2533,7 +2535,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(format!("/app/api/profiles/{}/keys", codex.id))
+                    .uri(format!("/webui/api/profiles/{}/keys", codex.id))
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({
@@ -2606,7 +2608,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("DELETE")
-                    .uri(format!("/app/api/profiles/{}", profile.id))
+                    .uri(format!("/webui/api/profiles/{}", profile.id))
                     .body(Body::empty())
                     .unwrap(),
             )
