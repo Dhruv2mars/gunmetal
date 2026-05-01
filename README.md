@@ -1,8 +1,8 @@
 # gunmetal
 
-Local-first inference middle layer.
+Local-first AI access as one Local API.
 
-Connect providers you already use, create local Gunmetal keys, point your apps at `http://127.0.0.1:4684/v1`, and inspect request history with token usage.
+Gunmetal turns your AI subscriptions and upstream provider access into a local API. Connect provider access you already use, create local Gunmetal keys, point your apps at `http://127.0.0.1:4684/v1`, choose provider-qualified model IDs, and inspect request history for debugging.
 
 ## Install
 
@@ -21,16 +21,16 @@ gunmetal start
 gunmetal status
 ```
 
-`gunmetal setup` is the golden path. It connects one provider, checks auth, syncs models, creates one key, and ends with a ready-to-run test command.
+`gunmetal setup` is the golden path. It creates one provider connection, checks auth, syncs models, creates one Gunmetal key, and ends with a ready-to-run Local API request.
 
-`gunmetal web` opens the local browser surface at `http://127.0.0.1:4684/webui`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
+`gunmetal web` opens the local Dashboard at `http://127.0.0.1:4684/webui`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
 
 ## Start Here
 
 1. Install: `npm i -g @dhruv2mars/gunmetal`
 2. Run `gunmetal setup`
-3. Run `gunmetal web` for the local browser UI, or `gunmetal start` for the API only
-4. Open `http://127.0.0.1:4684/webui` if you want the local browser UI
+3. Run `gunmetal web` for the Dashboard, or `gunmetal start` for the API only
+4. Open `http://127.0.0.1:4684/webui` if you want the Dashboard
 5. Call `GET /v1/models`
 6. Call `POST /v1/chat/completions`
 
@@ -55,16 +55,15 @@ Then configure any OpenAI-compatible app:
 | Setting  | Value                           |
 | -------- | ------------------------------- |
 | Base URL | `http://127.0.0.1:4684/v1`      |
-| API Key  | your gunmetal key               |
+| API Key  | your Gunmetal key               |
 | Model    | `openai/gpt-5.1`, `codex/gpt-5.4`, etc. |
 
 ## Providers
 
-| Type         | Providers              |
-| ------------ | ---------------------- |
-| Subscription | `codex`, `copilot`     |
-| Gateway      | `openrouter`, `zen`    |
-| Direct       | `openai`               |
+| Connection type          | Upstream providers      |
+| ------------------------ | ----------------------- |
+| Subscription connection  | `codex`, `copilot`      |
+| API-key connection       | `openrouter`, `zen`, `openai` |
 
 ## API
 
@@ -76,7 +75,7 @@ POST /v1/responses
 
 Streaming supported on both POST endpoints.
 
-Gunmetal is a normalized gateway by default, with local request history and token accounting built into the path.
+Gunmetal is a normalized Local API by default, with local request history and token usage built into the debugging path.
 
 - normalized mode keeps one clean contract across providers
 - passthrough mode is opt-in through `gunmetal.mode = "passthrough"` plus `provider_options`
@@ -85,8 +84,8 @@ Gunmetal is a normalized gateway by default, with local request history and toke
 Gunmetal works when the app talks to Gunmetal:
 
 - app must let you set a custom base URL
-- app must let you send a custom API key
-- app must accept arbitrary model ids like `provider/model`
+- app must let you send a custom Gunmetal key
+- app must accept provider-qualified model ids like `provider/model`
 - if it hardcodes the upstream endpoint, Gunmetal cannot help there
 
 ## Commands
@@ -108,9 +107,9 @@ gunmetal logs list
 ```
 apps/gunmetal/      # native CLI entrypoint
 apps/web/           # landing page, docs
-packages/sdk/       # internal SDK powering provider extensions
+packages/sdk/       # Gunmetal Provider SDK
 packages/sdk-core/  # shared SDK-facing types + contracts
-packages/extensions/ # first-party provider extensions
+packages/extensions/ # first-party provider integrations
 packages/app-cli/   # CLI command layer
 packages/app-daemon/ # local OpenAI-compatible API server
 packages/app-storage/ # sqlite + local state

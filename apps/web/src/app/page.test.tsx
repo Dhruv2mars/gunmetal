@@ -54,10 +54,14 @@ describe("marketing routes", () => {
     const product = renderToStaticMarkup(<ProductSuitePage />);
     const developer = renderToStaticMarkup(<DeveloperSdkPage />);
 
-    expect(product).toContain("Gunmetal Suite");
-    expect(product).toContain("provider extension");
-    expect(developer).toContain("Extension SDK");
+    expect(product).toContain("Gunmetal turns your AI subscriptions and upstream provider access into a local API.");
+    expect(product).toContain("provider connection");
+    expect(developer).toContain("Gunmetal Provider SDK");
+    expect(developer).toContain("provider contracts");
     expect(developer).toContain("packages/extensions");
+    expect(product).not.toContain("Gunmetal Suite");
+    expect(product).not.toContain("provider profile");
+    expect(developer).not.toContain("Extension SDK");
   });
 
   test("changelog release normalizer follows GitHub releases", () => {

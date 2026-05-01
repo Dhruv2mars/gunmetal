@@ -10,15 +10,15 @@ import {
 } from "@/components/ui/MarketingPrimitives";
 
 export const metadata: Metadata = {
-  title: "Extension SDK",
-  description: "Build native Gunmetal provider integrations.",
+  title: "Gunmetal Provider SDK",
+  description: "Build native Gunmetal provider contracts and routing primitives.",
 };
 
 const sdkRows = [
   {
     number: "01",
-    title: "Provider shape",
-    body: "Extensions describe auth, model sync, request modes, and provider-specific options behind one local contract.",
+    title: "Provider contracts",
+    body: "Provider SDK integrations describe auth, model sync, request modes, and provider-specific options behind one local contract.",
   },
   {
     number: "02",
@@ -38,8 +38,8 @@ export default function DeveloperSdkPage() {
       <div className="grid gap-12 lg:grid-cols-[0.78fr_1.22fr]">
         <PageIntro
           eyebrow="Developer"
-          title="Extension SDK"
-          body="Build powerful native integrations that make a provider feel like part of the local Gunmetal API instead of another remote dashboard."
+          title="Gunmetal Provider SDK"
+          body="Build against the provider contracts and routing primitives Gunmetal dogfoods internally, without the Dashboard, daemon, key-management UI, or request history product surfaces."
         />
 
         <Panel className="p-5">

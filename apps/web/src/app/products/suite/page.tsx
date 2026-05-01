@@ -11,29 +11,29 @@ import {
 } from "@/components/ui/MarketingPrimitives";
 
 export const metadata: Metadata = {
-  title: "Gunmetal Suite",
-  description: "The local-first Gunmetal workflow: providers, models, keys, and request history.",
+  title: "Gunmetal",
+  description: "Gunmetal turns your AI subscriptions and upstream provider access into a local API.",
 };
 
 const suiteRows = [
   {
     number: "01",
-    title: "Providers",
-    body: "Save one upstream provider profile. Browser-session providers open auth. API-key providers keep credentials on this machine.",
+    title: "Provider connections",
+    body: "Save one provider connection per upstream provider. Subscription connections open browser auth first; API-key connections keep credentials on this machine.",
   },
   {
     number: "02",
-    title: "Models",
-    body: "Sync provider models into one local registry so apps can target explicit ids like codex/gpt-5.4 or openai/gpt-5.1.",
+    title: "Model catalog",
+    body: "Sync provider-qualified models into one catalog so apps target explicit ids like codex/gpt-5.4 or openai/gpt-5.1.",
   },
   {
     number: "03",
-    title: "Keys",
+    title: "Gunmetal keys",
     body: "Mint a Gunmetal key and give that to apps. Upstream provider keys stay behind the local daemon.",
   },
   {
     number: "04",
-    title: "Requests",
+    title: "Request history",
     body: "Inspect success, failure, latency, token use, key, provider, model, and endpoint from local request history.",
   },
 ];
@@ -44,15 +44,15 @@ export default function ProductSuitePage() {
       <div className="grid gap-12 lg:grid-cols-[0.78fr_1.22fr]">
         <PageIntro
           eyebrow="Products"
-          title="Gunmetal Suite"
-          body="The all-in-one platform for your needs: connect providers, sync models, mint local keys, and watch traffic through one OpenAI-compatible local API."
+          title="Gunmetal"
+          body="Gunmetal turns your AI subscriptions and upstream provider access into a local API. Install locally, connect providers, create Gunmetal keys, and inspect request history without a hosted Dashboard."
         />
 
         <Panel className="p-5">
           <CodeBlock>{`app/tool
   -> Gunmetal key
   -> ${localApiUrl}
-  -> provider extension
+  -> provider connection
   -> upstream provider`}</CodeBlock>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-[rgba(226,226,226,0.08)] p-4">

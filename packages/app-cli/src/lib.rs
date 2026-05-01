@@ -110,12 +110,12 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           connect a provider, sync models, create a key\n  gunmetal web             open the local browser UI\n  gunmetal doctor          show what is missing and the next command\n  gunmetal chat            test a key against one synced model\n  gunmetal logs summary    inspect recent provider/model traffic\n  gunmetal start           keep the local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider/model  ex: codex/gpt-5.4\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           create a provider connection, sync models, create a Gunmetal key\n  gunmetal web             open the local Dashboard\n  gunmetal doctor          show what is missing and the next command\n  gunmetal chat            test a Gunmetal key against one provider-qualified model ID\n  gunmetal logs summary    inspect recent Local API request history\n  gunmetal start           keep the Local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider-qualified model ID  ex: codex/gpt-5.4\n  Mode      chat/completions or responses\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const DOCTOR_HELP_FOOTER: &str = "Use this when you are unsure what is missing.\nIt checks local service state plus saved providers, synced models, keys, and recent requests.";
-const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. connect one provider\n  2. auth that provider\n  3. sync models\n  4. create one Gunmetal key\n  5. show one working request snippet\n\nAdvanced flags stay optional.";
+const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. create one provider connection\n  2. auth that provider\n  3. sync provider-qualified models\n  4. create one Gunmetal key\n  5. show one working Local API request snippet\n\nAdvanced flags stay optional.";
 const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
 const WEB_UI_PATH: &str = "/webui";
-const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local browser UI at http://127.0.0.1:4684/webui\n  3. keeps the API at http://127.0.0.1:4684/v1 on the same machine";
+const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local Dashboard at http://127.0.0.1:4684/webui\n  3. keeps the Local API at http://127.0.0.1:4684/v1 on the same machine";
 const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web`.";
 const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start` or open `gunmetal web`.";
 const PROVIDERS_LIST_HELP_FOOTER: &str = "Lists built-in provider support, auth mode, request modes, and priority.\nUse `gunmetal profiles list` for the providers you already saved locally.";
@@ -138,7 +138,7 @@ pub enum Command {
     Doctor(DoctorArgs),
     Setup(SetupArgs),
     Chat(ChatArgs),
-    #[command(about = "Open the local browser UI. Starts Gunmetal if needed.")]
+    #[command(about = "Open the local Dashboard. Starts Gunmetal if needed.")]
     Web(WebArgs),
     #[command(about = "Start the local Gunmetal API in the background.")]
     Start(StartArgs),
@@ -2559,7 +2559,8 @@ mod tests {
         assert!(help.contains("gunmetal start"));
         assert!(help.contains("gunmetal status"));
         assert!(help.contains("http://127.0.0.1:4684/v1"));
-        assert!(help.contains("provider/model"));
+        assert!(help.contains("provider-qualified model ID"));
+        assert!(help.contains("chat/completions or responses"));
         assert!(help.contains("/v1/models"));
     }
 
@@ -2609,7 +2610,7 @@ mod tests {
         let mut command = Cli::command();
         let web = command.find_subcommand_mut("web").expect("web subcommand");
         let web_help = web.render_help().to_string();
-        assert!(web_help.contains("Open the local browser UI"));
+        assert!(web_help.contains("Open the local Dashboard"));
         assert!(web_help.contains("http://127.0.0.1:4684/webui"));
 
         let mut command = Cli::command();

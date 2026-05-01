@@ -2414,7 +2414,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn operator_save_profile_updates_matching_provider_and_name() {
+    async fn operator_save_profile_updates_matching_provider_connection() {
         let fixture = Fixture::new();
 
         let first = app(fixture.state())
@@ -2447,7 +2447,7 @@ mod tests {
                     .body(Body::from(
                         json!({
                             "provider": "openai",
-                            "name": "browser",
+                            "name": "cli",
                             "base_url": "https://two.example/v1",
                             "api_key": "second"
                         })
@@ -2462,7 +2462,7 @@ mod tests {
         let profiles = fixture.storage.list_profiles().unwrap();
         assert_eq!(profiles.len(), 1);
         assert_eq!(profiles[0].provider, ProviderKind::OpenAi);
-        assert_eq!(profiles[0].name, "browser");
+        assert_eq!(profiles[0].name, "cli");
         assert_eq!(
             profiles[0].base_url.as_deref(),
             Some("https://two.example/v1")

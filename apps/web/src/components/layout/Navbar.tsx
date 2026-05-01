@@ -8,8 +8,8 @@ const navItems = [
     label: "Products",
     items: [
       {
-        label: "Gunmetal Suite",
-        desc: "The all-in-one platform for your needs.",
+        label: "Gunmetal",
+        desc: "Local API for your provider access.",
         href: "/products/suite",
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,8 +23,8 @@ const navItems = [
     label: "Developer",
     items: [
       {
-        label: "Extension SDK",
-        desc: "Build powerful native integrations.",
+        label: "Provider SDK",
+        desc: "Build provider contracts and routing primitives.",
         href: "/developer/sdk",
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
