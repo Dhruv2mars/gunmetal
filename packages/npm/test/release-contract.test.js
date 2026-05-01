@@ -76,12 +76,18 @@ test("release workflow keeps publish contract", () => {
   assert.match(text, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24:\s*true/);
   assert.match(text, /for f in \.\/gunmetal-\*/);
   assert.match(text, /sed 's# \\\.\/# #'/);
+  assert.match(text, /publish_crates:[\s\S]*?permissions:[\s\S]*?id-token: write/);
+  assert.match(text, /rust-lang\/crates-io-auth-action@v1/);
+  assert.match(text, /CARGO_REGISTRY_TOKEN: \$\{\{ steps\.auth\.outputs\.token \}\}/);
   assert.match(text, /CARGO_REGISTRY_TOKEN/);
   assert.match(text, /cargo publish -p "\$crate"/);
   assert.match(text, /publish_crate gunmetal-core/);
   assert.match(text, /publish_crate gunmetal-storage/);
   assert.match(text, /publish_crate gunmetal-sdk/);
   assert.match(text, /publish_crate gunmetal-providers/);
+  assert.match(text, /publish_npm:[\s\S]*?needs: \[resolve_tag, validate, build_upload\]/);
+  assert.doesNotMatch(text, /publish_npm:[\s\S]*?needs: \[[^\]]*publish_crates/);
+  assert.doesNotMatch(text, /secrets\.CARGO_REGISTRY_TOKEN/);
   assert.doesNotMatch(text, /shasum -a 256 \*/);
   assert.doesNotMatch(text, /sha256sum \*/);
   assert.doesNotMatch(text, /shasum -a 256 -- \.\/\*/);
