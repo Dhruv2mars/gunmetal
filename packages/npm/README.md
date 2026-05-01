@@ -1,6 +1,6 @@
 # @dhruv2mars/gunmetal
 
-Install Gunmetal and run the local AI switchboard.
+Install Gunmetal and turn your AI subscriptions and upstream provider access into a local API.
 
 ## Install
 
@@ -18,7 +18,7 @@ gunmetal start
 gunmetal status
 ```
 
-`gunmetal setup` is the default path. It saves one profile, checks auth, syncs models, creates one key, and prints the next test command.
+`gunmetal setup` is the default path. It saves one provider connection, checks auth, syncs models, creates one Gunmetal key, and prints the next Local API request.
 
 ## Start Here
 
@@ -42,13 +42,13 @@ Then point your app at:
 
 - base URL: `http://127.0.0.1:4684/v1`
 - API key: the Gunmetal key created during setup
-- model: a provider/model id like `codex/gpt-5.4`
+- model: a provider-qualified model ID like `codex/gpt-5.4`
 
 Gunmetal works when the app talks to Gunmetal:
 
 - custom base URL
-- custom API key
-- arbitrary model names
+- custom Gunmetal key
+- provider-qualified model IDs
 - if the app hardcodes the upstream endpoint, Gunmetal cannot help there
 
 ## Commands

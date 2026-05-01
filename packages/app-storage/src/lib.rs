@@ -408,8 +408,8 @@ impl Storage {
         if let Some(existing) = self
             .conn
             .query_row(
-                "select id from provider_profiles where provider = ?1 and name = ?2",
-                params![provider, name],
+                "select id from provider_profiles where provider = ?1",
+                params![provider],
                 |row| row.get::<_, String>(0),
             )
             .optional()?
@@ -417,13 +417,15 @@ impl Storage {
             let id = parse_uuid(existing)?;
             self.conn.execute(
                 "update provider_profiles
-                 set base_url = ?2,
-                     enabled = ?3,
-                     credentials_json = ?4,
-                     updated_at = ?5
+                 set name = ?2,
+                     base_url = ?3,
+                     enabled = ?4,
+                     credentials_json = ?5,
+                     updated_at = ?6
                  where id = ?1",
                 params![
                     id.to_string(),
+                    name,
                     draft.base_url,
                     if draft.enabled { 1 } else { 0 },
                     draft.credentials.map(|value| value.to_string()),
@@ -1059,7 +1061,7 @@ mod tests {
     }
 
     #[test]
-    fn creating_same_provider_and_name_updates_existing_profile() {
+    fn creating_same_provider_updates_existing_connection() {
         let storage = Storage::open_in_memory().unwrap();
         let first = storage
             .create_profile(NewProviderProfile {
@@ -1074,7 +1076,7 @@ mod tests {
         let updated = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::OpenAi,
-                name: "default".to_owned(),
+                name: "browser".to_owned(),
                 base_url: Some("https://two.example/v1".to_owned()),
                 enabled: true,
                 credentials: Some(json!({ "api_key": "second" })),
@@ -1085,6 +1087,7 @@ mod tests {
         assert_eq!(profiles.len(), 1);
         assert_eq!(updated.id, first.id);
         assert_eq!(profiles[0].id, first.id);
+        assert_eq!(profiles[0].name, "browser");
         assert_eq!(
             profiles[0].base_url.as_deref(),
             Some("https://two.example/v1")
