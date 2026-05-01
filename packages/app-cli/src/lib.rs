@@ -983,6 +983,11 @@ async fn ensure_daemon_running(paths: &AppPaths, host: IpAddr, port: u16) -> Res
     let status = wait_for_health(paths, host, port, 20).await?;
     ensure_daemon_matches_home(&status, paths)?;
     if status.running {
+        // Write the PID file only after confirming the daemon is healthy.
+        // This avoids stale PID files when the child fails to bind.
+        if let Ok(Some(pid)) = pid_from_port(port) {
+            let _ = fs::write(paths.daemon_pid_file(), pid.to_string());
+        }
         return Ok(ServiceStatus {
             note: Some("Gunmetal started.".to_owned()),
             ..status
@@ -1003,16 +1008,31 @@ async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus
 
 async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
     let pid_file = paths.daemon_pid_file();
-    let Some(pid) = managed_daemon_pid(paths)? else {
-        let mut status = daemon_status(paths, host, port).await?;
+
+    // Prefer the PID file when it points to a live process.
+    let pid = if let Some(pid) = managed_daemon_pid(paths)? {
+        Some(pid)
+    } else {
+        let status = daemon_status(paths, host, port).await?;
         if status.running {
-            status.note = Some(
-                "Gunmetal is running, but not under managed daemon state. Stop the foreground `gunmetal serve` process directly.".to_owned(),
-            );
-            return Ok(status);
+            // No PID file, but something is responding on the port.
+            // Try to discover the owning PID from the port itself.
+            pid_from_port(port)?
+        } else {
+            let _ = fs::remove_file(&pid_file);
+            return Ok(ServiceStatus {
+                state: "stopped".to_owned(),
+                note: Some("Gunmetal was already stopped.".to_owned()),
+                ..status
+            });
         }
-        status.state = "stopped".to_owned();
-        status.note = Some("Gunmetal was already stopped.".to_owned());
+    };
+
+    let Some(pid) = pid else {
+        let mut status = daemon_status(paths, host, port).await?;
+        status.note = Some(
+            "Gunmetal is running on this port, but the process could not be identified. Stop the foreground `gunmetal serve` process directly.".to_owned(),
+        );
         return Ok(status);
     };
 
@@ -1182,8 +1202,7 @@ fn start_daemon_process(paths: &AppPaths, host: IpAddr, port: u16) -> Result<()>
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr));
-    let child = command.spawn()?;
-    fs::write(paths.daemon_pid_file(), child.id().to_string())?;
+    command.spawn()?;
     Ok(())
 }
 
@@ -1273,6 +1292,54 @@ fn terminate_pid(pid: u32) -> Result<()> {
     Ok(())
 }
 
+fn pid_from_port(port: u16) -> Result<Option<u32>> {
+    #[cfg(unix)]
+    {
+        if let Ok(output) = ProcessCommand::new("lsof")
+            .args(["-iTCP", &format!(":{port}"), "-sTCP:LISTEN", "-t"])
+            .output()
+            && output.status.success()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                if let Ok(pid) = line.trim().parse::<u32>() {
+                    return Ok(Some(pid));
+                }
+            }
+        }
+        if let Ok(output) = ProcessCommand::new("lsof")
+            .args(["-ti", &format!(":{port}")])
+            .output()
+            && output.status.success()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                if let Ok(pid) = line.trim().parse::<u32>() {
+                    return Ok(Some(pid));
+                }
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(output) = ProcessCommand::new("netstat").args(["-ano"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                if line.contains(&format!(":{port}")) && line.contains("LISTENING") {
+                    if let Some(pid_str) = line.rsplit_whitespace().next()
+                        && let Ok(pid) = pid_str.parse::<u32>()
+                    {
+                        return Ok(Some(pid));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ServiceStatus {
     state: String,
@@ -1289,9 +1356,14 @@ fn ensure_daemon_matches_home(status: &ServiceStatus, paths: &AppPaths) -> Resul
     if let Some(home) = status.home.as_deref()
         && home != expected
     {
+        let port = status
+            .url
+            .rsplit(':')
+            .next()
+            .and_then(|p| p.parse::<u16>().ok())
+            .unwrap_or(DEFAULT_PORT);
         anyhow::bail!(
-            "port already serves Gunmetal home {}. stop it first or switch back to that home.",
-            home
+            "Port {port} is already used by Gunmetal with home {home}.\nRun `gunmetal stop --port {port}` to stop it, or use `gunmetal start --port <different-port>`.",
         );
     }
     Ok(())
@@ -2825,7 +2897,7 @@ mod tests {
         assert!(
             error
                 .to_string()
-                .contains("port already serves Gunmetal home /tmp/other-home")
+                .contains("Port 4684 is already used by Gunmetal with home /tmp/other-home")
         );
     }
 
@@ -2986,5 +3058,18 @@ mod tests {
         assert_eq!(session.login_id, "daemon-flow");
         assert_eq!(session.auth_url, "https://example.com/auth");
         assert_eq!(session.user_code.as_deref(), Some("ABCD-EFGH"));
+    }
+
+    #[test]
+    fn pid_from_port_finds_current_process() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        let found = super::pid_from_port(port).unwrap();
+        assert_eq!(
+            found,
+            Some(std::process::id()),
+            "pid_from_port should discover the current process listening on {port}"
+        );
     }
 }
