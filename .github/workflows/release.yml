@@ -178,8 +178,39 @@ jobs:
             gh release upload --clobber "${RELEASE_TAG}" "$f"
           done
 
+  publish_crates:
+    needs: [resolve_tag, validate]
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve_tag.outputs.release_tag }}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          set -euo pipefail
+          if [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
+            echo "CARGO_REGISTRY_TOKEN missing"
+            exit 1
+          fi
+          version="$(node -p "require('./packages/npm/package.json').version")"
+          publish_crate() {
+            crate="$1"
+            if cargo search "$crate" --limit 1 | grep -Eq "^${crate} = \"${version}\""; then
+              echo "skip: ${crate} ${version} already on crates.io"
+              return
+            fi
+            cargo publish -p "$crate" --token "${CARGO_REGISTRY_TOKEN}"
+            sleep 20
+          }
+          publish_crate gunmetal-core
+          publish_crate gunmetal-storage
+          publish_crate gunmetal-sdk
+          publish_crate gunmetal-providers
+
   publish_npm:
-    needs: [resolve_tag, validate, build_upload]
+    needs: [resolve_tag, validate, build_upload, publish_crates]
     runs-on: ubuntu-latest
     permissions:
       contents: read

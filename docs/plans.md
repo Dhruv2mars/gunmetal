@@ -15,7 +15,7 @@ Keep this current while the UX pass moves.
 - `cargo run -p gunmetal -- doctor`
 - live browser check for hosted pages or local `/webui` when server checks are available
 - `git status --short --branch`
-- Last verified: 2026-04-25
+- Last verified: 2026-05-01
 
 ## Milestones
 - `[done]` Milestone 1: reset durable memory and UX direction
@@ -64,3 +64,8 @@ Keep this current while the UX pass moves.
 - Landing design source-of-truth is now `DESIGN.md`.
 - Added hosted subpages for `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/changelogs`, and `/changelog`.
 - Changelog implementation follows Offdex's GitHub Releases fetch/normalize/fallback model, restyled for Gunmetal.
+- Release readiness branch: `release-public-ready`.
+- Version target: `0.1.9`.
+- Provider SDK scope is now public crate readiness for `gunmetal-core`, `gunmetal-storage`, `gunmetal-sdk`, and `gunmetal-providers`.
+- Zen real E2E uses `zen/hy3-preview-free`; upstream may return SSE from the chat completion path, so the Zen adapter accepts and aggregates that payload.
+- Registry publish requires GitHub Actions auth: `CARGO_REGISTRY_TOKEN` for crates.io and either `NPM_TOKEN` or trusted publishing for npm.

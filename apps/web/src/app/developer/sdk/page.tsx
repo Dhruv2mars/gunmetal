@@ -43,14 +43,16 @@ export default function DeveloperSdkPage() {
         />
 
         <Panel className="p-5">
-          <CodeBlock>{`packages/sdk/
-packages/sdk-core/
-packages/extensions/
+          <CodeBlock>{`cargo add gunmetal-sdk gunmetal-core gunmetal-storage
+cargo add gunmetal-providers
 
 provider -> auth status
 provider -> sync models
 provider -> chat/completions
-provider -> responses`}</CodeBlock>
+provider -> responses
+
+ProviderHub::new(paths, registry)
+builtin_provider_hub(paths)`}</CodeBlock>
           <div className="mt-6 flex flex-wrap gap-4">
             <TextLink href={`${repoUrl}/tree/main/packages/sdk`}>SDK package</TextLink>
             <TextLink href={`${repoUrl}/tree/main/packages/extensions`}>Extensions</TextLink>

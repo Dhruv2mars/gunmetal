@@ -1,8 +1,13 @@
 [package]
 name = "gunmetal-providers"
+description = "First-party provider adapters for Gunmetal."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+documentation = "https://docs.rs/gunmetal-providers"
+readme = "README.md"
+keywords = ["ai", "inference", "providers", "sdk"]
+categories = ["api-bindings", "development-tools"]
 version.workspace = true
 
 [dependencies]
@@ -10,9 +15,9 @@ async-trait.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 futures-util.workspace = true
-gunmetal-core = { path = "../sdk-core" }
-gunmetal-sdk = { path = "../sdk" }
-gunmetal-storage = { path = "../app-storage" }
+gunmetal-core = { version = "0.1.9", path = "../sdk-core" }
+gunmetal-sdk = { version = "0.1.9", path = "../sdk" }
+gunmetal-storage = { version = "0.1.9", path = "../app-storage" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -41,6 +41,8 @@ Updated continuously during the UX pass.
 - Public Web UI marketing route remains `/webui`.
 - Product route `/products/suite` explains providers, models, keys, requests, and local API flow.
 - Developer route `/developer/sdk` explains extension surfaces and points to SDK/extension packages.
+- Provider SDK crates are prepared as public crates: `gunmetal-core`, `gunmetal-storage`, `gunmetal-sdk`, and `gunmetal-providers`.
+- The release workflow publishes SDK crates in dependency order before publishing the npm CLI package.
 - Download route `/download` gives install command, setup, Web UI, start, status, and GitHub releases.
 - Docs route `/docs` is a compact quick-start with sticky step navigation and API contract.
 - Changelog routes `/changelogs` and `/changelog` load GitHub Releases with a local fallback state.
@@ -50,11 +52,19 @@ Updated continuously during the UX pass.
 - `DESIGN.md` now defines landing and subpage brand/design rules.
 - Local browser Web UI now uses the `/webui` route, a calm Gunmetal-branded operator shell, a clearer setup/action flow, clipboard fallback handling, and safer narrow-screen containment.
 - CLI now includes `gunmetal doctor` for setup diagnosis and next-command guidance.
+- Zen free-model E2E is covered through the local API path; the Zen adapter handles OpenRouter-style SSE payloads when a free upstream model streams despite a chat-completion request.
 
 ## Validation Results
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web test`
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web lint`
 - `npx --yes bun@1.3.5 run --filter @gunmetal/web build`
+- `bun run test`
+- `bun run check`
+- `bun run build`
+- `cargo publish -p gunmetal-core --dry-run --allow-dirty`
+- real Zen E2E: isolated `GUNMETAL_HOME`, profile create, model sync, key create, `gunmetal web --no-open`, `/v1/models`, `gunmetal chat` with `zen/hy3-preview-free`, and logs summary
+- Browser Use check for `http://localhost:3000/`, `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/webui`
+- Browser Use check for local `http://127.0.0.1:4684/webui`
 - `cargo fmt --all --check`
 - `cargo test -p gunmetal-cli`
 - `cargo test -p gunmetal-daemon`

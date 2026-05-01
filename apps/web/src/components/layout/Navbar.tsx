@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
 
 const navItems = [
@@ -132,10 +133,12 @@ export function Navbar() {
         <div className="flex items-center justify-between h-14">
           {/* Logo — left */}
           <Link href="/" className="flex items-center group flex-shrink-0 h-full" aria-label="Gunmetal Home">
-            <img
+            <Image
               src="/logo.svg"
               alt=""
               aria-hidden="true"
+              width={22}
+              height={22}
               className="h-[22px] w-auto flex-shrink-0 relative z-10 bg-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-200"
               style={{ display: "block" }}
             />
