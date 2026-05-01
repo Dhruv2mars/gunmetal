@@ -19,7 +19,7 @@ Typical SDK embedding:
 ```rust
 use gunmetal_storage::AppPaths;
 
-let paths = AppPaths::from_default_home()?;
+let paths = AppPaths::resolve()?;
 let storage = paths.storage_handle()?;
 ```
 

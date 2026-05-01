@@ -22,7 +22,7 @@ Typical embedding:
 use gunmetal_providers::builtin_provider_hub;
 use gunmetal_storage::AppPaths;
 
-let paths = AppPaths::from_default_home()?;
+let paths = AppPaths::resolve()?;
 let hub = builtin_provider_hub(paths);
 let providers = hub.definitions();
 ```

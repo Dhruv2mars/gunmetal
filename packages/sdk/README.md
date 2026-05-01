@@ -123,7 +123,7 @@ impl ProviderAdapter for MyProvider {
 use gunmetal_sdk::{ProviderHub, ProviderRegistry};
 use gunmetal_storage::AppPaths;
 
-let paths = AppPaths::from_default_home()?;
+let paths = AppPaths::resolve()?;
 let mut registry = ProviderRegistry::default();
 registry.register(MyProvider);
 
