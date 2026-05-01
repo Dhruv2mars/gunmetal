@@ -65,7 +65,7 @@ Keep this current while the UX pass moves.
 - Added hosted subpages for `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/changelogs`, and `/changelog`.
 - Changelog implementation follows Offdex's GitHub Releases fetch/normalize/fallback model, restyled for Gunmetal.
 - Release readiness branch: `release-public-ready`.
-- Version target: `0.1.10`.
+- Version target: `0.1.11`.
 - Provider SDK scope is now public crate readiness for `gunmetal-core`, `gunmetal-storage`, `gunmetal-sdk`, and `gunmetal-providers`.
 - Zen real E2E uses `zen/hy3-preview-free`; upstream may return SSE from the chat completion path, so the Zen adapter accepts and aggregates that payload.
 - Registry publish uses GitHub Actions OIDC trusted publishing for crates.io and npm; `NPM_TOKEN` remains only a fallback for npm.
