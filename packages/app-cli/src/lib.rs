@@ -1327,7 +1327,7 @@ fn pid_from_port(port: u16) -> Result<Option<u32>> {
             let text = String::from_utf8_lossy(&output.stdout);
             for line in text.lines() {
                 if line.contains(&format!(":{port}")) && line.contains("LISTENING") {
-                    if let Some(pid_str) = line.rsplit_whitespace().next()
+                    if let Some(pid_str) = line.split_whitespace().last()
                         && let Ok(pid) = pid_str.parse::<u32>()
                     {
                         return Ok(Some(pid));
