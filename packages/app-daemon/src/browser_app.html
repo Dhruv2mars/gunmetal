@@ -7,18 +7,20 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg: #11110f;
-        --panel: rgba(30, 30, 27, 0.88);
-        --panel-2: rgba(17, 17, 15, 0.94);
-        --line: rgba(244, 240, 230, 0.12);
-        --line-strong: rgba(244, 240, 230, 0.24);
-        --text: #f4f0e6;
-        --muted: #969085;
-        --accent: #d7b46a;
-        --accent-2: #7dbeb3;
+        --bg: #0e0e0d;
+        --surface: rgba(20, 20, 18, 0.82);
+        --surface-strong: rgba(27, 27, 24, 0.9);
+        --field: rgba(8, 8, 7, 0.44);
+        --line: rgba(250, 249, 246, 0.1);
+        --line-strong: rgba(250, 249, 246, 0.18);
+        --text: #faf9f6;
+        --muted: #8d8b87;
+        --faint: #62605d;
+        --accent: #d6b56f;
+        --accent-2: #8fb8ac;
         --danger: #ff8d78;
-        --shadow: 0 24px 80px rgba(6, 7, 8, 0.34);
-        --radius: 22px;
+        --shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
+        --radius: 14px;
       }
 
       * {
@@ -30,11 +32,19 @@
         min-height: 100dvh;
         font-family: "Geist", "SF Pro Display", system-ui, sans-serif;
         color: var(--text);
-        background:
-          linear-gradient(rgba(244, 240, 230, 0.045) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(244, 240, 230, 0.045) 1px, transparent 1px),
-          linear-gradient(180deg, #171713, var(--bg) 36%);
-        background-size: 48px 48px, 48px 48px, auto;
+        background: radial-gradient(circle at 58% 18%, rgba(250, 249, 246, 0.035), transparent 34%),
+          linear-gradient(180deg, #11110f, var(--bg) 42%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(250, 249, 246, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(250, 249, 246, 0.03) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 74%);
       }
 
       a {
@@ -48,15 +58,71 @@
       }
 
       .shell {
-        width: min(1480px, calc(100vw - 32px));
+        width: min(1440px, calc(100vw - 32px));
         margin: 0 auto;
-        padding: 20px 0 56px;
+        padding: 18px 0 56px;
       }
 
-      .masthead {
+      .topbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 56px;
+        margin: 0 0 28px;
+        padding: 10px 0;
+        background: rgba(14, 14, 13, 0.72);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(250, 249, 246, 0.06);
+        z-index: 2;
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .brand-mark {
         display: grid;
-        gap: 20px;
-        padding: 20px 0 28px;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        color: var(--text);
+        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
+        font-size: 13px;
+      }
+
+      .brand-copy {
+        display: grid;
+        gap: 1px;
+      }
+
+      .brand-copy strong {
+        font-weight: 500;
+      }
+
+      .brand-copy span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .topbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .masthead,
+      .workspace {
+        display: grid;
+        gap: 16px;
       }
 
       .brand-row,
@@ -75,7 +141,7 @@
       }
 
       .brand-row {
-        grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 0.48fr);
       }
 
       .hero,
@@ -84,23 +150,22 @@
         min-width: 0;
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        background: linear-gradient(180deg, var(--panel), var(--panel-2));
-        box-shadow: var(--shadow);
+        background: linear-gradient(180deg, var(--surface-strong), var(--surface));
         backdrop-filter: blur(18px);
-        box-shadow: inset 0 1px 0 rgba(244, 240, 230, 0.08), var(--shadow);
+        box-shadow: inset 0 1px 0 rgba(250, 249, 246, 0.07), var(--shadow);
       }
 
       .hero {
         position: relative;
         overflow: hidden;
-        padding: 28px;
+        padding: clamp(22px, 4vw, 38px);
       }
 
       .hero::before {
         content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(120deg, rgba(215, 180, 106, 0.14), transparent 36%);
+        background: linear-gradient(120deg, rgba(214, 181, 111, 0.1), transparent 42%);
         pointer-events: none;
       }
 
@@ -121,19 +186,19 @@
 
       h1 {
         max-width: min(11ch, 100%);
-        font-size: clamp(3rem, 8vw, 6.4rem);
-        line-height: 0.9;
-        letter-spacing: -0.04em;
-        font-weight: 650;
+        font-size: clamp(2.8rem, 7.2vw, 6rem);
+        line-height: 0.92;
+        letter-spacing: 0;
+        font-weight: 420;
         overflow-wrap: break-word;
       }
 
       .lede {
-        max-width: 34rem;
+        max-width: 37rem;
         margin-top: 16px;
         font-size: clamp(1rem, 2vw, 1.18rem);
         line-height: 1.45;
-        color: rgba(244, 244, 238, 0.84);
+        color: var(--muted);
       }
 
       .hero-actions,
@@ -152,12 +217,12 @@
       .btn,
       .ghost-btn {
         border: 1px solid var(--line-strong);
-        border-radius: 999px;
-        padding: 10px 14px;
+        border-radius: 10px;
+        padding: 10px 13px;
         color: var(--text);
         background: rgba(255, 255, 255, 0.04);
         cursor: pointer;
-        transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, opacity 0.16s ease;
       }
 
       .btn:hover,
@@ -168,7 +233,7 @@
 
       .btn:active,
       .ghost-btn:active {
-        transform: translateY(0);
+        transform: scale(0.98);
       }
 
       .btn:disabled,
@@ -181,7 +246,7 @@
       }
 
       .btn.primary {
-        background: linear-gradient(135deg, rgba(215, 180, 106, 0.24), rgba(215, 180, 106, 0.08));
+        background: linear-gradient(135deg, rgba(214, 181, 111, 0.2), rgba(214, 181, 111, 0.06));
         border-color: rgba(216, 178, 110, 0.48);
       }
 
@@ -201,10 +266,9 @@
       }
 
       .stat {
-        padding: 18px;
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.02);
+        padding: 16px 0;
+        border-top: 1px solid var(--line);
+        background: transparent;
       }
 
       .stat-label {
@@ -215,13 +279,14 @@
       }
 
       .stat-value {
-        margin-top: 8px;
-        font-size: clamp(1.8rem, 3.6vw, 3rem);
+        margin-top: 10px;
+        font-size: clamp(1.75rem, 3.2vw, 2.7rem);
         line-height: 0.94;
+        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
       }
 
       .command-row {
-        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
       }
 
       .panel-kicker {
@@ -238,10 +303,12 @@
       .command-block {
         margin-top: 14px;
         padding: 14px;
-        border-radius: 18px;
+        border-radius: 12px;
         border: 1px solid var(--line);
-        background: rgba(0, 0, 0, 0.26);
+        background: var(--field);
         overflow: auto;
+        line-height: 1.65;
+        white-space: pre-wrap;
       }
 
       .setup-grid,
@@ -252,7 +319,7 @@
       }
 
       .setup-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
       }
 
       .snapshot-grid {
@@ -262,9 +329,9 @@
       .setup-step,
       .snapshot-card {
         padding: 14px;
-        border-radius: 18px;
+        border-radius: 12px;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255, 255, 255, 0.025);
       }
 
       .setup-step strong,
@@ -289,7 +356,7 @@
         display: grid;
         gap: 10px;
         padding: 16px;
-        border-radius: 18px;
+        border-radius: 12px;
         border: 1px solid rgba(215, 180, 106, 0.36);
         background: rgba(215, 180, 106, 0.08);
       }
@@ -327,7 +394,7 @@
       }
 
       .section-grid {
-        grid-template-columns: minmax(0, 0.86fr) minmax(340px, 0.74fr);
+        grid-template-columns: minmax(0, 0.86fr) minmax(360px, 0.66fr);
         align-items: start;
       }
 
@@ -349,7 +416,7 @@
 
       .profile-card {
         border: 1px solid var(--line);
-        border-radius: 22px;
+        border-radius: 12px;
         padding: 18px;
         background: rgba(255, 255, 255, 0.02);
       }
@@ -396,9 +463,9 @@
       select {
         width: 100%;
         border: 1px solid var(--line-strong);
-        border-radius: 14px;
+        border-radius: 10px;
         padding: 12px 14px;
-        background: rgba(6, 7, 8, 0.24);
+        background: var(--field);
         color: var(--text);
       }
 
@@ -597,9 +664,9 @@
         width: 100%;
         min-height: 120px;
         border: 1px solid var(--line-strong);
-        border-radius: 14px;
+        border-radius: 10px;
         padding: 12px 14px;
-        background: rgba(6, 7, 8, 0.24);
+        background: var(--field);
         color: var(--text);
         font: inherit;
         resize: vertical;
@@ -623,7 +690,7 @@
       .playground-message,
       .playground-empty {
         padding: 14px;
-        border-radius: 18px;
+        border-radius: 12px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.03);
       }
@@ -699,7 +766,7 @@
         .hero,
         .hero-side,
         .panel {
-          border-radius: 18px;
+          border-radius: 12px;
         }
 
         .hero,
@@ -722,24 +789,32 @@
   </head>
   <body>
     <div class="shell">
+      <nav class="topbar" aria-label="Web UI">
+        <div class="brand-lockup">
+          <span class="brand-mark">G</span>
+          <div class="brand-copy">
+            <strong>Gunmetal</strong>
+            <span>Local WebUI</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="refresh-button" type="button">
+            Refresh
+          </button>
+          <button class="ghost-btn" id="copy-api-button" type="button">
+            Copy API URL
+          </button>
+        </div>
+      </nav>
       <header class="masthead">
         <div class="brand-row">
           <section class="hero">
-            <p class="eyebrow">Gunmetal Web</p>
-            <h1>Your local gateway is running.</h1>
+            <p class="eyebrow">WebUI</p>
+            <h1>Your local gateway is live.</h1>
             <p class="lede">
-              Same daemon. Same keys. Same providers. This is the browser face
-              of Gunmetal, served straight from your local gateway with request
-              history and token usage close by.
+              Connect providers, sync models, mint local keys, test one request,
+              and inspect traffic from the same daemon that serves the API.
             </p>
-            <div class="hero-actions">
-              <button class="btn primary" id="refresh-button" type="button">
-                Refresh state
-              </button>
-              <button class="btn" id="copy-api-button" type="button">
-                Copy API base URL
-              </button>
-            </div>
           </section>
           <aside class="hero-side">
             <p class="panel-kicker">Operator flow</p>
@@ -898,7 +973,12 @@
         },
       };
 
+      const APP_API_BASE = "/webui/api";
       const $ = (id) => document.getElementById(id);
+
+      function appApi(path) {
+        return `${APP_API_BASE}${path}`;
+      }
 
       function escapeHtml(value) {
         return String(value ?? "")
@@ -1148,7 +1228,7 @@
 
       async function loadState() {
         try {
-          const data = await fetchJson("/app/api/state");
+          const data = await fetchJson(appApi("/state"));
           appState.data = data;
           syncPlaygroundSelections(data);
           render();
@@ -1207,6 +1287,9 @@
       }
 
       async function readSse(response, onEvent) {
+        if (!response.body) {
+          throw new Error("response stream is unavailable");
+        }
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -1819,20 +1902,20 @@
       }
 
       async function profileAction(id, action) {
-        await submitAction(`/app/api/profiles/${id}/${action}`, { method: "POST" });
+        await submitAction(appApi(`/profiles/${id}/${action}`), { method: "POST" });
       }
 
       async function createKey(id) {
         const chosen = window.prompt("Key name", "gunmetal-key");
         if (chosen == null) return;
-        await submitAction(`/app/api/profiles/${id}/keys`, {
+        await submitAction(appApi(`/profiles/${id}/keys`), {
           method: "POST",
           body: JSON.stringify({ name: chosen }),
         });
       }
 
       async function setKeyState(id, state) {
-        await submitAction(`/app/api/keys/${id}/state`, {
+        await submitAction(appApi(`/keys/${id}/state`), {
           method: "POST",
           body: JSON.stringify({ state }),
         });
@@ -1840,12 +1923,12 @@
 
       async function deleteKey(id) {
         if (!window.confirm("Delete this key?")) return;
-        await submitAction(`/app/api/keys/${id}`, { method: "DELETE" });
+        await submitAction(appApi(`/keys/${id}`), { method: "DELETE" });
       }
 
       async function deleteProfile(id) {
         if (!window.confirm("Delete this provider and its synced models?")) return;
-        await submitAction(`/app/api/profiles/${id}`, { method: "DELETE" });
+        await submitAction(appApi(`/profiles/${id}`), { method: "DELETE" });
       }
 
       function selectLog(id) {
@@ -1911,7 +1994,7 @@
       $("profile-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
-        await submitAction("/app/api/profiles", {
+        await submitAction(appApi("/profiles"), {
           method: "POST",
           body: JSON.stringify({
             provider: form.get("provider"),
@@ -1970,8 +2053,24 @@
           ? new URL(appState.data.service.api_base_url, window.location.origin).toString()
           : null;
         if (!base) return;
-        await navigator.clipboard.writeText(base);
-        setBanner("Copied API base URL.", "success");
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(base);
+          } else {
+            const textarea = document.createElement("textarea");
+            textarea.value = base;
+            textarea.setAttribute("readonly", "true");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand("copy");
+            textarea.remove();
+          }
+          setBanner("Copied API base URL.", "success");
+        } catch (error) {
+          setBanner(error.message || "Clipboard copy failed.", "danger");
+        }
       });
 
       syncProviderForm();

@@ -61,7 +61,7 @@ export default function DocsPage() {
       <PageIntro
         eyebrow="Resources"
         title="Documentation"
-        body="A compact path through the real Gunmetal workflow: install, setup, local API, client config, and recovery."
+        body="A compact path through the real Gunmetal workflow: install, setup, local API compatibility, client config, and recovery."
       />
 
       <section className="mt-16 grid gap-10 md:grid-cols-[180px_1fr] md:gap-12">

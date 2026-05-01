@@ -344,6 +344,28 @@ Do:
 - Keep visible focus rings subtle but present.
 - Avoid changing command animation in ways that confuse screen readers.
 
+## Local WebUI
+
+Route: `http://127.0.0.1:4684/webui`.
+
+The local WebUI is an operator surface, not a marketing page. It should follow
+the landing identity while being denser and more functional:
+
+- Warm near-black shell.
+- Off-white text with muted gray secondary labels.
+- One restrained amber accent for active/next-step states.
+- Compact top bar with brand, refresh, and copy API URL.
+- Clear first screen: service status, next action, setup steps, local API URL.
+- Primary workflow stays visible: connect provider, sync models, create key,
+  test request, inspect traffic.
+- Tables and forms use stable dimensions, subtle borders, and mono values.
+- Empty, loading, success, and error states are first-class UI.
+- Copy behavior must catch clipboard errors and provide fallback copy.
+- `/webui` is the only browser UI route.
+
+Do not make the WebUI feel like a SaaS analytics dashboard. Avoid colorful
+charts, large feature cards, decorative gradients, and unrelated navigation.
+
 ## Implementation Anchors
 
 Landing files:

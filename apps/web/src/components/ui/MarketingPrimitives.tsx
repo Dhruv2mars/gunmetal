@@ -6,7 +6,7 @@ export const releasesUrl = `${repoUrl}/releases`;
 export const packageName = "@dhruv2mars/gunmetal";
 export const installCommand = `npm i -g ${packageName}`;
 export const localApiUrl = "http://127.0.0.1:4684/v1";
-export const localAppUrl = "http://127.0.0.1:4684/app";
+export const localAppUrl = "http://127.0.0.1:4684/webui";
 
 export function PageFrame({ children }: { children: ReactNode }) {
   return (
