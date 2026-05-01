@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use futures_util::{StreamExt, stream};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
@@ -296,47 +296,12 @@ impl ZenClient {
                     return Err(read_error(response).await.into());
                 }
 
-                let payload: ChatCompletionResponse = response.json().await?;
-                let choice = payload
-                    .choices
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| anyhow!("zen returned no choices"))?;
-                let input_tokens = payload
-                    .usage
-                    .as_ref()
-                    .and_then(|usage| usage.prompt_tokens)
-                    .map(to_u32);
-                let output_tokens = payload
-                    .usage
-                    .as_ref()
-                    .and_then(|usage| usage.completion_tokens)
-                    .map(to_u32);
-                let total_tokens = payload
-                    .usage
-                    .as_ref()
-                    .and_then(|usage| usage.total_tokens)
-                    .map(to_u32)
-                    .or_else(|| match (input_tokens, output_tokens) {
-                        (Some(input), Some(output)) => Some(input.saturating_add(output)),
-                        _ => None,
-                    });
+                let response_text = response.text().await?;
+                let completion = parse_chat_completion_body(&response_text, &model)?;
 
                 Ok(ZenChatResult {
                     credentials: None,
-                    completion: ChatCompletionResult {
-                        model: format!("zen/{}", payload.model.unwrap_or_else(|| model.to_owned())),
-                        message: ChatMessage {
-                            role: ChatRole::Assistant,
-                            content: choice.message.content.unwrap_or_default(),
-                        },
-                        finish_reason: choice.finish_reason.unwrap_or_else(|| "stop".to_owned()),
-                        usage: TokenUsage {
-                            input_tokens,
-                            output_tokens,
-                            total_tokens,
-                        },
-                    },
+                    completion,
                 })
             }
         }
@@ -523,6 +488,131 @@ fn build_zen_request_body(model: &str, request: &ChatCompletionRequest) -> Value
     body
 }
 
+fn parse_chat_completion_body(text: &str, fallback_model: &str) -> Result<ChatCompletionResult> {
+    match serde_json::from_str::<ChatCompletionResponse>(text) {
+        Ok(payload) => completion_from_response(payload, fallback_model),
+        Err(error)
+            if text
+                .lines()
+                .any(|line| line.trim_start().starts_with("data:")) =>
+        {
+            completion_from_sse_text(text, fallback_model)
+        }
+        Err(error) => {
+            Err(error).with_context(|| format!("failed to decode zen chat response: {text}"))
+        }
+    }
+}
+
+fn completion_from_response(
+    payload: ChatCompletionResponse,
+    fallback_model: &str,
+) -> Result<ChatCompletionResult> {
+    let choice = payload
+        .choices
+        .into_iter()
+        .next()
+        .ok_or_else(|| anyhow!("zen returned no choices"))?;
+    let usage = usage_from_payload(payload.usage.as_ref());
+
+    Ok(ChatCompletionResult {
+        model: format!(
+            "zen/{}",
+            payload.model.unwrap_or_else(|| fallback_model.to_owned())
+        ),
+        message: ChatMessage {
+            role: ChatRole::Assistant,
+            content: choice.message.content.unwrap_or_default(),
+        },
+        finish_reason: choice.finish_reason.unwrap_or_else(|| "stop".to_owned()),
+        usage,
+    })
+}
+
+fn completion_from_sse_text(text: &str, fallback_model: &str) -> Result<ChatCompletionResult> {
+    let mut content = String::new();
+    let mut model = fallback_model.to_owned();
+    let mut finish_reason = None;
+    let mut usage = TokenUsage {
+        input_tokens: None,
+        output_tokens: None,
+        total_tokens: None,
+    };
+
+    for line in text.lines() {
+        let line = line.trim();
+        let Some(data) = line.strip_prefix("data:") else {
+            continue;
+        };
+        let data = data.trim();
+        if data.is_empty() || data == "[DONE]" {
+            continue;
+        }
+
+        let payload: Value = serde_json::from_str(data)
+            .with_context(|| format!("failed to decode zen stream event: {data}"))?;
+
+        if let Some(upstream_model) = payload.get("model").and_then(Value::as_str) {
+            model = upstream_model.to_owned();
+        }
+        if let Some(event_usage) = payload
+            .get("usage")
+            .and_then(|value| serde_json::from_value::<ChatUsage>(value.clone()).ok())
+        {
+            usage = usage_from_payload(Some(&event_usage));
+        }
+
+        let Some(choice) = payload
+            .get("choices")
+            .and_then(Value::as_array)
+            .and_then(|choices| choices.first())
+        else {
+            continue;
+        };
+
+        if let Some(reason) = choice.get("finish_reason").and_then(Value::as_str) {
+            finish_reason = Some(reason.to_owned());
+        }
+        if let Some(delta) = choice.get("delta") {
+            if let Some(piece) = delta.get("content").and_then(Value::as_str) {
+                content.push_str(piece);
+            }
+        } else if let Some(message) = choice.get("message")
+            && let Some(piece) = message.get("content").and_then(Value::as_str)
+        {
+            content.push_str(piece);
+        }
+    }
+
+    Ok(ChatCompletionResult {
+        model: format!("zen/{model}"),
+        message: ChatMessage {
+            role: ChatRole::Assistant,
+            content,
+        },
+        finish_reason: finish_reason.unwrap_or_else(|| "stop".to_owned()),
+        usage,
+    })
+}
+
+fn usage_from_payload(usage: Option<&ChatUsage>) -> TokenUsage {
+    let input_tokens = usage.and_then(|usage| usage.prompt_tokens).map(to_u32);
+    let output_tokens = usage.and_then(|usage| usage.completion_tokens).map(to_u32);
+    let total_tokens = usage
+        .and_then(|usage| usage.total_tokens)
+        .map(to_u32)
+        .or_else(|| match (input_tokens, output_tokens) {
+            (Some(input), Some(output)) => Some(input.saturating_add(output)),
+            _ => None,
+        });
+
+    TokenUsage {
+        input_tokens,
+        output_tokens,
+        total_tokens,
+    }
+}
+
 fn to_u32(value: u64) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
 }
@@ -540,7 +630,7 @@ mod tests {
         matchers::{body_string_contains, header, method, path},
     };
 
-    use super::{ZenClient, ZenClientOptions};
+    use super::{ZenClient, ZenClientOptions, parse_chat_completion_body};
     use crate::ProviderStreamEvent;
 
     #[tokio::test]
@@ -706,5 +796,26 @@ mod tests {
             }
         );
         assert!(stream.next().await.is_none());
+    }
+
+    #[test]
+    fn parses_openrouter_style_sse_when_zen_returns_stream_for_chat_completion() {
+        let body = concat!(
+            ": OPENROUTER PROCESSING\n\n",
+            "data: {\"id\":\"gen-1\",\"object\":\"chat.completion.chunk\",\"model\":\"tencent/hy3-preview-20260421:free\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"gun\",\"role\":\"assistant\"},\"finish_reason\":null}]}\n\n",
+            "data: {\"id\":\"gen-1\",\"object\":\"chat.completion.chunk\",\"model\":\"tencent/hy3-preview-20260421:free\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"metal zen\",\"role\":\"assistant\"},\"finish_reason\":null}]}\n\n",
+            "data: {\"id\":\"gen-1\",\"object\":\"chat.completion.chunk\",\"model\":\"tencent/hy3-preview-20260421:free\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\" e2e ok\",\"role\":\"assistant\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":23,\"completion_tokens\":59,\"total_tokens\":82,\"cost\":0}}\n\n",
+            "data: [DONE]\n\n",
+            "data: {\"choices\":[],\"cost\":\"0\"}\n\n"
+        );
+
+        let completion = parse_chat_completion_body(body, "hy3-preview-free").unwrap();
+
+        assert_eq!(completion.model, "zen/tencent/hy3-preview-20260421:free");
+        assert_eq!(completion.message.content, "gunmetal zen e2e ok");
+        assert_eq!(completion.finish_reason, "stop");
+        assert_eq!(completion.usage.input_tokens, Some(23));
+        assert_eq!(completion.usage.output_tokens, Some(59));
+        assert_eq!(completion.usage.total_tokens, Some(82));
     }
 }

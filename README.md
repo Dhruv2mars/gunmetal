@@ -65,6 +65,24 @@ Then configure any OpenAI-compatible app:
 | Subscription connection  | `codex`, `copilot`      |
 | API-key connection       | `openrouter`, `zen`, `openai` |
 
+## Gunmetal Provider SDK
+
+Developers can build provider integrations against the same contracts Gunmetal uses internally.
+
+```bash
+cargo add gunmetal-sdk gunmetal-core gunmetal-storage
+```
+
+Use `gunmetal-sdk` for `ProviderAdapter`, `ProviderRegistry`, `ProviderHub`, streaming helpers, and model enrichment. Use `gunmetal-core` for shared request, response, provider, key, profile, and model types. Use `gunmetal-storage` for local `AppPaths` and storage handles when embedding the hub in a local application.
+
+First-party adapters live in `gunmetal-providers`:
+
+```bash
+cargo add gunmetal-providers
+```
+
+It exposes `builtin_registry()`, `builtin_provider_hub()`, and concrete clients for Codex, Copilot, OpenRouter, Zen, and OpenAI.
+
 ## API
 
 ```

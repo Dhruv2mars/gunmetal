@@ -35,7 +35,7 @@
 
 ## Non-Goals
 - Do not reintroduce TUI.
-- Do not publish SDK packages.
+- Provider SDK crates must be ready for public use by developers integrating Gunmetal provider contracts.
 - Do not add auth, accounts, teams, hosted sync, or multi-tenant concepts.
 - Do not widen beyond the super-app Web UI and CLI path.
 - Do not redesign or tweak landing page/navbar unless user explicitly asks.
