@@ -8,6 +8,35 @@ import { join } from "node:path";
 
 const REPO = "Dhruv2mars/gunmetal";
 
+export const PACKAGE_NAME = "@dhruv2mars/gunmetal@latest";
+
+export const SUPPORTED_PACKAGE_MANAGERS = {
+  bun: {
+    execPathHint: "bun",
+    userAgentHint: "bun/",
+    listGlobalArgs: ["pm", "ls", "-g"],
+    installGlobalArgs: ["add", "-g", PACKAGE_NAME]
+  },
+  npm: {
+    execPathHint: "npm",
+    userAgentHint: "npm/",
+    listGlobalArgs: ["list", "-g", "--depth=0"],
+    installGlobalArgs: ["install", "-g", PACKAGE_NAME]
+  },
+  pnpm: {
+    execPathHint: "pnpm",
+    userAgentHint: "pnpm/",
+    listGlobalArgs: ["list", "-g", "--depth=0"],
+    installGlobalArgs: ["add", "-g", PACKAGE_NAME]
+  },
+  yarn: {
+    execPathHint: "yarn",
+    userAgentHint: "yarn/",
+    listGlobalArgs: ["global", "list", "--depth=0"],
+    installGlobalArgs: ["global", "add", PACKAGE_NAME]
+  }
+};
+
 export function binNameForPlatform(platform = process.platform) {
   return platform === "win32" ? "gunmetal.exe" : "gunmetal";
 }
@@ -38,18 +67,20 @@ export function isWorkspaceInstall(binDir) {
   return existsSync(join(repoRoot, "Cargo.toml")) && existsSync(join(repoRoot, "packages", "npm", "package.json"));
 }
 
+const DETECTION_ORDER = ["bun", "pnpm", "yarn", "npm"];
+
 export function packageManagerHintFromEnv(env = process.env) {
   const execPath = String(env.npm_execpath || "").toLowerCase();
-  if (execPath.includes("bun")) return "bun";
-  if (execPath.includes("pnpm")) return "pnpm";
-  if (execPath.includes("yarn")) return "yarn";
-  if (execPath.includes("npm")) return "npm";
+  for (const name of DETECTION_ORDER) {
+    const config = SUPPORTED_PACKAGE_MANAGERS[name];
+    if (config && execPath.includes(config.execPathHint)) return name;
+  }
 
   const ua = String(env.npm_config_user_agent || "").toLowerCase();
-  if (ua.startsWith("bun/")) return "bun";
-  if (ua.startsWith("pnpm/")) return "pnpm";
-  if (ua.startsWith("yarn/")) return "yarn";
-  if (ua.startsWith("npm/")) return "npm";
+  for (const name of DETECTION_ORDER) {
+    const config = SUPPORTED_PACKAGE_MANAGERS[name];
+    if (config && ua.startsWith(config.userAgentHint)) return name;
+  }
 
   return null;
 }
