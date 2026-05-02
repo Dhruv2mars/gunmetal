@@ -1281,7 +1281,9 @@ fn usage_from_parts(input_tokens: Option<u32>, output_tokens: Option<u32>) -> To
 
 #[cfg(test)]
 mod tests {
-    use gunmetal_core::{ChatRole, ProviderKind, RequestOptions};
+    use gunmetal_core::{
+        ChatMessage, ChatRole, ProviderAuthState, ProviderKind, ProviderProfile, RequestOptions,
+    };
     use serde_json::json;
     use wiremock::{
         Mock, MockServer, ResponseTemplate,
@@ -1290,7 +1292,7 @@ mod tests {
 
     use super::{
         CopilotClient, CopilotClientOptions, CopilotCredentialEnvelope, CopilotSession,
-        parse_access_token_payload, parse_github_user_body,
+        epoch_seconds, parse_access_token_payload, parse_github_user_body,
     };
 
     #[test]
@@ -1480,5 +1482,205 @@ mod tests {
             .unwrap();
         assert_eq!(completion.completion.message.content, "GUNMETAL_COPILOT_OK");
         assert_eq!(completion.completion.usage.total_tokens, Some(5));
+    }
+
+    #[tokio::test]
+    async fn refresh_if_needed_with_expired_token() {
+        let github = MockServer::start().await;
+        let copilot = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/oauth/access_token"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "access_token": "new_token",
+                "expires_in": 3600,
+                "refresh_token": "new_refresh"
+            })))
+            .mount(&github)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/models"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([{
+                "id": "gpt-5.4",
+                "name": "GPT-5.4",
+                "model_picker_enabled": true,
+                "policy": { "state": "enabled" }
+            }])))
+            .mount(&copilot)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/user"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "login": "testuser" })))
+            .mount(&github)
+            .await;
+
+        let client = CopilotClient::with_options(CopilotClientOptions {
+            api_base_url: github.uri(),
+            client_id: "client-id".to_owned(),
+            copilot_base_url: copilot.uri(),
+            login_base_url: github.uri(),
+            pending_login: None,
+            scope: None,
+            session: Some(CopilotSession {
+                account_label: "old".to_owned(),
+                expires_at: Some("1".to_owned()),
+                organization: None,
+                refresh_token: Some("old_refresh".to_owned()),
+                refresh_token_expires_at: None,
+                token: "old_token".to_owned(),
+                token_hint: "old".to_owned(),
+            }),
+        });
+
+        let options = client.options().unwrap();
+        let session = options.session.clone().unwrap();
+        let refreshed = client.refresh_if_needed(&options, session).await.unwrap();
+        assert_eq!(refreshed.token, "new_token");
+        assert_eq!(refreshed.refresh_token, Some("new_refresh".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn refresh_if_needed_with_valid_token_skips_refresh() {
+        let client = CopilotClient::with_options(CopilotClientOptions {
+            api_base_url: "http://localhost".to_owned(),
+            client_id: "client-id".to_owned(),
+            copilot_base_url: "http://localhost".to_owned(),
+            login_base_url: "http://localhost".to_owned(),
+            pending_login: None,
+            scope: None,
+            session: Some(CopilotSession {
+                account_label: "test".to_owned(),
+                expires_at: Some((epoch_seconds() + 3600).to_string()),
+                organization: None,
+                refresh_token: Some("refresh".to_owned()),
+                refresh_token_expires_at: None,
+                token: "token".to_owned(),
+                token_hint: "token".to_owned(),
+            }),
+        });
+
+        let options = client.options().unwrap();
+        let session = options.session.clone().unwrap();
+        let result = client.refresh_if_needed(&options, session.clone()).await.unwrap();
+        assert_eq!(result.token, session.token);
+        assert_eq!(result.account_label, session.account_label);
+    }
+
+    #[tokio::test]
+    async fn refresh_if_needed_fails_when_refresh_token_missing() {
+        let client = CopilotClient::with_options(CopilotClientOptions {
+            api_base_url: "http://localhost".to_owned(),
+            client_id: "client-id".to_owned(),
+            copilot_base_url: "http://localhost".to_owned(),
+            login_base_url: "http://localhost".to_owned(),
+            pending_login: None,
+            scope: None,
+            session: Some(CopilotSession {
+                account_label: "test".to_owned(),
+                expires_at: Some("1".to_owned()),
+                organization: None,
+                refresh_token: None,
+                refresh_token_expires_at: None,
+                token: "token".to_owned(),
+                token_hint: "token".to_owned(),
+            }),
+        });
+
+        let options = client.options().unwrap();
+        let session = options.session.clone().unwrap();
+        let result = client.refresh_if_needed(&options, session).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("copilot refresh token unavailable"));
+    }
+
+    #[tokio::test]
+    async fn complete_with_fallback_when_chat_fails() {
+        let copilot = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ResponseTemplate::new(400).set_body_json(json!({
+                "error": { "code": "unsupported_api_for_model", "message": "Model not supported" }
+            })))
+            .mount(&copilot)
+            .await;
+        Mock::given(method("POST"))
+            .and(path("/responses"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "output": [{ "content": [{ "type": "output_text", "text": "fallback ok" }] }],
+                "usage": { "input_tokens": 5, "output_tokens": 2 }
+            })))
+            .mount(&copilot)
+            .await;
+
+        let client = CopilotClient::with_options(CopilotClientOptions {
+            api_base_url: "http://localhost".to_owned(),
+            client_id: "client-id".to_owned(),
+            copilot_base_url: copilot.uri(),
+            login_base_url: "http://localhost".to_owned(),
+            pending_login: None,
+            scope: None,
+            session: Some(CopilotSession {
+                account_label: "test".to_owned(),
+                expires_at: Some((epoch_seconds() + 3600).to_string()),
+                organization: None,
+                refresh_token: None,
+                refresh_token_expires_at: None,
+                token: "token".to_owned(),
+                token_hint: "token".to_owned(),
+            }),
+        });
+
+        {
+            let mut cache = client.model_cache.lock().unwrap();
+            cache.insert("gpt-5.4".to_owned(), super::LiveModel {
+                family: Some("gpt-5.4".to_owned()),
+                id: "gpt-5.4".to_owned(),
+                label: "GPT-5.4".to_owned(),
+                model_picker_enabled: true,
+                policy_state: Some("enabled".to_owned()),
+                preview: false,
+                supported_endpoints: vec!["/chat/completions".to_owned(), "/responses".to_owned()],
+                model_type: Some("chat".to_owned()),
+            });
+        }
+
+        let options = client.options().unwrap();
+        let completion = client
+            .complete_with_fallback(&options, "token", "gpt-5.4", &[
+                ChatMessage { role: ChatRole::User, content: "hi".to_owned() }
+            ])
+            .await
+            .unwrap();
+        assert_eq!(completion.message.content, "fallback ok");
+    }
+
+    #[tokio::test]
+    async fn auth_status_signed_out_when_no_session() {
+        let client = CopilotClient::with_options(CopilotClientOptions {
+            api_base_url: "http://localhost".to_owned(),
+            client_id: "client-id".to_owned(),
+            copilot_base_url: "http://localhost".to_owned(),
+            login_base_url: "http://localhost".to_owned(),
+            pending_login: None,
+            scope: None,
+            session: None,
+        });
+
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Copilot,
+            name: "copilot".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        let result = client.auth_status(&profile).await.unwrap();
+        assert_eq!(result.status.state, ProviderAuthState::SignedOut);
+        assert_eq!(result.status.label, "Signed out");
     }
 }
