@@ -10,9 +10,9 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
-    ProviderAuthState, ProviderAuthStatus, ProviderLoginSession, ProviderProfile, TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderLoginSession, ProviderProfile,
+    TokenUsage,
 };
-use gunmetal_storage::AppPaths;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::{
@@ -52,7 +52,7 @@ pub struct CodexClientOptions {
 }
 
 impl CodexClientOptions {
-    pub fn from_profile(profile: &ProviderProfile, paths: &AppPaths) -> Self {
+    pub fn from_profile(profile: &ProviderProfile, context: &dyn ProviderContext) -> Self {
         let settings = profile
             .credentials
             .as_ref()
@@ -60,9 +60,9 @@ impl CodexClientOptions {
             .and_then(|value| serde_json::from_value::<CodexProfileSettings>(value).ok())
             .unwrap_or_default();
         let fallback_helper = if cfg!(windows) {
-            paths.helpers_dir.join("codex.exe")
+            context.helpers_dir().join("codex.exe")
         } else {
-            paths.helpers_dir.join("codex")
+            context.helpers_dir().join("codex")
         };
         let codex_bin = settings
             .bin_path
@@ -76,7 +76,7 @@ impl CodexClientOptions {
             codex_bin,
             cwd: settings
                 .cwd
-                .unwrap_or_else(|| paths.empty_workspace_dir.clone()),
+                .unwrap_or_else(|| context.empty_workspace_dir().to_path_buf()),
         }
     }
 }
