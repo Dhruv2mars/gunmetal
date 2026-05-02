@@ -202,6 +202,8 @@ pub struct DoctorArgs {
     pub host: IpAddr,
     #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
+    #[arg(long, help = "Emit structured JSON output.")]
+    pub json: bool,
 }
 
 #[derive(Debug, clap::Args)]
@@ -345,6 +347,8 @@ pub struct SetupArgs {
         help = "Skip Gunmetal key creation at the end of setup."
     )]
     pub no_key: bool,
+    #[arg(long, help = "Emit structured JSON output.")]
+    pub json: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -876,6 +880,7 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
 }
 
 async fn doctor(paths: &AppPaths, output: &mut impl Write, args: DoctorArgs) -> Result<()> {
+    let json_mode = args.json || std::env::var("GUNMETAL_JSON").is_ok();
     let storage = paths.storage_handle()?;
     let profiles = storage.list_profiles()?;
     let models = storage.list_models()?;
@@ -894,27 +899,64 @@ async fn doctor(paths: &AppPaths, output: &mut impl Write, args: DoctorArgs) -> 
         logs.len(),
     );
 
-    writeln!(output, "Gunmetal doctor")?;
-    writeln!(
-        output,
-        "Service: {} ({}/v1)",
-        if status.running { "running" } else { "stopped" },
-        status.url
-    )?;
-    if let Some(note) = &status.note {
-        writeln!(output, "Service note: {note}")?;
+    if json_mode {
+        let passed =
+            status.running && !profiles.is_empty() && !models.is_empty() && active_keys > 0;
+        let mut warnings = Vec::new();
+        let mut errors = Vec::new();
+        if !status.running {
+            warnings.push("local service is not running".to_owned());
+        }
+        if profiles.is_empty() {
+            errors.push("no provider connections configured".to_owned());
+        }
+        if models.is_empty() {
+            errors.push("no models synced".to_owned());
+        }
+        if active_keys == 0 {
+            errors.push("no active Gunmetal keys".to_owned());
+        }
+        let result = json!({
+            "checks": {
+                "service_running": status.running,
+                "providers": profiles.len(),
+                "models": models.len(),
+                "keys_active": active_keys,
+                "keys_total": keys.len(),
+                "recent_requests": logs.len()
+            },
+            "passed": passed,
+            "warnings": warnings,
+            "errors": errors,
+            "next_steps": {
+                "reason": next.reason,
+                "command": next.command
+            }
+        });
+        writeln!(output, "{}", serde_json::to_string(&result)?)?;
+    } else {
+        writeln!(output, "Gunmetal doctor")?;
+        writeln!(
+            output,
+            "Service: {} ({}/v1)",
+            if status.running { "running" } else { "stopped" },
+            status.url
+        )?;
+        if let Some(note) = &status.note {
+            writeln!(output, "Service note: {note}")?;
+        }
+        writeln!(output, "Providers: {}", profiles.len())?;
+        writeln!(output, "Models: {}", models.len())?;
+        writeln!(
+            output,
+            "Keys: {} active / {} total",
+            active_keys,
+            keys.len()
+        )?;
+        writeln!(output, "Recent requests: {}", logs.len())?;
+        writeln!(output, "Next: {}", next.reason)?;
+        writeln!(output, "Command: {}", next.command)?;
     }
-    writeln!(output, "Providers: {}", profiles.len())?;
-    writeln!(output, "Models: {}", models.len())?;
-    writeln!(
-        output,
-        "Keys: {} active / {} total",
-        active_keys,
-        keys.len()
-    )?;
-    writeln!(output, "Recent requests: {}", logs.len())?;
-    writeln!(output, "Next: {}", next.reason)?;
-    writeln!(output, "Command: {}", next.command)?;
     Ok(())
 }
 
@@ -1383,13 +1425,16 @@ async fn setup(
     output: &mut impl Write,
     args: SetupArgs,
 ) -> Result<()> {
+    let json_mode = args.json || std::env::var("GUNMETAL_JSON").is_ok();
     let interactive = io::stdin().is_terminal();
-    writeln!(output, "Gunmetal setup")?;
-    writeln!(
-        output,
-        "This connects one provider, checks auth, syncs models, and creates one local key that works across providers."
-    )?;
-    writeln!(output)?;
+    if !json_mode {
+        writeln!(output, "Gunmetal setup")?;
+        writeln!(
+            output,
+            "This connects one provider, checks auth, syncs models, and creates one local key that works across providers."
+        )?;
+        writeln!(output)?;
+    }
     let provider = match args.provider {
         Some(provider) => provider,
         None => prompt_provider(output, interactive)?,
@@ -1438,11 +1483,13 @@ async fn setup(
             args.title,
         ),
     })?;
-    writeln!(
-        output,
-        "Saved provider {} ({})",
-        profile.name, profile.provider
-    )?;
+    if !json_mode {
+        writeln!(
+            output,
+            "Saved provider {} ({})",
+            profile.name, profile.provider
+        )?;
+    }
 
     let browser_login = supports_browser_login(&provider);
     let mut auth_ready_for_sync = true;
@@ -1454,12 +1501,15 @@ async fn setup(
             DEFAULT_PORT,
         )
         .await?;
-        writeln!(output, "Open this URL to finish auth: {}", session.auth_url)?;
-        if let Some(user_code) = session.user_code.clone() {
-            writeln!(output, "User code: {user_code}")?;
+        if !json_mode {
+            writeln!(output, "Open this URL to finish auth: {}", session.auth_url)?;
+            if let Some(user_code) = session.user_code.clone() {
+                writeln!(output, "User code: {user_code}")?;
+            }
         }
         if !args.no_open
             && let Err(error) = webbrowser::open(&session.auth_url)
+            && !json_mode
         {
             writeln!(output, "Browser open failed: {error}")?;
         }
@@ -1473,32 +1523,40 @@ async fn setup(
             .await?;
         } else {
             auth_ready_for_sync = false;
-            writeln!(
-                output,
-                "Auth still needs to finish. Run `gunmetal auth status {}` when done.",
-                profile.name
-            )?;
+            if !json_mode {
+                writeln!(
+                    output,
+                    "Auth still needs to finish. Run `gunmetal auth status {}` when done.",
+                    profile.name
+                )?;
+            }
         }
     } else {
         let status = providers.auth_status(&profile).await?;
-        writeln!(output, "Auth: {}", status.label)?;
+        if !json_mode {
+            writeln!(output, "Auth: {}", status.label)?;
+        }
         auth_ready_for_sync = auth_state_is_connected(&status.state);
     }
 
     let mut models = Vec::new();
     if args.no_sync {
-        writeln!(output, "Skipping model sync because `--no-sync` was set.")?;
+        if !json_mode {
+            writeln!(output, "Skipping model sync because `--no-sync` was set.")?;
+        }
     } else if auth_ready_for_sync {
         models = providers.sync_models(&profile).await?;
         storage.replace_models_for_profile(&profile.provider, Some(profile.id), &models)?;
-        writeln!(output, "Synced {} models.", models.len())?;
-    } else if browser_login {
+        if !json_mode {
+            writeln!(output, "Synced {} models.", models.len())?;
+        }
+    } else if browser_login && !json_mode {
         writeln!(
             output,
             "Skipping model sync until browser auth finishes for {}.",
             profile.name
         )?;
-    } else {
+    } else if !json_mode {
         writeln!(
             output,
             "Skipping model sync until auth works for {}.",
@@ -1518,46 +1576,71 @@ async fn setup(
             expires_at: None,
         })?;
         created_secret = Some(created.secret.clone());
-        writeln!(output, "Created key {}.", created.record.name)?;
-        writeln!(output, "API key: {}", created.secret)?;
+        if !json_mode {
+            writeln!(output, "Created key {}.", created.record.name)?;
+            writeln!(output, "API key: {}", created.secret)?;
+        }
     }
 
-    if let Some(model) = models.first() {
+    if let Some(model) = models.first()
+        && !json_mode
+    {
         writeln!(output, "First model: {}", model.id)?;
     }
 
-    writeln!(output)?;
-    writeln!(output, "What just happened")?;
-    writeln!(
-        output,
-        "- provider saved: {} ({})",
-        profile.name, profile.provider
-    )?;
-    if !args.no_sync {
-        writeln!(output, "- models synced: {}", models.len())?;
-    }
-    if !args.no_key {
-        writeln!(output, "- local key created")?;
-    }
-    writeln!(output)?;
-    writeln!(output, "What to do next")?;
-    writeln!(
-        output,
-        "1. Start Gunmetal: gunmetal web  (or gunmetal start)"
-    )?;
-    writeln!(output, "2. Base URL: {BASE_URL}")?;
-    writeln!(output, "3. Model format: provider/model")?;
-    if let (Some(secret), Some(model)) = (created_secret, models.first()) {
-        writeln!(output, "4. First test:")?;
+    if json_mode {
+        let status = if auth_ready_for_sync && !args.no_sync && !args.no_key {
+            "complete"
+        } else {
+            "incomplete"
+        };
+        let result = json!({
+            "api_key": created_secret,
+            "first_model": models.first().map(|m| m.id.clone()),
+            "status": status,
+            "provider_connections": [
+                {
+                    "name": profile.name,
+                    "provider": profile.provider.to_string(),
+                    "auth_status": if auth_ready_for_sync { "connected" } else { "pending" }
+                }
+            ]
+        });
+        writeln!(output, "{}", serde_json::to_string(&result)?)?;
+    } else {
+        writeln!(output)?;
+        writeln!(output, "What just happened")?;
         writeln!(
             output,
-            "   curl {BASE_URL}/models -H 'Authorization: Bearer {secret}'"
+            "- provider saved: {} ({})",
+            profile.name, profile.provider
         )?;
+        if !args.no_sync {
+            writeln!(output, "- models synced: {}", models.len())?;
+        }
+        if !args.no_key {
+            writeln!(output, "- local key created")?;
+        }
+        writeln!(output)?;
+        writeln!(output, "What to do next")?;
         writeln!(
             output,
-            "   curl {BASE_URL}/chat/completions -H 'Authorization: Bearer {secret}' -H 'Content-Type: application/json' -d '{{\"model\":\"{}\",\"messages\":[{{\"role\":\"user\",\"content\":\"say ok\"}}]}}'",
-            model.id
+            "1. Start Gunmetal: gunmetal web  (or gunmetal start)"
         )?;
+        writeln!(output, "2. Base URL: {BASE_URL}")?;
+        writeln!(output, "3. Model format: provider/model")?;
+        if let (Some(secret), Some(model)) = (created_secret, models.first()) {
+            writeln!(output, "4. First test:")?;
+            writeln!(
+                output,
+                "   curl {BASE_URL}/models -H 'Authorization: Bearer {secret}'"
+            )?;
+            writeln!(
+                output,
+                "   curl {BASE_URL}/chat/completions -H 'Authorization: Bearer {secret}' -H 'Content-Type: application/json' -d '{{\"model\":\"{}\",\"messages\":[{{\"role\":\"user\",\"content\":\"say ok\"}}]}}'",
+                model.id
+            )?;
+        }
     }
     Ok(())
 }
@@ -2647,6 +2730,7 @@ mod tests {
             Command::Doctor(DoctorArgs {
                 host: "127.0.0.1".parse().unwrap(),
                 port: 46859,
+                json: false,
             }),
             &paths,
             &mut output,
@@ -3028,6 +3112,7 @@ mod tests {
                 no_wait: false,
                 no_sync: false,
                 no_key: true,
+                json: false,
             },
         )
         .await
