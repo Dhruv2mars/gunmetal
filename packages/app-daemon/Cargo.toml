@@ -10,11 +10,14 @@ async-stream.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
+dirs.workspace = true
 futures-util.workspace = true
 gunmetal-core = { path = "../sdk-core" }
 gunmetal-providers = { path = "../extensions" }
 gunmetal-sdk = { path = "../sdk" }
 gunmetal-storage = { path = "../app-storage" }
+libc.workspace = true
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
