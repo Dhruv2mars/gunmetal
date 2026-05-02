@@ -2122,68 +2122,10 @@ mod tests {
     use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
     use tempfile::TempDir;
+    use gunmetal_test_utils::provider_definition_fixture;
     use tower::util::ServiceExt;
 
     use super::{DaemonState, app};
-
-    fn provider_definition_fixture(
-        kind: ProviderKind,
-        class: ProviderClass,
-        priority: usize,
-    ) -> ProviderDefinition {
-        let (
-            label,
-            auth_method,
-            supports_base_url,
-            helper_title,
-            helper_body,
-            base_url_placeholder,
-        ) = match kind {
-            ProviderKind::Codex => (
-                "codex",
-                ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::Custom(_)
-            | ProviderKind::OpenRouter
-            | ProviderKind::Zen
-            | ProviderKind::OpenAi
-            | ProviderKind::Azure
-            | ProviderKind::Nvidia
-            | ProviderKind::Copilot => (
-                "custom",
-                ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "optional override",
-            ),
-        };
-
-        ProviderDefinition {
-            kind,
-            label,
-            class,
-            priority,
-            capabilities: gunmetal_sdk::ProviderCapabilities {
-                auth_method,
-                supports_base_url,
-                supports_model_sync: true,
-                supports_chat_completions: true,
-                supports_responses_api: true,
-                supports_streaming: true,
-            },
-            ux: gunmetal_sdk::ProviderUxHints {
-                helper_title,
-                helper_body,
-                suggested_name: label,
-                base_url_placeholder,
-            },
-        }
-    }
 
     #[tokio::test]
     async fn health_endpoint_is_live() {
