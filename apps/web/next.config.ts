@@ -1,13 +1,5 @@
-import path from "node:path";
 import type { NextConfig } from "next";
 
-const workspaceRoot = path.resolve(__dirname, "../..");
-
-const nextConfig: NextConfig = {
-  outputFileTracingRoot: workspaceRoot,
-  turbopack: {
-    root: workspaceRoot
-  }
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
