@@ -1,3 +1,5 @@
+pub mod daemon_manager;
+
 use std::{
     collections::HashMap,
     convert::Infallible,

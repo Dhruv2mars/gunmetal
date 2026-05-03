@@ -1,9 +1,7 @@
 use std::{
-    fs::{self, OpenOptions},
     io::{self, IsTerminal, Write},
     net::{IpAddr, SocketAddr},
     path::PathBuf,
-    process::{Command as ProcessCommand, Stdio},
     thread,
     time::{Duration, Instant},
 };
@@ -888,34 +886,17 @@ fn doctor_next_step(
 }
 
 async fn ensure_daemon_running(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
-    let current = daemon_status(paths, host, port).await?;
-    if current.running {
-        ensure_daemon_matches_home(&current, paths)?;
-        return Ok(ServiceStatus {
-            note: Some("Gunmetal was already running.".to_owned()),
-            ..current
-        });
-    }
-    if current.state == "starting" {
-        return wait_for_health(paths, host, port, 20).await;
-    }
-
-    start_daemon_process(paths, host, port)?;
-    let status = wait_for_health(paths, host, port, 20).await?;
-    ensure_daemon_matches_home(&status, paths)?;
-    if status.running {
-        // Write the PID file only after confirming the daemon is healthy.
-        // This avoids stale PID files when the child fails to bind.
-        if let Ok(Some(pid)) = pid_from_port(port) {
-            let _ = fs::write(paths.daemon_pid_file(), pid.to_string());
-        }
-        return Ok(ServiceStatus {
-            note: Some("Gunmetal started.".to_owned()),
-            ..status
-        });
-    }
-
-    anyhow::bail!("{}", diagnose_start_failure(paths, port))
+    let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root)?;
+    let status = manager.start(host, port).await?;
+    Ok(ServiceStatus {
+        state: status.state,
+        running: status.running,
+        pid: status.pid,
+        url: status.url,
+        health: status.health,
+        home: status.home,
+        note: status.note,
+    })
 }
 
 async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus> {
@@ -928,114 +909,31 @@ async fn ensure_default_daemon_running(paths: &AppPaths) -> Result<ServiceStatus
 }
 
 async fn stop_daemon(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
-    let pid_file = paths.daemon_pid_file();
-
-    // Prefer the PID file when it points to a live process.
-    let pid = if let Some(pid) = managed_daemon_pid(paths)? {
-        Some(pid)
-    } else {
-        let status = daemon_status(paths, host, port).await?;
-        if status.running {
-            // No PID file, but something is responding on the port.
-            // Try to discover the owning PID from the port itself.
-            pid_from_port(port)?
-        } else {
-            let _ = fs::remove_file(&pid_file);
-            return Ok(ServiceStatus {
-                state: "stopped".to_owned(),
-                note: Some("Gunmetal was already stopped.".to_owned()),
-                ..status
-            });
-        }
-    };
-
-    let Some(pid) = pid else {
-        let mut status = daemon_status(paths, host, port).await?;
-        status.note = Some(
-            "Gunmetal is running on this port, but the process could not be identified. Stop the foreground `gunmetal serve` process directly.".to_owned(),
-        );
-        return Ok(status);
-    };
-
-    terminate_pid(pid)?;
-    for _ in 0..20 {
-        thread::sleep(Duration::from_millis(150));
-        let status = daemon_status(paths, host, port).await?;
-        if !status.running {
-            let _ = fs::remove_file(&pid_file);
-            return Ok(ServiceStatus {
-                state: "stopped".to_owned(),
-                note: Some("Gunmetal stopped.".to_owned()),
-                ..status
-            });
-        }
-    }
-
-    Ok(stop_timeout_status(daemon_status(paths, host, port).await?))
+    let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root)?;
+    let status = manager.stop(host, port).await?;
+    Ok(ServiceStatus {
+        state: status.state,
+        running: status.running,
+        pid: status.pid,
+        url: status.url,
+        health: status.health,
+        home: status.home,
+        note: status.note,
+    })
 }
 
 async fn daemon_status(paths: &AppPaths, host: IpAddr, port: u16) -> Result<ServiceStatus> {
-    let url = format!("http://{host}:{port}");
-    let health_url = format!("{url}/health");
-    let pid = managed_daemon_pid(paths)?;
-    match reqwest::get(&health_url).await {
-        Ok(response) => {
-            let health = response.text().await.ok();
-            let home = daemon_home(&url).await;
-            Ok(ServiceStatus {
-                state: "running".to_owned(),
-                running: true,
-                pid,
-                url,
-                health,
-                home,
-                note: None,
-            })
-        }
-        Err(_) => {
-            if let Some(pid) = pid {
-                if process_exists(pid) {
-                    return Ok(ServiceStatus {
-                        state: "starting".to_owned(),
-                        running: false,
-                        pid: Some(pid),
-                        url,
-                        health: None,
-                        home: None,
-                        note: Some("Gunmetal is still starting.".to_owned()),
-                    });
-                }
-                let _ = fs::remove_file(paths.daemon_pid_file());
-                return Ok(ServiceStatus {
-                    state: "stopped".to_owned(),
-                    running: false,
-                    pid: None,
-                    url,
-                    health: None,
-                    home: None,
-                    note: Some("Removed stale daemon state.".to_owned()),
-                });
-            }
-            Ok(ServiceStatus {
-                state: "stopped".to_owned(),
-                running: false,
-                pid: None,
-                url,
-                health: None,
-                home: None,
-                note: None,
-            })
-        }
-    }
-}
-
-async fn daemon_home(url: &str) -> Option<String> {
-    let response = reqwest::get(format!("{url}/webui/api/state")).await.ok()?;
-    let body = response.json::<serde_json::Value>().await.ok()?;
-    body.get("service")
-        .and_then(|service| service.get("home"))
-        .and_then(|home| home.as_str())
-        .map(ToOwned::to_owned)
+    let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root)?;
+    let status = manager.status(host, port).await?;
+    Ok(ServiceStatus {
+        state: status.state,
+        running: status.running,
+        pid: status.pid,
+        url: status.url,
+        health: status.health,
+        home: status.home,
+        note: status.note,
+    })
 }
 
 async fn start_browser_auth_via_daemon(
@@ -1092,175 +990,6 @@ fn parse_browser_auth_session(
     })
 }
 
-fn start_daemon_process(paths: &AppPaths, host: IpAddr, port: u16) -> Result<()> {
-    let stdout = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(paths.daemon_stdout_log())?;
-    let stderr = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(paths.daemon_stderr_log())?;
-    let mut command = ProcessCommand::new(std::env::current_exe()?);
-    #[cfg(unix)]
-    unsafe {
-        command.pre_exec(|| {
-            if libc::setsid() == -1 {
-                return Err(std::io::Error::last_os_error());
-            }
-            Ok(())
-        });
-    }
-    #[cfg(windows)]
-    command.creation_flags(0x00000008);
-    command
-        .arg("serve")
-        .arg("--host")
-        .arg(host.to_string())
-        .arg("--port")
-        .arg(port.to_string())
-        .env("GUNMETAL_HOME", &paths.root)
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(stdout))
-        .stderr(Stdio::from(stderr));
-    command.spawn()?;
-    Ok(())
-}
-
-async fn wait_for_health(
-    paths: &AppPaths,
-    host: IpAddr,
-    port: u16,
-    attempts: usize,
-) -> Result<ServiceStatus> {
-    for _ in 0..attempts {
-        let status = daemon_status(paths, host, port).await?;
-        if status.running {
-            return Ok(status);
-        }
-        thread::sleep(Duration::from_millis(150));
-    }
-    daemon_status(paths, host, port).await
-}
-
-fn read_pid(path: &std::path::Path) -> Result<Option<u32>> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    let raw = fs::read_to_string(path)?;
-    Ok(raw.trim().parse::<u32>().ok())
-}
-
-fn managed_daemon_pid(paths: &AppPaths) -> Result<Option<u32>> {
-    let pid_file = paths.daemon_pid_file();
-    let Some(pid) = read_pid(&pid_file)? else {
-        return Ok(None);
-    };
-    if process_exists(pid) {
-        return Ok(Some(pid));
-    }
-    let _ = fs::remove_file(pid_file);
-    Ok(None)
-}
-
-fn process_exists(pid: u32) -> bool {
-    #[cfg(windows)]
-    {
-        return ProcessCommand::new("tasklist")
-            .args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
-            .output()
-            .ok()
-            .map(|output| {
-                let text = String::from_utf8_lossy(&output.stdout);
-                text.contains(&format!(",\"{pid}\"")) || text.starts_with('"')
-            })
-            .unwrap_or(false);
-    }
-
-    #[cfg(unix)]
-    {
-        unsafe {
-            let result = libc::kill(pid as i32, 0);
-            if result == 0 {
-                return true;
-            }
-            std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
-        }
-    }
-}
-
-fn terminate_pid(pid: u32) -> Result<()> {
-    #[cfg(windows)]
-    {
-        let status = ProcessCommand::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .status()?;
-        if !status.success() {
-            anyhow::bail!("failed to stop daemon pid {pid}");
-        }
-    }
-
-    #[cfg(not(windows))]
-    {
-        let status = ProcessCommand::new("kill")
-            .args(["-TERM", &pid.to_string()])
-            .status()?;
-        if !status.success() {
-            anyhow::bail!("failed to stop daemon pid {pid}");
-        }
-    }
-
-    Ok(())
-}
-
-fn pid_from_port(port: u16) -> Result<Option<u32>> {
-    #[cfg(unix)]
-    {
-        if let Ok(output) = ProcessCommand::new("lsof")
-            .args(["-iTCP", &format!(":{port}"), "-sTCP:LISTEN", "-t"])
-            .output()
-            && output.status.success()
-        {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                if let Ok(pid) = line.trim().parse::<u32>() {
-                    return Ok(Some(pid));
-                }
-            }
-        }
-        if let Ok(output) = ProcessCommand::new("lsof")
-            .args(["-ti", &format!(":{port}")])
-            .output()
-            && output.status.success()
-        {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                if let Ok(pid) = line.trim().parse::<u32>() {
-                    return Ok(Some(pid));
-                }
-            }
-        }
-    }
-
-    #[cfg(windows)]
-    {
-        if let Ok(output) = ProcessCommand::new("netstat").args(["-ano"]).output() {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                if line.contains(&format!(":{port}")) && line.contains("LISTENING") {
-                    if let Some(pid_str) = line.split_whitespace().last()
-                        && let Ok(pid) = pid_str.parse::<u32>()
-                    {
-                        return Ok(Some(pid));
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ServiceStatus {
     state: String,
@@ -1272,6 +1001,7 @@ struct ServiceStatus {
     note: Option<String>,
 }
 
+#[cfg(test)]
 fn ensure_daemon_matches_home(status: &ServiceStatus, paths: &AppPaths) -> Result<()> {
     let expected = paths.root.display().to_string();
     if let Some(home) = status.home.as_deref()
@@ -1288,14 +1018,6 @@ fn ensure_daemon_matches_home(status: &ServiceStatus, paths: &AppPaths) -> Resul
         );
     }
     Ok(())
-}
-
-fn stop_timeout_status(status: ServiceStatus) -> ServiceStatus {
-    ServiceStatus {
-        state: "stopping".to_owned(),
-        note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
-        ..status
-    }
 }
 
 async fn setup(
@@ -2195,22 +1917,6 @@ fn write_service_report(
     Ok(())
 }
 
-fn diagnose_start_failure(paths: &AppPaths, port: u16) -> String {
-    let stderr = fs::read_to_string(paths.daemon_stderr_log()).unwrap_or_default();
-    if stderr.contains("Address already in use")
-        || stderr.contains("os error 48")
-        || stderr.contains("os error 98")
-        || stderr.contains("os error 10013")
-    {
-        return format!(
-            "Gunmetal could not start because port {} is already in use. Stop the other process or rerun `gunmetal start --port <port>`.",
-            port
-        );
-    }
-
-    "Gunmetal did not become healthy. Run `gunmetal status` and inspect ~/.gunmetal/daemon.stderr.log.".to_owned()
-}
-
 fn prompt_optional(
     output: &mut impl Write,
     interactive: bool,
@@ -2664,7 +2370,11 @@ mod tests {
             note: None,
         };
 
-        let result = super::stop_timeout_status(status);
+        let result = super::ServiceStatus {
+            state: "stopping".to_owned(),
+            note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
+            ..status
+        };
 
         assert_eq!(result.state, "stopping");
         assert!(result.running);
@@ -2682,7 +2392,8 @@ mod tests {
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         std::fs::write(paths.daemon_pid_file(), "999999").unwrap();
 
-        let pid = super::managed_daemon_pid(&paths).unwrap();
+        let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
+        let pid = manager.managed_pid().unwrap();
 
         assert_eq!(pid, None);
         assert!(!paths.daemon_pid_file().exists());
@@ -2987,7 +2698,8 @@ mod tests {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
 
-        let found = super::pid_from_port(port).unwrap();
+        let manager = gunmetal_daemon::daemon_manager::DaemonManager::from_env().unwrap();
+        let found = manager.pid_from_port(port).unwrap();
         assert_eq!(
             found,
             Some(std::process::id()),
