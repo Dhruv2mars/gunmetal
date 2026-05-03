@@ -3,2078 +3,383 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gunmetal Web</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #0e0e0d;
-        --surface: rgba(20, 20, 18, 0.82);
-        --surface-strong: rgba(27, 27, 24, 0.9);
-        --field: rgba(8, 8, 7, 0.44);
-        --line: rgba(250, 249, 246, 0.1);
-        --line-strong: rgba(250, 249, 246, 0.18);
-        --text: #faf9f6;
-        --muted: #8d8b87;
-        --faint: #62605d;
-        --accent: #d6b56f;
-        --accent-2: #8fb8ac;
-        --danger: #ff8d78;
-        --shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
-        --radius: 14px;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100dvh;
-        font-family: "Geist", "SF Pro Display", system-ui, sans-serif;
-        color: var(--text);
-        background: radial-gradient(circle at 58% 18%, rgba(250, 249, 246, 0.035), transparent 34%),
-          linear-gradient(180deg, #11110f, var(--bg) 42%);
-      }
-
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image: linear-gradient(rgba(250, 249, 246, 0.035) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(250, 249, 246, 0.03) 1px, transparent 1px);
-        background-size: 64px 64px;
-        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 74%);
-      }
-
-      a {
-        color: inherit;
-      }
-
-      button,
-      input,
-      select {
-        font: inherit;
-      }
-
-      .shell {
-        width: min(1440px, calc(100vw - 32px));
-        margin: 0 auto;
-        padding: 18px 0 56px;
-      }
-
-      .topbar {
-        position: sticky;
-        top: 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        min-height: 56px;
-        margin: 0 0 28px;
-        padding: 10px 0;
-        background: rgba(14, 14, 13, 0.72);
-        backdrop-filter: blur(18px);
-        border-bottom: 1px solid rgba(250, 249, 246, 0.06);
-        z-index: 2;
-      }
-
-      .brand-lockup {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 0;
-      }
-
-      .brand-mark {
-        display: grid;
-        place-items: center;
-        width: 28px;
-        height: 28px;
-        border: 1px solid var(--line-strong);
-        border-radius: 999px;
-        color: var(--text);
-        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
-        font-size: 13px;
-      }
-
-      .brand-copy {
-        display: grid;
-        gap: 1px;
-      }
-
-      .brand-copy strong {
-        font-weight: 500;
-      }
-
-      .brand-copy span {
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .topbar-actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-
-      .masthead,
-      .workspace {
-        display: grid;
-        gap: 16px;
-      }
-
-      .brand-row,
-      .status-row,
-      .command-row,
-      .section-grid {
-        display: grid;
-        gap: 16px;
-      }
-
-      .brand-row > *,
-      .status-row > *,
-      .command-row > *,
-      .section-grid > * {
-        min-width: 0;
-      }
-
-      .brand-row {
-        grid-template-columns: minmax(0, 1fr) minmax(340px, 0.48fr);
-      }
-
-      .hero,
-      .hero-side,
-      .panel {
-        min-width: 0;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: linear-gradient(180deg, var(--surface-strong), var(--surface));
-        backdrop-filter: blur(18px);
-        box-shadow: inset 0 1px 0 rgba(250, 249, 246, 0.07), var(--shadow);
-      }
-
-      .hero {
-        position: relative;
-        overflow: hidden;
-        padding: clamp(22px, 4vw, 38px);
-      }
-
-      .hero::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(120deg, rgba(214, 181, 111, 0.1), transparent 42%);
-        pointer-events: none;
-      }
-
-      .eyebrow {
-        font-size: 12px;
-        letter-spacing: 0.24em;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin: 0 0 12px;
-      }
-
-      h1,
-      h2,
-      h3,
-      p {
-        margin: 0;
-      }
-
-      h1 {
-        max-width: min(11ch, 100%);
-        font-size: clamp(2.8rem, 7.2vw, 6rem);
-        line-height: 0.92;
-        letter-spacing: 0;
-        font-weight: 420;
-        overflow-wrap: break-word;
-      }
-
-      .lede {
-        max-width: 37rem;
-        margin-top: 16px;
-        font-size: clamp(1rem, 2vw, 1.18rem);
-        line-height: 1.45;
-        color: var(--muted);
-      }
-
-      .hero-actions,
-      .mini-actions,
-      .provider-list,
-      .count-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .hero-actions {
-        margin-top: 22px;
-      }
-
-      .btn,
-      .ghost-btn {
-        border: 1px solid var(--line-strong);
-        border-radius: 10px;
-        padding: 10px 13px;
-        color: var(--text);
-        background: rgba(255, 255, 255, 0.04);
-        cursor: pointer;
-        transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, opacity 0.16s ease;
-      }
-
-      .btn:hover,
-      .ghost-btn:hover {
-        transform: translateY(-1px);
-        border-color: rgba(216, 178, 110, 0.58);
-      }
-
-      .btn:active,
-      .ghost-btn:active {
-        transform: scale(0.98);
-      }
-
-      .btn:disabled,
-      .ghost-btn:disabled,
-      input:disabled,
-      select:disabled,
-      textarea:disabled {
-        cursor: not-allowed;
-        opacity: 0.58;
-      }
-
-      .btn.primary {
-        background: linear-gradient(135deg, rgba(214, 181, 111, 0.2), rgba(214, 181, 111, 0.06));
-        border-color: rgba(216, 178, 110, 0.48);
-      }
-
-      .hero-side,
-      .panel {
-        padding: 20px;
-      }
-
-      .hero-side {
-        display: grid;
-        gap: 14px;
-        align-content: start;
-      }
-
-      .status-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-
-      .stat {
-        padding: 16px 0;
-        border-top: 1px solid var(--line);
-        background: transparent;
-      }
-
-      .stat-label {
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        color: var(--muted);
-      }
-
-      .stat-value {
-        margin-top: 10px;
-        font-size: clamp(1.75rem, 3.2vw, 2.7rem);
-        line-height: 0.94;
-        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
-      }
-
-      .command-row {
-        grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
-      }
-
-      .panel-kicker {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.22em;
-        color: var(--muted);
-      }
-
-      .mono {
-        font-family: "Geist Mono", "SFMono-Regular", ui-monospace, monospace;
-      }
-
-      .command-block {
-        margin-top: 14px;
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: var(--field);
-        overflow: auto;
-        line-height: 1.65;
-        white-space: pre-wrap;
-      }
-
-      .setup-grid,
-      .snapshot-grid {
-        display: grid;
-        gap: 12px;
-        margin-top: 14px;
-      }
-
-      .setup-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .snapshot-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .setup-step,
-      .snapshot-card {
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.025);
-      }
-
-      .setup-step strong,
-      .snapshot-card strong {
-        display: block;
-      }
-
-      .setup-step span,
-      .snapshot-card span {
-        display: block;
-        margin-top: 6px;
-        color: var(--muted);
-        line-height: 1.35;
-      }
-
-      .setup-step.done {
-        border-color: rgba(125, 211, 200, 0.32);
-        background: rgba(125, 211, 200, 0.08);
-      }
-
-      .next-action {
-        display: grid;
-        gap: 10px;
-        padding: 16px;
-        border-radius: 12px;
-        border: 1px solid rgba(215, 180, 106, 0.36);
-        background: rgba(215, 180, 106, 0.08);
-      }
-
-      .next-action strong,
-      .next-action span,
-      .next-action code {
-        display: block;
-      }
-
-      .next-action span {
-        color: var(--muted);
-        line-height: 1.4;
-      }
-
-      .next-action code {
-        width: 100%;
-        overflow-x: auto;
-        border-radius: 12px;
-        padding: 10px 12px;
-        background: rgba(6, 7, 8, 0.28);
-        color: var(--text);
-      }
-
-      .snapshot-value {
-        margin-top: 8px;
-        font-size: 1.55rem;
-        line-height: 1;
-      }
-
-      .service-stack {
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid var(--line);
-      }
-
-      .section-grid {
-        grid-template-columns: minmax(0, 0.86fr) minmax(360px, 0.66fr);
-        align-items: start;
-      }
-
-      .stack {
-        display: grid;
-        gap: 16px;
-        min-width: 0;
-      }
-
-      .stack > *,
-      .profile-grid > * {
-        min-width: 0;
-      }
-
-      .profile-grid {
-        display: grid;
-        gap: 14px;
-      }
-
-      .profile-card {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 18px;
-        background: rgba(255, 255, 255, 0.02);
-      }
-
-      .profile-meta,
-      .key-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-      }
-
-      .pill {
-        border-radius: 999px;
-        padding: 6px 10px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--line);
-        font-size: 13px;
-        color: var(--muted);
-      }
-
-      .profile-actions,
-      .key-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      form {
-        display: grid;
-        gap: 12px;
-        margin-top: 16px;
-      }
-
-      label {
-        display: grid;
-        gap: 8px;
-        font-size: 14px;
-        color: var(--muted);
-      }
-
-      input,
-      select {
-        width: 100%;
-        border: 1px solid var(--line-strong);
-        border-radius: 10px;
-        padding: 12px 14px;
-        background: var(--field);
-        color: var(--text);
-      }
-
-      input:focus,
-      select:focus,
-      textarea:focus {
-        outline: 1px solid rgba(215, 180, 106, 0.55);
-        outline-offset: 2px;
-      }
-
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 14px;
-      }
-
-      .table th,
-      .table td {
-        padding: 12px 10px;
-        border-bottom: 1px solid var(--line);
-        text-align: left;
-        vertical-align: top;
-        font-size: 14px;
-      }
-
-      .table th {
-        color: var(--muted);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-      }
-
-      .note {
-        margin-top: 12px;
-        color: var(--muted);
-        line-height: 1.45;
-      }
-
-      .form-helper {
-        margin-top: 14px;
-        padding: 14px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .form-helper strong {
-        display: block;
-      }
-
-      .form-helper span {
-        display: block;
-        margin-top: 6px;
-        color: var(--muted);
-        line-height: 1.4;
-      }
-
-      .field-hidden {
-        display: none;
-      }
-
-      .banner {
-        padding: 14px 16px;
-        border-radius: 18px;
-        border: 1px solid var(--line-strong);
-        background: rgba(255, 255, 255, 0.04);
-      }
-
-      .banner strong {
-        display: block;
-        margin-bottom: 6px;
-      }
-
-      .success {
-        border-color: rgba(125, 211, 200, 0.32);
-        background: rgba(125, 211, 200, 0.08);
-      }
-
-      .danger {
-        border-color: rgba(255, 141, 120, 0.38);
-        background: rgba(255, 141, 120, 0.08);
-      }
-
-      .subtle {
-        color: var(--muted);
-      }
-
-      .token-breakdown {
-        margin-top: 4px;
-      }
-
-      .request-detail {
-        margin-top: 14px;
-      }
-
-      .request-detail-grid {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        margin-top: 12px;
-      }
-
-      .request-detail-card {
-        padding: 14px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .request-detail-card strong,
-      .request-detail-card span {
-        display: block;
-      }
-
-      .request-detail-card span {
-        margin-top: 6px;
-        color: var(--muted);
-        line-height: 1.4;
-      }
-
-      .request-summary-grid {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .summary-table {
-        padding: 14px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .summary-table h3 {
-        margin: 0 0 12px;
-        font-size: 14px;
-      }
-
-      .summary-list {
-        display: grid;
-        gap: 10px;
-      }
-
-      .summary-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      }
-
-      .summary-row:last-child {
-        padding-bottom: 0;
-        border-bottom: none;
-      }
-
-      .summary-row strong,
-      .summary-row span {
-        display: block;
-      }
-
-      .summary-row span {
-        margin-top: 4px;
-        color: var(--muted);
-        line-height: 1.4;
-      }
-
-      .request-filter-bar {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-        margin-top: 14px;
-      }
-
-      .request-filter-bar label {
-        display: grid;
-        gap: 8px;
-      }
-
-      .playground-form,
-      .playground-toolbar,
-      .playground-composer {
-        display: grid;
-        gap: 12px;
-      }
-
-      .playground-form {
-        margin-top: 16px;
-      }
-
-      .playground-toolbar {
-        grid-template-columns: minmax(0, 1fr) repeat(2, minmax(140px, 0.35fr));
-      }
-
-      textarea {
-        width: 100%;
-        min-height: 120px;
-        border: 1px solid var(--line-strong);
-        border-radius: 10px;
-        padding: 12px 14px;
-        background: var(--field);
-        color: var(--text);
-        font: inherit;
-        resize: vertical;
-      }
-
-      .playground-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 16px;
-      }
-
-      .playground-transcript {
-        display: grid;
-        gap: 10px;
-        margin-top: 16px;
-        max-height: 420px;
-        overflow: auto;
-      }
-
-      .playground-message,
-      .playground-empty {
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .playground-message.user {
-        border-color: rgba(216, 178, 110, 0.3);
-      }
-
-      .playground-message.assistant {
-        border-color: rgba(125, 211, 200, 0.32);
-      }
-
-      .playground-message strong {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: var(--muted);
-      }
-
-      .playground-message pre {
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: break-word;
-        font: inherit;
-        line-height: 1.5;
-      }
-
-      .playground-empty {
-        border-style: dashed;
-        color: var(--muted);
-        min-height: 86px;
-        align-content: center;
-      }
-
-      .request-row {
-        cursor: pointer;
-      }
-
-      .request-row-active {
-        background: rgba(125, 211, 200, 0.08);
-      }
-
-      @media (max-width: 1080px) {
-        .brand-row,
-        .status-row,
-        .command-row,
-        .section-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .setup-grid,
-        .snapshot-grid,
-        .request-summary-grid,
-        .request-filter-bar,
-        .request-detail-grid,
-        .playground-toolbar {
-          grid-template-columns: 1fr;
-        }
-
-        h1 {
-          max-width: 100%;
-        }
-      }
-
-      @media (max-width: 620px) {
-        .shell {
-          width: min(100vw - 20px, 1480px);
-          padding-top: 10px;
-        }
-
-        .hero,
-        .hero-side,
-        .panel {
-          border-radius: 12px;
-        }
-
-        .hero,
-        .hero-side,
-        .panel {
-          padding: 16px;
-        }
-
-        .stat-value {
-          font-size: 2rem;
-        }
-
-        .table {
-          display: block;
-          overflow-x: auto;
-          white-space: nowrap;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="shell">
-      <nav class="topbar" aria-label="Web UI">
-        <div class="brand-lockup">
-          <span class="brand-mark">G</span>
-          <div class="brand-copy">
-            <strong>Gunmetal</strong>
-            <span>Local WebUI</span>
+    <title>Gunmetal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin>(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))a(n);new MutationObserver(n=>{for(const d of n)if(d.type==="childList")for(const l of d.addedNodes)l.tagName==="LINK"&&l.rel==="modulepreload"&&a(l)}).observe(document,{childList:!0,subtree:!0});function r(n){const d={};return n.integrity&&(d.integrity=n.integrity),n.referrerPolicy&&(d.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?d.credentials="include":n.crossOrigin==="anonymous"?d.credentials="omit":d.credentials="same-origin",d}function a(n){if(n.ep)return;n.ep=!0;const d=r(n);fetch(n.href,d)}})();function o(e){return String(e??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}function M(e){if(!e)return"";const t=new Date(e);if(Number.isNaN(t.getTime()))return String(e);const a=Date.now()-t.getTime(),n=Math.floor(a/1e3);if(n<60)return"just now";const d=Math.floor(n/60);if(d<60)return`${d}m ago`;const l=Math.floor(d/60);if(l<24)return`${l}h ago`;const i=Math.floor(l/24);return i<7?`${i}d ago`:t.toLocaleDateString()}function S(e){return e<1e3?`${e}ms`:`${(e/1e3).toFixed(1)}s`}function P(e){return e>=1e6?`${(e/1e6).toFixed(1)}M`:e>=1e3?`${(e/1e3).toFixed(1)}K`:String(e)}async function T(e){try{if(navigator.clipboard?.writeText)return await navigator.clipboard.writeText(e),!0;const t=document.createElement("textarea");t.value=e,t.setAttribute("readonly","true"),t.style.position="fixed",t.style.opacity="0",document.body.appendChild(t),t.select();const r=document.execCommand("copy");return t.remove(),r}catch{return!1}}const m="/webui/api";async function f(e,t){const r=await fetch(e,{headers:{"Content-Type":"application/json"},...t}),a=await r.text(),n=a?JSON.parse(a):{};if(!r.ok)throw new Error(n?.error?.message||n?.message||"request failed");return n}async function D(){return f(`${m}/state`)}async function N(e){return f(`${m}/profiles`,{method:"POST",body:JSON.stringify(e)})}async function F(e,t){return f(`${m}/profiles/${e}/${t}`,{method:"POST"})}async function O(e,t){return f(`${m}/profiles/${e}/keys`,{method:"POST",body:JSON.stringify({name:t})})}async function K(e,t){return f(`${m}/keys/${e}/state`,{method:"POST",body:JSON.stringify({state:t})})}async function R(e){return f(`${m}/keys/${e}`,{method:"DELETE"})}async function J(e){return f(`${m}/profiles/${e}`,{method:"DELETE"})}async function z(e,t,r,a){const n=e==="responses"?"/v1/responses":"/v1/chat/completions",d=e==="responses"?{model:r,stream:!0,input:a.map(l=>({role:l.role==="system"?"developer":l.role,content:[{type:"input_text",text:l.content}]}))}:{model:r,stream:!0,messages:a};return fetch(n,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify(d)})}async function G(){const e=new URL("/v1",window.location.origin).toString();return T(e)}const H={key:"",provider:"",model:"",mode:"chat",historyMode:"conversation",running:!1,messages:[],usage:null,lastDurationMs:null},U={provider:"all",status:"all",query:"",limit:"8"},s={data:null,loading:!0,toast:null,secret:null,selectedLogId:null,expandedLogId:null,expandedSection:null,showAddProvider:!1,showCreateKey:!1,modelSearch:"",playground:{...H},requestFilters:{...U}};let A=null;function V(e){A=e}function p(){A?.()}function c(e,t="default"){s.toast={message:e,tone:t},p(),setTimeout(()=>{s.toast?.message===e&&(s.toast=null,p())},3e3)}function W(e){s.secret=e,e&&(s.playground.key=e),p()}function Q(e,t){return`${e}::${t||""}`}function q(e){const t=s.requestFilters,r=t.provider==="all"||Q(e.provider,e.profile_name)===t.provider,a=t.status==="all"||(t.status==="success"?(e.status_code??0)<400&&!e.error_message:(e.status_code??0)>=400||!!e.error_message),n=t.query.trim().toLowerCase(),d=!n||[e.provider,e.profile_name||"",e.model,e.endpoint,e.key_name||"",e.request_mode||"",e.error_message||""].join(" ").toLowerCase().includes(n);return r&&a&&d}function X(){const e=s.data,t=e?new URL(e.service.api_base_url,window.location.origin).toString():"";return`
+    <nav class="sticky top-0 z-50 border-b hairline" style="background:rgba(14,14,13,0.88);backdrop-filter:blur(20px)">
+      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 md:px-6">
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-7 w-7 items-center justify-center rounded-full border hairline-strong text-[13px] font-mono font-medium">
+            G
+          </span>
+          <div class="flex flex-col leading-none">
+            <span class="text-[14px] font-medium tracking-[-0.01em]">Gunmetal</span>
+            <span class="text-[11px] text-text-muted">Local dashboard</span>
           </div>
         </div>
-        <div class="topbar-actions">
-          <button class="ghost-btn" id="refresh-button" type="button">
+        <div class="flex items-center gap-2">
+          <div class="hidden items-center gap-2 md:flex">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:#7dbeb3"></span>
+            <span class="text-[12px] text-text-muted">Running</span>
+            <span class="mx-1 text-text-faint">·</span>
+            <code class="font-mono text-[12px] text-text-muted">${o(t)}</code>
+          </div>
+          <button id="copy-api-btn" class="tap-target flex items-center gap-1.5 rounded-lg border hairline px-3 py-1.5 text-[13px] text-text-secondary transition-all duration-150 hover:bg-frosted-hover active:scale-[0.97]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy API
+          </button>
+          <button id="refresh-btn" class="tap-target flex items-center gap-1.5 rounded-lg border hairline px-3 py-1.5 text-[13px] text-text-secondary transition-all duration-150 hover:bg-frosted-hover active:scale-[0.97]">
+            <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Refresh
           </button>
-          <button class="ghost-btn" id="copy-api-button" type="button">
-            Copy API URL
-          </button>
         </div>
-      </nav>
-      <header class="masthead">
-        <div class="brand-row">
-          <section class="hero">
-            <p class="eyebrow">WebUI</p>
-            <h1>Your local gateway is live.</h1>
-            <p class="lede">
-              Connect providers, sync models, mint local keys, test one request,
-              and inspect traffic from the same daemon that serves the API.
-            </p>
-          </section>
-          <aside class="hero-side">
-            <p class="panel-kicker">Operator flow</p>
-            <div class="provider-list" id="provider-strip"></div>
-            <div class="banner" id="message-banner">
-              <strong>Loading local state...</strong>
-              <span class="subtle">Reading providers, models, keys, and recent request history from your local Gunmetal home.</span>
-            </div>
-            <div class="next-action" id="next-action"></div>
-            <div class="banner success" id="secret-banner" hidden></div>
-          </aside>
+      </div>
+    </nav>
+  `}function Y(){document.getElementById("copy-api-btn")?.addEventListener("click",async()=>{const e=await G();c(e?"Copied API base URL":"Copy failed",e?"success":"danger")}),document.getElementById("refresh-btn")?.addEventListener("click",()=>{const e=document.getElementById("refresh-icon");e&&(e.style.transition="transform 400ms linear",e.style.transform="rotate(360deg)",setTimeout(()=>{e.style.transition="none",e.style.transform="rotate(0deg)"},400)),window.dispatchEvent(new CustomEvent("gm:refresh"))})}function Z(){const e=s.data;if(!e)return"";const t=[{label:"Connect provider",done:e.setup.provider_ready,count:e.counts.profiles},{label:"Sync models",done:e.setup.models_ready,count:e.counts.models},{label:"Create key",done:e.setup.key_ready,count:e.counts.keys},{label:"Send request",done:e.setup.traffic_ready,count:e.counts.logs}];return t.every(a=>a.done)?`
+      <section class="mx-auto max-w-5xl px-4 py-3 md:px-6">
+        <div class="flex items-center gap-3 rounded-lg border border-success-border bg-success-bg px-4 py-2.5">
+          <span class="h-1.5 w-1.5 rounded-full" style="background:#7dbeb3"></span>
+          <span class="text-[13px] text-text-secondary">All set. ${o(e.setup.next_step)}</span>
         </div>
-        <section class="status-row" id="count-grid"></section>
-        <section class="command-row">
-          <article class="panel">
-            <p class="panel-kicker">Golden path</p>
-            <div class="command-block mono" id="command-block"></div>
-            <div class="setup-grid" id="setup-grid"></div>
-          </article>
-          <article class="panel">
-            <p class="panel-kicker">Traffic snapshot</p>
-            <div class="snapshot-grid" id="traffic-grid"></div>
-            <div class="stack service-stack" id="service-panel"></div>
-          </article>
-        </section>
-      </header>
-
-      <main class="section-grid">
-        <section class="stack">
-          <article class="panel">
-            <p class="panel-kicker">Providers</p>
-            <div id="profiles"></div>
-          </article>
-          <article class="panel">
-            <p class="panel-kicker">Request history</p>
-            <div class="request-detail" id="request-summary"></div>
-            <div class="request-filter-bar" id="request-filters"></div>
-            <div class="request-detail" id="request-detail"></div>
-            <div id="logs"></div>
-          </article>
-        </section>
-        <section class="stack">
-          <article class="panel">
-            <p class="panel-kicker">Connect provider</p>
-            <p class="note">
-              Start with one provider. Browser-login providers open an auth URL.
-              Key-based providers need the upstream API key saved here.
-            </p>
-            <div class="form-helper" id="profile-form-helper"></div>
-            <form id="profile-form">
-              <label>
-                Provider
-                <select name="provider">
-                  <option value="">loading providers...</option>
-                </select>
-              </label>
-              <label>
-                Provider name
-                <input name="name" placeholder="work-openai" required />
-              </label>
-              <label id="base-url-field">
-                Base URL
-                <input name="base_url" placeholder="optional override" />
-              </label>
-              <label id="api-key-field">
-                API key
-                <input name="api_key" placeholder="optional for browser-login providers" />
-              </label>
-              <button class="btn primary" type="submit">Save provider</button>
-            </form>
-          </article>
-          <article class="panel">
-            <p class="panel-kicker">Playground</p>
-            <p class="note">
-              Use one Gunmetal key, pick a synced provider and model, and test
-              the local API directly through <span class="mono">chat/completions</span>
-              or <span class="mono">responses</span>.
-            </p>
-            <form class="playground-form" id="playground-form">
-              <label>
-                Gunmetal key
-                <input id="playground-key" name="api_key" placeholder="Gunmetal key only (gm_...)" autocomplete="off" />
-              </label>
-              <div class="playground-toolbar">
-                <label>
-                  Provider
-                  <select id="playground-provider" name="provider"></select>
-                </label>
-                <label>
-                  Model
-                  <select id="playground-model" name="model"></select>
-                </label>
-                <label>
-                  Mode
-                  <select id="playground-mode" name="mode">
-                    <option value="chat">chat/completions</option>
-                    <option value="responses">responses</option>
-                  </select>
-                </label>
-                <label>
-                  History
-                  <select id="playground-history">
-                    <option value="conversation">keep conversation</option>
-                    <option value="single">send last message only</option>
-                  </select>
-                </label>
+      </section>
+    `:`
+    <section class="mx-auto max-w-5xl px-4 py-4 md:px-6">
+      <div class="flex flex-wrap items-center gap-2">
+        ${t.map((a,n)=>{const d=n===t.length-1;return`
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 rounded-lg border px-3 py-2 ${a.done?"border-success-border bg-success-bg":"hairline-strong bg-frosted"}">
+                  <span class="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium ${a.done?"bg-[#7dbeb3] text-bg":"border hairline text-text-muted"}">${a.done?"✓":n+1}</span>
+                  <span class="text-[13px] ${a.done?"text-text-secondary":"text-text"}">${o(a.label)}</span>
+                  ${a.done?`<span class="font-mono text-[12px] text-text-muted">${a.count}</span>`:""}
+                </div>
+                ${d?"":'<span class="text-text-faint">→</span>'}
               </div>
-              <div class="playground-composer">
-                <label>
-                  Message
-                  <textarea id="playground-input" name="content" placeholder="Ask the selected model to say hello."></textarea>
-                </label>
-                <div class="mini-actions">
-                  <button class="btn primary" id="playground-send" type="submit">Send request</button>
-                  <button class="ghost-btn" id="playground-clear" type="button">Clear chat</button>
+            `}).join("")}
+      </div>
+      <p class="mt-2 text-[13px] text-text-muted">${o(e.setup.next_step)}</p>
+    </section>
+  `}function ee(){const e=s.data;return e?`
+    <section class="mx-auto max-w-5xl border-b hairline px-4 py-4 md:px-6">
+      <div class="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        ${[{label:"Providers",value:e.counts.profiles},{label:"Models",value:e.counts.models},{label:"Keys",value:e.counts.keys},{label:"Requests",value:e.counts.logs}].map(r=>`
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono text-[22px] font-medium leading-none text-text">${P(r.value)}</span>
+                <span class="text-label text-text-muted">${o(r.label)}</span>
+              </div>
+            `).join("")}
+      </div>
+    </section>
+  `:""}function te(){const e=s.data;if(!e)return"";const t=e.logs.filter(q),r=s.requestFilters.limit==="all"?t:t.slice(0,Number(s.requestFilters.limit)||8);return`
+    <section class="mx-auto max-w-5xl px-4 py-6 md:px-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-[18px] font-medium tracking-[-0.02em] text-text">Activity</h2>
+          <p class="mt-0.5 text-[13px] text-text-muted">Recent requests and traffic</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="filter-provider" class="h-8 rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">${['<option value="all">All providers</option>',...e.provider_summaries.map(n=>{const d=`${n.provider}::${n.profile_name||""}`;return`<option value="${o(d)}"${s.requestFilters.provider===d?" selected":""}>${o(n.label)}</option>`})].join("")}</select>
+          <select id="filter-status" class="h-8 rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">
+            <option value="all"${s.requestFilters.status==="all"?" selected":""}>All statuses</option>
+            <option value="success"${s.requestFilters.status==="success"?" selected":""}>Success</option>
+            <option value="error"${s.requestFilters.status==="error"?" selected":""}>Errors</option>
+          </select>
+          <input id="filter-query" value="${o(s.requestFilters.query)}" placeholder="Search..." class="h-8 w-40 rounded-md border hairline bg-bg px-2 text-[13px] text-text placeholder:text-text-faint focus:border-accent" />
+          <select id="filter-limit" class="h-8 rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">
+            <option value="8"${s.requestFilters.limit==="8"?" selected":""}>Latest 8</option>
+            <option value="24"${s.requestFilters.limit==="24"?" selected":""}>Latest 24</option>
+            <option value="all"${s.requestFilters.limit==="all"?" selected":""}>All</option>
+          </select>
+        </div>
+      </div>
+
+      ${r.length===0?se():ne(r)}
+    </section>
+  `}function se(){const e=s.data,t=e&&e.logs.length>0;return`
+    <div class="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed hairline py-16">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-faint"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <p class="mt-3 text-[14px] text-text-muted">${t?"No requests match the current filters.":"No traffic yet."}</p>
+      ${t?"":'<p class="mt-1 text-[13px] text-text-faint">Send a request from the playground or point an app at the local API.</p>'}
+    </div>
+  `}function ne(e){return`
+    <div class="mt-4 divide-y hairline">
+      ${e.map(t=>{const r=(t.status_code??0)>=400||t.error_message,a=s.expandedLogId===t.id;return`
+            <div class="group cursor-pointer transition-colors duration-150 hover:bg-frosted" data-log-id="${o(t.id)}">
+              <div class="flex items-center gap-3 py-3 px-2">
+                <span class="h-2 w-2 shrink-0 rounded-full ${r?"bg-[#ff8d78]":"bg-[#7dbeb3]"}"></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline gap-2">
+                    <span class="truncate text-[14px] text-text">${o(t.model)}</span>
+                    <span class="shrink-0 text-[12px] text-text-muted">${o(t.profile_name||t.provider)}</span>
+                  </div>
+                  <div class="mt-0.5 flex items-center gap-2 text-[12px] text-text-faint">
+                    <span>${o(t.request_mode||t.endpoint)}</span>
+                    <span>·</span>
+                    <span>${S(t.duration_ms)}</span>
+                    ${t.total_tokens?`<span>·</span><span>${t.total_tokens} tokens</span>`:""}
+                  </div>
+                </div>
+                <div class="shrink-0 text-right">
+                  <div class="text-[12px] text-text-muted">${M(t.started_at)}</div>
+                  <div class="mt-0.5 font-mono text-[12px] ${r?"text-[#ff8d78]":"text-text-faint"}">${t.status_code??"—"}</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-text-faint transition-transform duration-200 ${a?"rotate-180":""}"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              ${a?re(t):""}
+            </div>
+          `}).join("")}
+    </div>
+    <p class="mt-2 text-[12px] text-text-faint">Showing ${e.length} of ${s.data.logs.filter(q).length} matching requests</p>
+  `}function re(e){return`
+    <div class="border-t hairline bg-frosted px-2 pb-4 pt-3 animate-fade-in">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div><span class="text-label text-text-faint">Status</span><div class="mt-1 text-[13px] text-text">${o(String(e.status_code??"pending"))}${e.error_message?` <span class="text-[#ff8d78]">· ${o(e.error_message)}</span>`:""}</div></div>
+        <div><span class="text-label text-text-faint">Latency</span><div class="mt-1 text-[13px] text-text">${S(e.duration_ms)}</div></div>
+        <div><span class="text-label text-text-faint">Tokens</span><div class="mt-1 text-[13px] text-text">in ${e.input_tokens??0} · out ${e.output_tokens??0} · total ${e.total_tokens??0}</div></div>
+        <div><span class="text-label text-text-faint">Key</span><div class="mt-1 text-[13px] text-text">${o(e.key_name||"unknown")}</div></div>
+        <div><span class="text-label text-text-faint">Endpoint</span><div class="mt-1 font-mono text-[12px] text-text-secondary">${o(e.endpoint)}</div></div>
+        <div><span class="text-label text-text-faint">Time</span><div class="mt-1 text-[13px] text-text">${o(new Date(e.started_at).toLocaleString())}</div></div>
+      </div>
+    </div>
+  `}function ae(){document.querySelectorAll("[data-log-id]").forEach(t=>{t.addEventListener("click",()=>{const r=t.getAttribute("data-log-id");s.expandedLogId=s.expandedLogId===r?null:r})});const e=(t,r)=>{s.requestFilters[t]=r};document.getElementById("filter-provider")?.addEventListener("change",t=>e("provider",t.target.value)),document.getElementById("filter-status")?.addEventListener("change",t=>e("status",t.target.value)),document.getElementById("filter-query")?.addEventListener("input",t=>e("query",t.target.value)),document.getElementById("filter-limit")?.addEventListener("change",t=>e("limit",t.target.value))}function oe(){const e=s.data,t=s.playground,r=e?e.profiles.filter(d=>e.models.some(l=>l.provider===d.provider)):[],a=e?e.models.filter(d=>d.provider===t.provider):[],n=s.expandedSection==="playground";return`
+    <section class="mx-auto max-w-5xl border-y hairline px-4 py-6 md:px-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-[18px] font-medium tracking-[-0.02em] text-text">Playground</h2>
+          <p class="mt-0.5 text-[13px] text-text-muted">Test models with a Gunmetal key</p>
+        </div>
+        <button id="toggle-playground" class="tap-target rounded-lg border hairline px-3 py-1.5 text-[13px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]">
+          ${n?"Collapse":"Expand"}
+        </button>
+      </div>
+
+      <div id="playground-body" class="${n?"":"max-h-[200px] overflow-hidden"} transition-all duration-300">
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label class="text-label text-text-faint">Gunmetal key</label>
+            <input id="pg-key" value="${o(t.key)}" placeholder="gm_..." class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2.5 font-mono text-[13px] text-text placeholder:text-text-faint focus:border-accent" />
+          </div>
+          <div>
+            <label class="text-label text-text-faint">Provider</label>
+            <select id="pg-provider" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">
+              ${r.length?r.map(d=>`<option value="${o(d.provider)}"${t.provider===d.provider?" selected":""}>${o(d.name)}</option>`).join(""):'<option value="">No providers</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="text-label text-text-faint">Model</label>
+            <select id="pg-model" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2 font-mono text-[12px] text-text-secondary focus:border-accent">
+              ${a.length?a.map(d=>`<option value="${o(d.id)}"${t.model===d.id?" selected":""}>${o(d.id)}</option>`).join(""):'<option value="">No models</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="text-label text-text-faint">Mode</label>
+            <select id="pg-mode" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">
+              <option value="chat"${t.mode==="chat"?" selected":""}>chat/completions</option>
+              <option value="responses"${t.mode==="responses"?" selected":""}>responses</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <div id="pg-messages" class="max-h-[360px] overflow-auto rounded-xl border hairline bg-frosted p-3">
+            ${t.messages.length?t.messages.map(d=>`
+                      <div class="mb-2 last:mb-0">
+                        <div class="mb-1 text-label ${d.role==="user"?"text-accent":"text-[#7dbeb3]"}">${d.role}</div>
+                        <div class="whitespace-pre-wrap text-[14px] leading-relaxed text-text">${o(d.content)}</div>
+                      </div>
+                    `).join(""):'<div class="flex h-24 items-center justify-center text-[13px] text-text-muted">Choose a model and send a message</div>'}
+          </div>
+          <form id="pg-form" class="mt-3 flex gap-2">
+            <textarea id="pg-input" placeholder="Ask something..." rows="2" class="min-h-[48px] flex-1 resize-y rounded-lg border hairline bg-bg px-3 py-2 text-[14px] text-text placeholder:text-text-faint focus:border-accent" ${t.running?"disabled":""}></textarea>
+            <button type="submit" class="tap-target self-end rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-[13px] font-medium text-accent transition-all hover:bg-accent/20 active:scale-[0.97]" ${t.running||!t.model?"disabled":""}>
+              ${t.running?"...":"Send"}
+            </button>
+            <button type="button" id="pg-clear" class="tap-target self-end rounded-lg border hairline px-3 py-2 text-[13px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" ${t.running||t.messages.length===0?"disabled":""}>Clear</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  `}function de(){const e=document.getElementById("pg-key"),t=document.getElementById("pg-provider"),r=document.getElementById("pg-model"),a=document.getElementById("pg-mode");e?.addEventListener("input",n=>{s.playground.key=n.target.value}),t?.addEventListener("change",n=>{s.playground.provider=n.target.value;const d=s.data;if(d){const l=d.models.filter(i=>i.provider===s.playground.provider);s.playground.model=l[0]?.id||""}p()}),r?.addEventListener("change",n=>{s.playground.model=n.target.value}),a?.addEventListener("change",n=>{s.playground.mode=n.target.value}),document.getElementById("toggle-playground")?.addEventListener("click",()=>{s.expandedSection=s.expandedSection==="playground"?null:"playground",p()}),document.getElementById("pg-clear")?.addEventListener("click",()=>{s.playground.messages=[],s.playground.usage=null,s.playground.lastDurationMs=null,p()}),document.getElementById("pg-form")?.addEventListener("submit",async n=>{n.preventDefault();const d=document.getElementById("pg-input"),l=d?.value.trim()||"",i=s.playground;if(!i.key){c("Paste a Gunmetal key first","danger");return}if(!i.model){c("Sync a model first","danger");return}if(!l){c("Enter a message","danger");return}i.historyMode==="single"&&(i.messages=[]),i.messages.push({role:"user",content:l}),i.running=!0,i.usage=null,d&&(d.value=""),p();try{const x=await z(i.mode,i.key,i.model,i.messages);if(!x.ok){const w=await x.text();let v="request failed";try{v=JSON.parse(w)?.error?.message||v}catch{}throw new Error(v)}i.messages.push({role:"assistant",content:""}),p();const _=x.body?.getReader(),C=new TextDecoder;if(!_)throw new Error("No response stream");let g="",h="";const I=performance.now();for(;;){const{value:w,done:v}=await _.read();g+=C.decode(w||new Uint8Array,{stream:!v});let b=g.indexOf(`
+
+`);for(;b!==-1;){const j=g.slice(0,b);g=g.slice(b+2);const B=j.split(/\r?\n/);let $="message";const y=[];for(const u of B)u.startsWith("event:")?$=u.slice(6).trim():u.startsWith("data:")&&y.push(u.slice(5).trimStart());if(y.length&&y.join("")!=="[DONE]"){const u=JSON.parse(y.join(`
+`));if(i.mode==="chat"){const L=u?.choices?.[0]?.delta?.content||"";L&&(h+=L)}else $==="response.output_text.delta"?h+=u.delta||"":$==="response.completed"&&(h=u?.response?.output_text||h,i.usage=u?.response?.usage||null);const k=i.messages[i.messages.length-1];k&&k.role==="assistant"&&(k.content=h),p()}b=g.indexOf(`
+
+`)}if(v)break}i.lastDurationMs=Math.round(performance.now()-I),c("Response received","success")}catch(x){i.messages=i.messages.slice(0,Math.max(0,i.messages.length-2)),c(x.message||"Request failed","danger")}finally{i.running=!1,p()}})}function ie(){const e=s.data;return e?`
+    <section class="mx-auto max-w-5xl border-b hairline px-4 py-6 md:px-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-[18px] font-medium tracking-[-0.02em] text-text">Providers</h2>
+          <p class="mt-0.5 text-[13px] text-text-muted">Connected upstream providers</p>
+        </div>
+        <button id="toggle-add-provider" class="tap-target rounded-lg border hairline px-3 py-1.5 text-[13px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]">
+          ${s.showAddProvider?"Cancel":"Add provider"}
+        </button>
+      </div>
+
+      ${e.profiles.length===0?le():ce(e.profiles)}
+      ${s.showAddProvider?pe(e.providers):""}
+    </section>
+  `:""}function le(){return`
+    <div class="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed hairline py-12">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-faint"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <p class="mt-2 text-[14px] text-text-muted">No providers connected</p>
+      <p class="mt-0.5 text-[13px] text-text-faint">Add your first provider to start routing requests</p>
+    </div>
+  `}function ce(e){return`
+    <div class="mt-4 divide-y hairline">
+      ${e.map(t=>{const r=s.data?.providers.find(d=>d.kind===t.provider),a=r?[r.supports_chat_completions?"chat":null,r.supports_responses_api?"responses":null].filter(Boolean).join(" + ")||"request":"",n=t.auth_label.includes("saved")||t.auth_label.includes("session");return`
+            <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[15px] font-medium text-text">${o(t.name)}</span>
+                  <span class="rounded-full border hairline px-2 py-0.5 text-[11px] text-text-muted">${o(t.provider)}</span>
+                  <span class="h-1.5 w-1.5 rounded-full ${n?"bg-[#7dbeb3]":"bg-[#ff8d78]"}"></span>
+                </div>
+                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-text-faint">
+                  <span class="font-mono">${o(t.selector)}</span>
+                  ${t.base_url?`<span>${o(t.base_url)}</span>`:""}
+                  <span>${o(t.auth_label)}</span>
+                  <span>${t.model_count} models</span>
+                  ${a?`<span>${o(a)}</span>`:""}
                 </div>
               </div>
-            </form>
-            <div class="playground-meta" id="playground-meta"></div>
-            <div class="playground-transcript" id="playground-transcript"></div>
-          </article>
-          <article class="panel">
-            <p class="panel-kicker">Keys</p>
-            <div id="keys"></div>
-          </article>
-          <article class="panel">
-            <p class="panel-kicker">Models</p>
-            <p class="note" id="models-note"></p>
-            <div id="models"></div>
-          </article>
-        </section>
-      </main>
+              <div class="flex flex-wrap gap-1.5">
+                <button class="provider-action tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-action="auth" data-id="${o(t.id)}">Auth</button>
+                <button class="provider-action tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-action="sync" data-id="${o(t.id)}">Sync</button>
+                <button class="provider-create-key tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-id="${o(t.id)}">Key</button>
+                <button class="provider-action tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-action="logout" data-id="${o(t.id)}">Logout</button>
+                <button class="provider-delete tap-target rounded-md border border-danger-border bg-danger-bg px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:opacity-80 active:scale-[0.97]" data-id="${o(t.id)}">Delete</button>
+              </div>
+            </div>
+          `}).join("")}
     </div>
-
-    <script>
-      const appState = {
-        data: null,
-        banner: null,
-        selectedLogId: null,
-        playground: {
-          key: "",
-          provider: "",
-          model: "",
-          mode: "chat",
-          historyMode: "conversation",
-          running: false,
-          messages: [],
-          usage: null,
-          lastDurationMs: null,
-        },
-        requestFilters: {
-          provider: "all",
-          status: "all",
-          query: "",
-          limit: "8",
-        },
-      };
-
-      const APP_API_BASE = "/webui/api";
-      const $ = (id) => document.getElementById(id);
-
-      function appApi(path) {
-        return `${APP_API_BASE}${path}`;
-      }
-
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;");
-      }
-
-      function formatTimestamp(value) {
-        if (!value) return "";
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-      }
-
-      function providerFilterValue(provider, profileName) {
-        return `${provider}::${profileName || ""}`;
-      }
-
-      function logMatchesRequestFilters(log) {
-        const providerMatches =
-          appState.requestFilters.provider === "all" ||
-          providerFilterValue(log.provider, log.profile_name) === appState.requestFilters.provider;
-        const statusMatches =
-          appState.requestFilters.status === "all" ||
-          (appState.requestFilters.status === "success"
-            ? (log.status_code ?? 0) < 400 && !log.error_message
-            : (log.status_code ?? 0) >= 400 || Boolean(log.error_message));
-        const query = appState.requestFilters.query.trim().toLowerCase();
-        const queryMatches =
-          !query ||
-          [
-            log.provider,
-            log.profile_name || "",
-            log.model,
-            log.endpoint,
-            log.key_name || "",
-            log.request_mode || "",
-            log.error_message || "",
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(query);
-        return providerMatches && statusMatches && queryMatches;
-      }
-
-      function updateRequestFilter(name, value) {
-        appState.requestFilters[name] = value;
-        render();
-      }
-
-      function availablePlaygroundProviders(data) {
-        const models = Array.isArray(data?.models) ? data.models : [];
-        const profiles = Array.isArray(data?.profiles) ? data.profiles : [];
-        return profiles
-          .filter((profile) => models.some((model) => model.provider === profile.provider))
-          .map((profile) => ({
-            value: profile.provider,
-            label: `${profile.name} · ${profile.provider}`,
-          }));
-      }
-
-      function filteredPlaygroundModels(data) {
-        const models = Array.isArray(data?.models) ? data.models : [];
-        if (!appState.playground.provider) return models;
-        return models.filter((model) => model.provider === appState.playground.provider);
-      }
-
-      function setBanner(message, tone = "default") {
-        appState.banner = { message, tone };
-        renderBanner();
-      }
-
-      function renderBanner() {
-        const banner = $("message-banner");
-        if (!appState.banner) {
-          return;
-        }
-        const { message, tone } = appState.banner;
-        banner.className = "banner";
-        if (tone === "danger") banner.classList.add("danger");
-        if (tone === "success") banner.classList.add("success");
-        banner.innerHTML = `<strong>${tone === "danger" ? "Action failed." : "Updated."}</strong><span>${escapeHtml(message)}</span>`;
-      }
-
-      function setSecret(secret) {
-        const banner = $("secret-banner");
-        if (!secret) {
-          banner.hidden = true;
-          banner.innerHTML = "";
-          return;
-        }
-        banner.hidden = false;
-        banner.innerHTML = `<strong>New key secret</strong><span class="mono">${escapeHtml(secret)}</span>`;
-        $("playground-key").value = secret;
-        appState.playground.key = secret;
-      }
-
-      function providerUiConfig(kind) {
-        const provider = appState.data?.providers?.find((item) => item.kind === kind);
-        if (provider) {
-          const requestModes =
-            [provider.supports_chat_completions ? "chat/completions" : null, provider.supports_responses_api ? "responses" : null]
-              .filter(Boolean)
-              .join(" + ") || "request";
-          return {
-            helperTitle: provider.helper_title || provider.label || provider.kind || "Provider",
-            helperBody: `${provider.helper_body || "Save one provider first, then auth it, sync models, and create one key."} Request modes: ${requestModes}.`,
-            requiresApiKey: provider.auth_method === "api_key",
-            supportsBaseUrl: Boolean(provider.supports_base_url),
-            baseUrlPlaceholder: provider.base_url_placeholder || "optional base URL",
-            suggestedName: provider.suggested_name || provider.kind || "provider",
-          };
-        }
-
-        return {
-          helperTitle: "Provider",
-          helperBody: "Save one provider first, then auth it, sync models, and create one key.",
-          requiresApiKey: true,
-          supportsBaseUrl: true,
-          baseUrlPlaceholder: "optional override",
-          suggestedName: kind || "provider",
-        };
-      }
-
-      function syncProviderForm() {
-        const form = $("profile-form");
-        const provider = String(new FormData(form).get("provider") || "");
-        const config = providerUiConfig(provider);
-        const nameInput = form.elements.namedItem("name");
-        const baseUrlInput = form.elements.namedItem("base_url");
-        const apiKeyInput = form.elements.namedItem("api_key");
-
-        $("profile-form-helper").innerHTML = `
-          <strong>${escapeHtml(config.helperTitle)}</strong>
-          <span>${escapeHtml(config.helperBody)}</span>
-        `;
-
-        if (nameInput && !nameInput.value.trim()) {
-          nameInput.placeholder = `work-${config.suggestedName}`;
-        }
-
-        if (baseUrlInput) {
-          baseUrlInput.placeholder = config.baseUrlPlaceholder;
-        }
-
-        $("base-url-field").classList.toggle("field-hidden", !config.supportsBaseUrl);
-        if (!config.supportsBaseUrl && baseUrlInput) {
-          baseUrlInput.value = "";
-        }
-
-        $("api-key-field").classList.toggle("field-hidden", !config.requiresApiKey);
-        if (config.requiresApiKey && apiKeyInput) {
-          apiKeyInput.placeholder = "required for this provider";
-        }
-        if (!config.requiresApiKey && apiKeyInput) {
-          apiKeyInput.value = "";
-        }
-      }
-
-      function syncBanner(data) {
-        if (appState.banner) {
-          renderBanner();
-          return;
-        }
-        if (!data.profiles.length) {
-          $("message-banner").className = "banner";
-          $("message-banner").innerHTML =
-            "<strong>Ready.</strong><span class=\"subtle\">Connect a provider, auth it, sync models, mint a key.</span>";
-          return;
-        }
-
-        if (!data.models.length) {
-          $("message-banner").className = "banner";
-          $("message-banner").innerHTML =
-            "<strong>Provider connected.</strong><span class=\"subtle\">Sync models next so apps can target explicit provider/model ids.</span>";
-          return;
-        }
-
-        if (!data.keys.length) {
-          $("message-banner").className = "banner success";
-          $("message-banner").innerHTML =
-            "<strong>Models are ready.</strong><span class=\"subtle\">Mint a Gunmetal key next, then point one app at the local API.</span>";
-          return;
-        }
-
-        if (!data.logs.length) {
-          $("message-banner").className = "banner success";
-          $("message-banner").innerHTML =
-            "<strong>Ready for traffic.</strong><span class=\"subtle\">Use the local base URL in your app or test one Gunmetal key in the playground.</span>";
-          return;
-        }
-
-        $("message-banner").className = "banner success";
-        $("message-banner").innerHTML =
-          "<strong>Traffic flowing.</strong><span class=\"subtle\">Review recent logs below or keep refining keys and provider coverage.</span>";
-      }
-
-      function nextActionForSetup(data) {
-        if (!data.profiles.length) {
-          return {
-            title: "Next: connect one provider",
-            detail: "Use the form below. Browser providers open auth; API-key providers store upstream keys locally.",
-            command: "gunmetal setup",
-          };
-        }
-        if (!data.models.length) {
-          return {
-            title: "Next: sync models",
-            detail: "Pick the provider card, then sync so apps can target provider/model ids.",
-            command: "gunmetal models sync <saved-provider>",
-          };
-        }
-        if (!data.keys.length) {
-          return {
-            title: "Next: create one Gunmetal key",
-            detail: "Use a provider card. Paste that local key into apps, not your upstream provider key.",
-            command: "gunmetal keys create --name default",
-          };
-        }
-        if (!data.logs.length) {
-          return {
-            title: "Next: send one request",
-            detail: "Use the playground or point a client at the local OpenAI-compatible API.",
-            command: "gunmetal chat",
-          };
-        }
-        return {
-          title: "Next: inspect or keep routing",
-          detail: "Traffic exists. Review request history, errors, latency, and token use before changing providers.",
-          command: "gunmetal logs summary",
-        };
-      }
-
-      async function fetchJson(url, options) {
-        const response = await fetch(url, {
-          headers: { "Content-Type": "application/json" },
-          ...options,
-        });
-        const text = await response.text();
-        const body = text ? JSON.parse(text) : {};
-        if (!response.ok) {
-          throw new Error(body?.error?.message || body?.message || "request failed");
-        }
-        return body;
-      }
-
-      async function loadState() {
-        try {
-          const data = await fetchJson(appApi("/state"));
-          appState.data = data;
-          syncPlaygroundSelections(data);
-          render();
-        } catch (error) {
-          setBanner(error.message, "danger");
-        }
-      }
-
-      async function wait(ms) {
-        await new Promise((resolve) => window.setTimeout(resolve, ms));
-      }
-
-      function syncPlaygroundSelections(data) {
-        const models = Array.isArray(data?.models) ? data.models : [];
-        if (!models.length) {
-          appState.playground.provider = "";
-          appState.playground.model = "";
-          return;
-        }
-
-        const providers = availablePlaygroundProviders(data);
-        if (
-          !appState.playground.provider ||
-          !providers.some((provider) => provider.value === appState.playground.provider)
-        ) {
-          appState.playground.provider = providers[0]?.value || models[0].provider;
-        }
-
-        const providerModels = filteredPlaygroundModels(data);
-        if (!providerModels.some((model) => model.id === appState.playground.model)) {
-          appState.playground.model = providerModels[0]?.id || models[0].id;
-        }
-      }
-
-      function pushPlaygroundMessage(role, content) {
-        appState.playground.messages.push({ role, content });
-      }
-
-      function playgroundPayload(mode, model, messages) {
-        if (mode === "responses") {
-          return {
-            model,
-            stream: true,
-            input: messages.map((message) => ({
-              role: message.role === "system" ? "developer" : message.role,
-              content: [{ type: "input_text", text: message.content }],
-            })),
-          };
-        }
-
-        return {
-          model,
-          stream: true,
-          messages,
-        };
-      }
-
-      async function readSse(response, onEvent) {
-        if (!response.body) {
-          throw new Error("response stream is unavailable");
-        }
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { value, done } = await reader.read();
-          buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-
-          let boundary = buffer.indexOf("\n\n");
-          while (boundary !== -1) {
-            const chunk = buffer.slice(0, boundary);
-            buffer = buffer.slice(boundary + 2);
-            const lines = chunk.split(/\r?\n/);
-            let event = "message";
-            const dataLines = [];
-
-            for (const line of lines) {
-              if (line.startsWith("event:")) {
-                event = line.slice(6).trim();
-              } else if (line.startsWith("data:")) {
-                dataLines.push(line.slice(5).trimStart());
-              }
-            }
-
-            if (dataLines.length) {
-              onEvent({ event, data: dataLines.join("\n") });
-            }
-
-            boundary = buffer.indexOf("\n\n");
-          }
-
-          if (done) {
-            break;
-          }
-        }
-      }
-
-      function renderPlayground() {
-        const data = appState.data;
-        const providerOptions = availablePlaygroundProviders(data);
-        const models = filteredPlaygroundModels(data);
-        const latestLog = data?.logs?.[0] || null;
-
-        $("playground-provider").innerHTML = providerOptions.length
-          ? providerOptions
-              .map(
-                (provider) =>
-                  `<option value="${escapeHtml(provider.value)}"${appState.playground.provider === provider.value ? " selected" : ""}>${escapeHtml(provider.label)}</option>`,
-              )
-              .join("")
-          : `<option value="">sync a provider first</option>`;
-
-        $("playground-model").innerHTML = models.length
-          ? models
-              .map(
-                (model) =>
-                  `<option value="${escapeHtml(model.id)}"${appState.playground.model === model.id ? " selected" : ""}>${escapeHtml(model.id)}</option>`,
-              )
-              .join("")
-          : `<option value="">sync a provider first</option>`;
-
-        $("playground-mode").value = appState.playground.mode;
-        $("playground-history").value = appState.playground.historyMode;
-        $("playground-send").disabled = appState.playground.running;
-        $("playground-clear").disabled =
-          appState.playground.running || !appState.playground.messages.length;
-        $("playground-key").disabled = appState.playground.running;
-        $("playground-provider").disabled = appState.playground.running || !providerOptions.length;
-        $("playground-model").disabled = appState.playground.running || !models.length;
-        $("playground-mode").disabled = appState.playground.running;
-        $("playground-history").disabled = appState.playground.running;
-        $("playground-input").disabled = appState.playground.running;
-
-        const meta = [
-          providerOptions.find((provider) => provider.value === appState.playground.provider)?.label || null,
-          appState.playground.model || null,
-          appState.playground.mode === "chat" ? "chat/completions" : "responses",
-          appState.playground.lastDurationMs == null
-            ? null
-            : `${appState.playground.lastDurationMs} ms`,
-        ].filter(Boolean);
-
-        if (appState.playground.usage?.total_tokens != null) {
-          meta.push(
-            `tokens in ${appState.playground.usage.input_tokens ?? 0} · out ${appState.playground.usage.output_tokens ?? 0} · total ${appState.playground.usage.total_tokens}`,
-          );
-        } else if (latestLog?.total_tokens != null) {
-          meta.push(
-            `latest log in ${latestLog.input_tokens ?? 0} · out ${latestLog.output_tokens ?? 0} · total ${latestLog.total_tokens}`,
-          );
-        }
-
-        $("playground-meta").innerHTML = meta
-          .map((item) => `<span class="pill">${escapeHtml(item)}</span>`)
-          .join("");
-
-        $("playground-transcript").innerHTML = appState.playground.messages.length
-          ? appState.playground.messages
-              .map(
-                (message) => `
-                  <article class="playground-message ${escapeHtml(message.role)}">
-                    <strong>${escapeHtml(message.role)}</strong>
-                    <pre>${escapeHtml(message.content)}</pre>
-                  </article>
-                `,
-              )
-              .join("")
-          : `<div class="playground-empty">No playground traffic yet. Paste one Gunmetal key, choose a model, and send the first message here.</div>`;
-      }
-
-      async function runPlayground(mode, key, model, messages) {
-        const response = await fetch(
-          mode === "responses" ? "/v1/responses" : "/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${key}`,
-            },
-            body: JSON.stringify(playgroundPayload(mode, model, messages)),
-          },
-        );
-
-        if (!response.ok) {
-          const text = await response.text();
-          try {
-            const body = text ? JSON.parse(text) : {};
-            throw new Error(body?.error?.message || "request failed");
-          } catch (error) {
-            throw new Error(error.message || text || "request failed");
-          }
-        }
-
-        const startedAt = performance.now();
-        let assistantText = "";
-        let usage = null;
-        pushPlaygroundMessage("assistant", "");
-        renderPlayground();
-
-        await readSse(response, ({ event, data }) => {
-          if (data === "[DONE]") {
-            return;
-          }
-
-          const assistant = appState.playground.messages[appState.playground.messages.length - 1];
-          if (!assistant || assistant.role !== "assistant") {
-            return;
-          }
-
-          const parsed = JSON.parse(data);
-          if (mode === "chat") {
-            const delta = parsed?.choices?.[0]?.delta?.content || "";
-            if (delta) {
-              assistantText += delta;
-              assistant.content = assistantText;
-              renderPlayground();
-            }
-            return;
-          }
-
-          if (event === "response.output_text.delta") {
-            assistantText += parsed.delta || "";
-            assistant.content = assistantText;
-            renderPlayground();
-          } else if (event === "response.completed") {
-            assistantText = parsed?.response?.output_text || assistantText;
-            usage = parsed?.response?.usage || null;
-            assistant.content = assistantText;
-            renderPlayground();
-          }
-        });
-
-        appState.playground.lastDurationMs = Math.round(performance.now() - startedAt);
-        appState.playground.usage = usage;
-      }
-
-      function render() {
-        const data = appState.data;
-        if (!data) return;
-        const apiBaseUrl = new URL(data.service.api_base_url, window.location.origin).toString();
-        const webUrl = new URL(data.service.web_url, window.location.origin).toString();
-        if (!appState.selectedLogId && data.logs.length) {
-          appState.selectedLogId = data.logs[0].id;
-        }
-        syncBanner(data);
-
-        const nextAction = nextActionForSetup(data);
-        $("next-action").innerHTML = `
-          <strong>${escapeHtml(nextAction.title)}</strong>
-          <span>${escapeHtml(nextAction.detail)}</span>
-          <code class="mono">${escapeHtml(nextAction.command)}</code>
-        `;
-
-        $("provider-strip").innerHTML = data.providers
-          .map(
-            (provider) =>
-              `<span class="pill">${escapeHtml(provider.kind)} · ${escapeHtml(provider.class)} · ${escapeHtml(provider.auth_method === "browser_session" ? "browser auth" : "api key")}</span>`,
-          )
-          .join("");
-
-        const providerSelect = $("profile-form").elements.namedItem("provider");
-        const selectedProvider =
-          providerSelect.value && data.providers.some((provider) => provider.kind === providerSelect.value)
-            ? providerSelect.value
-            : data.providers[0]?.kind || "";
-        providerSelect.innerHTML = data.providers.length
-          ? data.providers
-              .map(
-                (provider) =>
-                  `<option value="${escapeHtml(provider.kind)}"${provider.kind === selectedProvider ? " selected" : ""}>${escapeHtml(provider.kind)}</option>`,
-              )
-              .join("")
-          : `<option value="">no providers available</option>`;
-        providerSelect.value = selectedProvider;
-
-        $("count-grid").innerHTML = [
-          ["Providers", data.counts.profiles],
-          ["Models", data.counts.models],
-          ["Keys", data.counts.keys],
-          ["Requests", data.counts.logs],
-        ]
-          .map(
-            ([label, value]) => `
-              <article class="stat">
-                <div class="stat-label">${escapeHtml(label)}</div>
-                <div class="stat-value">${escapeHtml(value)}</div>
-              </article>
-            `,
-          )
-          .join("");
-
-        $("command-block").innerHTML = escapeHtml(
-          [
-            "npm i -g @dhruv2mars/gunmetal",
-            "gunmetal setup",
-            "gunmetal web",
-            "",
-            "OPENAI_BASE_URL=" + apiBaseUrl,
-            "OPENAI_API_KEY=gm_your_local_key",
-            "MODEL=provider/model",
-          ].join("\n"),
-        );
-        syncProviderForm();
-
-        const setupSteps = [
-          [
-            "Connect provider",
-            data.setup.provider_ready,
-            data.setup.provider_ready
-              ? `${escapeHtml(data.counts.profiles)} saved`
-              : "Start with one provider.",
-          ],
-          [
-            "Sync models",
-            data.setup.models_ready,
-            data.setup.models_ready
-              ? `${escapeHtml(data.counts.models)} ready`
-              : "Pull models into the local registry.",
-          ],
-          [
-            "Create key",
-            data.setup.key_ready,
-            data.setup.key_ready
-              ? `${escapeHtml(data.counts.keys)} available`
-              : "Mint one Gunmetal key for your app.",
-          ],
-          [
-            "Send request",
-            data.setup.traffic_ready,
-            data.setup.traffic_ready
-              ? escapeHtml(data.setup.next_step)
-              : "Use the playground here or point one app at the local API.",
-          ],
-        ];
-
-        $("setup-grid").innerHTML = setupSteps
-          .map(
-            ([label, done, detail]) => `
-              <article class="setup-step${done ? " done" : ""}">
-                <strong>${escapeHtml(label)}</strong>
-                <span>${detail}</span>
-              </article>
-            `,
-          )
-          .join("");
-
-        $("traffic-grid").innerHTML = [
-          [
-            "Total tokens",
-            data.traffic.total_tokens,
-            `in ${escapeHtml(data.traffic.input_tokens)} · out ${escapeHtml(data.traffic.output_tokens)}`,
-          ],
-          [
-            "Avg latency",
-            data.traffic.avg_latency_ms == null ? "—" : `${escapeHtml(data.traffic.avg_latency_ms)} ms`,
-            data.traffic.latest_request_at
-              ? `latest ${escapeHtml(formatTimestamp(data.traffic.latest_request_at))}`
-              : "No request yet.",
-          ],
-          [
-            "Successes",
-            data.traffic.success_count,
-            `${escapeHtml(data.traffic.error_count)} errors`,
-          ],
-          [
-            "Recent requests",
-            data.traffic.recent_requests,
-            "Last 24 requests stored locally.",
-          ],
-        ]
-          .map(
-            ([label, value, detail]) => `
-              <article class="snapshot-card">
-                <strong>${escapeHtml(label)}</strong>
-                <div class="snapshot-value">${escapeHtml(value)}</div>
-                <span>${detail}</span>
-              </article>
-            `,
-          )
-          .join("");
-
-        $("request-summary").innerHTML = `
-          <div class="request-summary-grid">
-            <article class="summary-table">
-              <h3>Top providers</h3>
-              <div class="summary-list">
-                ${
-                  data.provider_summaries.length
-                    ? data.provider_summaries
-                        .slice(0, 4)
-                        .map(
-                          (item) => `
-                            <div class="summary-row">
-                              <div>
-                                <strong>${escapeHtml(item.label)}</strong>
-                                <span>${escapeHtml(item.provider)} · ${escapeHtml(item.requests)} requests</span>
-                              </div>
-                              <div>
-                                <strong>${escapeHtml(item.total_tokens)}</strong>
-                                <span>${escapeHtml(item.error_count)} errors · ${escapeHtml(item.avg_latency_ms ?? "—")} ms</span>
-                              </div>
-                            </div>
-                          `,
-                        )
-                        .join("")
-                    : `<p class="note">No provider traffic yet.</p>`
-                }
+  `}function pe(e){const t=e[0];return`
+    <form id="add-provider-form" class="mt-4 animate-fade-in rounded-xl border hairline-strong bg-frosted p-4">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="text-label text-text-faint">Provider type</label>
+          <select name="provider" id="add-provider-select" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2 text-[13px] text-text-secondary focus:border-accent">
+            ${e.map(r=>`<option value="${o(r.kind)}">${o(r.kind)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="text-label text-text-faint">Name</label>
+          <input name="name" required placeholder="${o(t?.suggested_name||"provider")}" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent" />
+        </div>
+        <div id="add-base-url-wrap">
+          <label class="text-label text-text-faint">Base URL</label>
+          <input name="base_url" placeholder="${o(t?.base_url_placeholder||"optional")}" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent" />
+        </div>
+        <div id="add-api-key-wrap">
+          <label class="text-label text-text-faint">API key</label>
+          <input name="api_key" type="password" placeholder="required for this provider" class="mt-1.5 h-9 w-full rounded-md border hairline bg-bg px-2.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent" />
+        </div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button type="submit" class="tap-target rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-[13px] font-medium text-accent transition-all hover:bg-accent/20 active:scale-[0.97]">Save provider</button>
+      </div>
+      <p id="add-provider-help" class="mt-2 text-[12px] text-text-muted">${o(t?.helper_body||"")}</p>
+    </form>
+  `}function ue(){document.getElementById("toggle-add-provider")?.addEventListener("click",()=>{s.showAddProvider=!s.showAddProvider,p()}),document.querySelectorAll(".provider-action").forEach(t=>{t.addEventListener("click",async()=>{const r=t.getAttribute("data-id"),a=t.getAttribute("data-action");try{const n=await F(r,a);n.auth_url&&window.open(n.auth_url,"_blank","noopener,noreferrer"),c(n.message,"success"),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(n){c(n.message,"danger")}})}),document.querySelectorAll(".provider-create-key").forEach(t=>{t.addEventListener("click",async()=>{const r=t.getAttribute("data-id"),a=window.prompt("Key name","gunmetal-key");if(a!=null)try{const n=await O(r,a);c(n.message,"success"),W(n.secret||null),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(n){c(n.message,"danger")}})}),document.querySelectorAll(".provider-delete").forEach(t=>{t.addEventListener("click",async()=>{const r=t.getAttribute("data-id");if(window.confirm("Delete this provider and its synced models?"))try{const a=await J(r);c(a.message,"success"),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(a){c(a.message,"danger")}})});const e=document.getElementById("add-provider-form");if(e){const t=()=>{const a=document.getElementById("add-provider-select")?.value||"",n=s.data?.providers.find(x=>x.kind===a),d=document.getElementById("add-base-url-wrap"),l=document.getElementById("add-api-key-wrap"),i=document.getElementById("add-provider-help");d&&(d.style.display=n?.supports_base_url?"":"none"),l&&(l.style.display=n?.auth_method==="api_key"?"":"none"),i&&n&&(i.textContent=n.helper_body)};document.getElementById("add-provider-select")?.addEventListener("change",t),t(),e.addEventListener("submit",async r=>{r.preventDefault();const a=new FormData(e);try{const n=await N({provider:String(a.get("provider")||""),name:String(a.get("name")||""),base_url:String(a.get("base_url")||""),api_key:String(a.get("api_key")||"")});c(n.message,"success"),s.showAddProvider=!1,e.reset(),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(n){c(n.message,"danger")}})}}function xe(){const e=s.data;return e?`
+    <section class="mx-auto max-w-5xl border-b hairline px-4 py-6 md:px-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-[18px] font-medium tracking-[-0.02em] text-text">Keys</h2>
+          <p class="mt-0.5 text-[13px] text-text-muted">Gunmetal keys for your apps</p>
+        </div>
+      </div>
+
+      ${e.keys.length===0?me():fe(e.keys)}
+
+      ${s.secret?`
+        <div class="mt-4 animate-fade-in rounded-xl border border-accent/30 bg-accent-muted px-4 py-3">
+          <span class="text-label text-accent">New key secret</span>
+          <code class="mt-1 block break-all font-mono text-[13px] text-text">${o(s.secret)}</code>
+          <p class="mt-1 text-[12px] text-text-muted">Copy this now. It will not be shown again.</p>
+        </div>
+      `:""}
+    </section>
+  `:""}function me(){return`
+    <div class="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed hairline py-12">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-faint"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <p class="mt-2 text-[14px] text-text-muted">No keys yet</p>
+      <p class="mt-0.5 text-[13px] text-text-faint">Create a key from a provider to start using the API</p>
+    </div>
+  `}function fe(e){return`
+    <div class="mt-4 divide-y hairline">
+      ${e.map(t=>{const r=t.state==="active"?"border-success-border bg-success-bg text-text-secondary":t.state==="disabled"?"hairline bg-frosted text-text-muted":"border-danger-border bg-danger-bg text-text-muted";return`
+            <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[15px] font-medium text-text">${o(t.name)}</span>
+                  <span class="rounded-full border px-2 py-0.5 text-[11px] ${r}">${o(t.state)}</span>
+                </div>
+                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-text-faint">
+                  <span class="font-mono">${o(t.prefix)}</span>
+                  <span>${t.providers.length?o(t.providers.join(", ")):"all providers"}</span>
+                  ${t.last_used_at?`<span>used ${o(new Date(t.last_used_at).toLocaleDateString())}</span>`:""}
+                </div>
               </div>
-            </article>
-            <article class="summary-table">
-              <h3>Top models</h3>
-              <div class="summary-list">
-                ${
-                  data.model_summaries.length
-                    ? data.model_summaries
-                        .slice(0, 5)
-                        .map(
-                          (item) => `
-                            <div class="summary-row">
-                              <div>
-                                <strong>${escapeHtml(item.model)}</strong>
-                                <span>${escapeHtml(item.provider)} · ${escapeHtml(item.requests)} requests</span>
-                              </div>
-                              <div>
-                                <strong>${escapeHtml(item.total_tokens)}</strong>
-                                <span>${escapeHtml(item.error_count)} errors · ${escapeHtml(item.avg_latency_ms ?? "—")} ms</span>
-                              </div>
-                            </div>
-                          `,
-                        )
-                        .join("")
-                    : `<p class="note">No model traffic yet.</p>`
-                }
+              <div class="flex flex-wrap gap-1.5">
+                <button class="key-action tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-action="disabled" data-id="${o(t.id)}">Disable</button>
+                <button class="key-action tap-target rounded-md border hairline px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:bg-frosted-hover active:scale-[0.97]" data-action="revoked" data-id="${o(t.id)}">Revoke</button>
+                <button class="key-delete tap-target rounded-md border border-danger-border bg-danger-bg px-2.5 py-1 text-[12px] text-text-secondary transition-all hover:opacity-80 active:scale-[0.97]" data-id="${o(t.id)}">Delete</button>
               </div>
-            </article>
-          </div>
-        `;
+            </div>
+          `}).join("")}
+    </div>
+  `}function ge(){document.querySelectorAll(".key-action").forEach(e=>{e.addEventListener("click",async()=>{const t=e.getAttribute("data-id"),r=e.getAttribute("data-action");try{const a=await K(t,r);c(a.message,"success"),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(a){c(a.message,"danger")}})}),document.querySelectorAll(".key-delete").forEach(e=>{e.addEventListener("click",async()=>{const t=e.getAttribute("data-id");if(window.confirm("Delete this key?"))try{const r=await R(t);c(r.message,"success"),window.dispatchEvent(new CustomEvent("gm:refresh"))}catch(r){c(r.message,"danger")}})})}function ve(){const e=s.data;if(!e)return"";const t=s.modelSearch.trim().toLowerCase(),r=t?e.models.filter(a=>a.id.toLowerCase().includes(t)||a.provider.toLowerCase().includes(t)):e.models;return`
+    <section class="mx-auto max-w-5xl px-4 py-6 md:px-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-[18px] font-medium tracking-[-0.02em] text-text">Models</h2>
+          <p class="mt-0.5 text-[13px] text-text-muted">Synced provider-qualified models</p>
+        </div>
+        <input id="model-search" value="${o(s.modelSearch)}" placeholder="Search models..." class="h-8 w-full rounded-md border hairline bg-bg px-2.5 text-[13px] text-text placeholder:text-text-faint focus:border-accent sm:w-64" />
+      </div>
 
-        const providerOptions = [
-          `<option value="all">all providers</option>`,
-          ...data.provider_summaries.map((item) => {
-            const value = providerFilterValue(item.provider, item.profile_name);
-            return `<option value="${escapeHtml(value)}"${appState.requestFilters.provider === value ? " selected" : ""}>${escapeHtml(item.label)} · ${escapeHtml(item.provider)}</option>`;
-          }),
-        ].join("");
-        $("request-filters").innerHTML = `
-          <label>
-            Provider
-            <select onchange="updateRequestFilter('provider', this.value)">${providerOptions}</select>
-          </label>
-          <label>
-            Status
-            <select onchange="updateRequestFilter('status', this.value)">
-              <option value="all"${appState.requestFilters.status === "all" ? " selected" : ""}>all statuses</option>
-              <option value="success"${appState.requestFilters.status === "success" ? " selected" : ""}>success only</option>
-              <option value="error"${appState.requestFilters.status === "error" ? " selected" : ""}>errors only</option>
-            </select>
-          </label>
-          <label>
-            Search
-            <input value="${escapeHtml(appState.requestFilters.query)}" placeholder="model, key, endpoint, error" oninput="updateRequestFilter('query', this.value)" />
-          </label>
-          <label>
-            Range
-            <select onchange="updateRequestFilter('limit', this.value)">
-              <option value="8"${appState.requestFilters.limit === "8" ? " selected" : ""}>latest 8</option>
-              <option value="24"${appState.requestFilters.limit === "24" ? " selected" : ""}>latest 24</option>
-              <option value="all"${appState.requestFilters.limit === "all" ? " selected" : ""}>all matches</option>
-            </select>
-          </label>
-        `;
-
-        $("service-panel").innerHTML = `
-          <div><strong>Status</strong><div class="subtle">${escapeHtml(data.service.status)}</div></div>
-          <div><strong>Version</strong><div class="subtle mono">${escapeHtml(data.service.version)}</div></div>
-          <div><strong>Web</strong><div class="subtle mono">${escapeHtml(webUrl)}</div></div>
-          <div><strong>API</strong><div class="subtle mono">${escapeHtml(apiBaseUrl)}</div></div>
-          <div><strong>Home</strong><div class="subtle mono">${escapeHtml(data.service.home)}</div></div>
-        `;
-
-        $("profiles").innerHTML = data.profiles.length
-          ? `<div class="profile-grid">${data.profiles
-              .map(
-                (profile) => `
-                <article class="profile-card">
-                  <h3>${escapeHtml(profile.name)}</h3>
-                  <div class="profile-meta">
-                    <span class="pill">${escapeHtml(profile.provider)}</span>
-                    <span class="pill">${escapeHtml(profile.auth_label)}</span>
-                    <span class="pill">${escapeHtml(profile.model_count)} models</span>
-                  </div>
-                  <p class="note mono">${escapeHtml(profile.selector)}${profile.base_url ? ` · ${escapeHtml(profile.base_url)}` : ""}</p>
-                  <p class="note">${
-                    (() => {
-                      const provider = data.providers.find((item) => item.kind === profile.provider);
-                      if (!provider) return "";
-                      const modes = [provider.supports_chat_completions ? "chat/completions" : null, provider.supports_responses_api ? "responses" : null]
-                        .filter(Boolean)
-                        .join(" + ");
-                      return escapeHtml(`${provider.auth_method === "browser_session" ? "browser auth" : "api key"} · ${modes || "request"} · ${provider.supports_streaming ? "streaming" : "non-streaming"}`);
-                    })()
-                  }</p>
-                  <div class="profile-actions">
-                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'auth')">Auth / Check</button>
-                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'sync')">Sync models</button>
-                    <button class="ghost-btn" type="button" onclick="createKey('${profile.id}')">Create key</button>
-                    <button class="ghost-btn" type="button" onclick="profileAction('${profile.id}', 'logout')">Logout</button>
-                    <button class="ghost-btn" type="button" onclick="deleteProfile('${profile.id}')">Delete</button>
-                  </div>
-                </article>
-              `,
-              )
-              .join("")}</div>`
-          : `<p class="note">No providers yet. Save one on the right, then auth and sync it here.</p>`;
-
-        $("keys").innerHTML = data.keys.length
-          ? `<table class="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>State</th>
-                  <th>Providers</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.keys
-                  .map(
-                    (key) => `
-                    <tr>
-                      <td><strong>${escapeHtml(key.name)}</strong><div class="subtle mono">${escapeHtml(key.prefix)}</div></td>
-                      <td>${escapeHtml(key.state)}</td>
-                      <td>${escapeHtml(key.providers.length ? key.providers.join(", ") : "all")}</td>
-                      <td>
-                        <div class="key-actions">
-                          <button class="ghost-btn" type="button" onclick="setKeyState('${key.id}', 'disabled')">Disable</button>
-                          <button class="ghost-btn" type="button" onclick="setKeyState('${key.id}', 'revoked')">Revoke</button>
-                          <button class="ghost-btn" type="button" onclick="deleteKey('${key.id}')">Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `,
-                  )
-                  .join("")}
-              </tbody>
-            </table>`
-          : `<p class="note">No keys yet. Create one from a provider card.</p>`;
-
-        const activeModelProvider = appState.playground.provider || data.models[0]?.provider || "";
-        const activeProviderModels = activeModelProvider
-          ? data.models.filter((model) => model.provider === activeModelProvider)
-          : data.models;
-        $("models-note").innerHTML = activeProviderModels.length
-          ? `Showing ${escapeHtml(Math.min(activeProviderModels.length, 12))} of ${escapeHtml(activeProviderModels.length)} synced models for <span class="mono">${escapeHtml(activeModelProvider)}</span>. Use the playground provider selector to switch the view.`
-          : "No models in view yet.";
-        $("models").innerHTML = activeProviderModels.length
-          ? `<table class="table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  <th>Provider</th>
-                  <th>Reasoning</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${activeProviderModels
-                  .slice(0, 12)
-                  .map(
-                    (model) => `
-                      <tr>
-                        <td><strong>${escapeHtml(model.id)}</strong></td>
-                        <td>${escapeHtml(model.provider)}</td>
-                        <td>${escapeHtml(model.supports_reasoning == null ? "unknown" : model.supports_reasoning ? "yes" : "no")}</td>
-                      </tr>
-                    `,
-                  )
-                  .join("")}
-              </tbody>
-            </table>`
-          : `<p class="note">No models synced yet. Sync at least one provider.</p>`;
-
-        renderPlayground();
-
-        const filteredLogs = data.logs.filter(logMatchesRequestFilters);
-        const visibleLogs =
-          appState.requestFilters.limit === "all"
-            ? filteredLogs
-            : filteredLogs.slice(0, Number(appState.requestFilters.limit || 8));
-
-        $("logs").innerHTML = filteredLogs.length
-          ? `<p class="note">Showing ${escapeHtml(visibleLogs.length)} of ${escapeHtml(filteredLogs.length)} matching requests.</p>
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>Model</th>
-                  <th>Result</th>
-                  <th>Latency</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${visibleLogs
-                  .map(
-                    (log) => `
-                      <tr class="request-row${appState.selectedLogId === log.id ? " request-row-active" : ""}" onclick="selectLog('${log.id}')">
-                        <td><div>${escapeHtml(log.profile_name || log.provider)}</div><div class="subtle mono">${escapeHtml(formatTimestamp(log.started_at))}</div></td>
-                        <td><strong>${escapeHtml(log.model)}</strong><div class="subtle">${escapeHtml(log.request_mode || log.endpoint)} · ${escapeHtml(log.key_name || "unknown key")}</div></td>
-                        <td>${escapeHtml(log.status_code ?? "pending")}${log.error_message ? `<div class="subtle">${escapeHtml(log.error_message)}</div>` : ""}</td>
-                        <td>${escapeHtml(log.duration_ms)} ms${log.total_tokens ? `<div class="subtle token-breakdown">in ${escapeHtml(log.input_tokens ?? 0)} · out ${escapeHtml(log.output_tokens ?? 0)} · total ${escapeHtml(log.total_tokens)}</div>` : ""}</td>
-                      </tr>
-                    `,
-                  )
-                  .join("")}
-              </tbody>
-            </table>`
-          : data.logs.length
-            ? `<p class="note">No requests match the current filters.</p>`
-            : `<p class="note">No request history yet. Use the playground here or point one app at Gunmetal, then come back.</p>`;
-
-        const selectedLog =
-          visibleLogs.find((log) => log.id === appState.selectedLogId) || visibleLogs[0] || null;
-        if (selectedLog) {
-          appState.selectedLogId = selectedLog.id;
-        }
-
-        $("request-detail").innerHTML = selectedLog
-          ? `
-              <div class="banner success">
-                <strong>Selected request</strong>
-                <span>${escapeHtml(selectedLog.model)} via ${escapeHtml(selectedLog.profile_name || selectedLog.provider)}</span>
+      ${r.length===0?he():be(r)}
+    </section>
+  `}function he(){const e=s.data,t=e&&e.models.length>0;return`
+    <div class="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed hairline py-12">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-faint"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <p class="mt-2 text-[14px] text-text-muted">${t?"No models match your search.":"No models synced yet"}</p>
+      ${t?"":'<p class="mt-0.5 text-[13px] text-text-faint">Sync a provider to pull its available models</p>'}
+    </div>
+  `}function be(e){return`
+    <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      ${e.slice(0,60).map(t=>{const r=[];return t.supports_reasoning&&r.push("reasoning"),t.supports_tools&&r.push("tools"),`
+            <div class="flex items-center justify-between rounded-lg border hairline bg-frosted px-3 py-2.5 transition-colors hover:bg-frosted-hover">
+              <div class="min-w-0">
+                <div class="truncate font-mono text-[13px] text-text">${o(t.id)}</div>
+                <div class="mt-0.5 text-[11px] text-text-faint">${o(t.provider)}</div>
               </div>
-              <div class="request-detail-grid">
-                <article class="request-detail-card">
-                  <strong>Status</strong>
-                  <span>${escapeHtml(selectedLog.status_code ?? "pending")}${selectedLog.error_message ? ` · ${escapeHtml(selectedLog.error_message)}` : ""}</span>
-                </article>
-                <article class="request-detail-card">
-                  <strong>Latency</strong>
-                  <span>${escapeHtml(selectedLog.duration_ms)} ms</span>
-                </article>
-                <article class="request-detail-card">
-                  <strong>Tokens</strong>
-                  <span>in ${escapeHtml(selectedLog.input_tokens ?? 0)} · out ${escapeHtml(selectedLog.output_tokens ?? 0)} · total ${escapeHtml(selectedLog.total_tokens ?? 0)}</span>
-                </article>
-                <article class="request-detail-card">
-                  <strong>Key</strong>
-                  <span>${escapeHtml(selectedLog.key_name || "unknown")} · ${escapeHtml(selectedLog.request_mode || "request")}</span>
-                </article>
-                <article class="request-detail-card">
-                  <strong>Endpoint</strong>
-                  <span>${escapeHtml(selectedLog.endpoint)} · ${escapeHtml(formatTimestamp(selectedLog.started_at))}</span>
-                </article>
-              </div>
-            `
-          : `<div class="banner"><strong>No request selected.</strong><span class="subtle">Your first request will appear here with latency and token details.</span></div>`;
-      }
-
-      async function submitAction(url, options) {
-        try {
-          const body = await fetchJson(url, options);
-          if (body.auth_url) {
-            window.open(body.auth_url, "_blank", "noopener,noreferrer");
-          }
-          setBanner(body.message, "success");
-          setSecret(body.secret || null);
-          await loadState();
-        } catch (error) {
-          setBanner(error.message, "danger");
-        }
-      }
-
-      async function profileAction(id, action) {
-        await submitAction(appApi(`/profiles/${id}/${action}`), { method: "POST" });
-      }
-
-      async function createKey(id) {
-        const chosen = window.prompt("Key name", "gunmetal-key");
-        if (chosen == null) return;
-        await submitAction(appApi(`/profiles/${id}/keys`), {
-          method: "POST",
-          body: JSON.stringify({ name: chosen }),
-        });
-      }
-
-      async function setKeyState(id, state) {
-        await submitAction(appApi(`/keys/${id}/state`), {
-          method: "POST",
-          body: JSON.stringify({ state }),
-        });
-      }
-
-      async function deleteKey(id) {
-        if (!window.confirm("Delete this key?")) return;
-        await submitAction(appApi(`/keys/${id}`), { method: "DELETE" });
-      }
-
-      async function deleteProfile(id) {
-        if (!window.confirm("Delete this provider and its synced models?")) return;
-        await submitAction(appApi(`/profiles/${id}`), { method: "DELETE" });
-      }
-
-      function selectLog(id) {
-        appState.selectedLogId = id;
-        render();
-      }
-
-      async function submitPlayground(event) {
-        event.preventDefault();
-        const key = $("playground-key").value.trim();
-        const model = $("playground-model").value;
-        const mode = $("playground-mode").value;
-        const historyMode = $("playground-history").value;
-        const content = $("playground-input").value.trim();
-
-        if (!key) {
-          setBanner("Paste a Gunmetal key first.", "danger");
-          return;
-        }
-        if (!model) {
-          setBanner("Sync at least one model first.", "danger");
-          return;
-        }
-        if (!content) {
-          setBanner("Enter a message before sending the request.", "danger");
-          return;
-        }
-
-        if (historyMode === "single") {
-          appState.playground.messages = [];
-        }
-
-        appState.playground.key = key;
-        appState.playground.model = model;
-        appState.playground.mode = mode;
-        appState.playground.historyMode = historyMode;
-        appState.playground.running = true;
-        appState.playground.usage = null;
-        pushPlaygroundMessage("user", content);
-        $("playground-input").value = "";
-        renderPlayground();
-
-        try {
-          await runPlayground(mode, key, model, appState.playground.messages);
-          appState.selectedLogId = null;
-          setBanner("Playground request completed.", "success");
-          await loadState();
-          await wait(350);
-          appState.selectedLogId = null;
-          await loadState();
-        } catch (error) {
-          appState.playground.messages = appState.playground.messages.slice(
-            0,
-            Math.max(0, appState.playground.messages.length - 2),
-          );
-          setBanner(error.message, "danger");
-        } finally {
-          appState.playground.running = false;
-          renderPlayground();
-        }
-      }
-
-      $("profile-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        await submitAction(appApi("/profiles"), {
-          method: "POST",
-          body: JSON.stringify({
-            provider: form.get("provider"),
-            name: form.get("name"),
-            base_url: form.get("base_url"),
-            api_key: form.get("api_key"),
-          }),
-        });
-        event.currentTarget.reset();
-        syncProviderForm();
-      });
-
-      $("refresh-button").addEventListener("click", () => {
-        appState.banner = null;
-        setSecret(null);
-        loadState();
-      });
-
-      $("profile-form").elements.namedItem("provider").addEventListener("change", () => {
-        syncProviderForm();
-      });
-
-      $("playground-form").addEventListener("submit", submitPlayground);
-
-      $("playground-clear").addEventListener("click", () => {
-        appState.playground.messages = [];
-        appState.playground.usage = null;
-        appState.playground.lastDurationMs = null;
-        renderPlayground();
-      });
-
-      $("playground-key").addEventListener("input", (event) => {
-        appState.playground.key = event.currentTarget.value;
-      });
-
-      $("playground-provider").addEventListener("change", (event) => {
-        appState.playground.provider = event.currentTarget.value;
-        syncPlaygroundSelections(appState.data);
-        renderPlayground();
-      });
-
-      $("playground-model").addEventListener("change", (event) => {
-        appState.playground.model = event.currentTarget.value;
-      });
-
-      $("playground-mode").addEventListener("change", (event) => {
-        appState.playground.mode = event.currentTarget.value;
-      });
-
-      $("playground-history").addEventListener("change", (event) => {
-        appState.playground.historyMode = event.currentTarget.value;
-      });
-
-      $("copy-api-button").addEventListener("click", async () => {
-        const base = appState.data
-          ? new URL(appState.data.service.api_base_url, window.location.origin).toString()
-          : null;
-        if (!base) return;
-        try {
-          if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(base);
-          } else {
-            const textarea = document.createElement("textarea");
-            textarea.value = base;
-            textarea.setAttribute("readonly", "true");
-            textarea.style.position = "fixed";
-            textarea.style.opacity = "0";
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand("copy");
-            textarea.remove();
-          }
-          setBanner("Copied API base URL.", "success");
-        } catch (error) {
-          setBanner(error.message || "Clipboard copy failed.", "danger");
-        }
-      });
-
-      syncProviderForm();
-      loadState();
-    </script>
+              ${r.length?`<div class="flex shrink-0 gap-1">${r.map(a=>`<span class="rounded-full border hairline px-1.5 py-0.5 text-[10px] text-text-muted">${o(a)}</span>`).join("")}</div>`:""}
+            </div>
+          `}).join("")}
+    </div>
+    ${e.length>60?`<p class="mt-2 text-[12px] text-text-faint">Showing 60 of ${e.length} models. Search to filter.</p>`:""}
+  `}function ye(){document.getElementById("model-search")?.addEventListener("input",t=>{s.modelSearch=t.target.value})}function we(){if(!s.toast)return"";const{message:e,tone:t}=s.toast;return`
+    <div class="fixed bottom-4 right-4 z-[100] max-w-sm animate-fade-up rounded-lg border px-4 py-3 shadow-2xl" style="border-color:${t==="danger"?"rgba(255,141,120,0.3)":t==="success"?"rgba(125,211,200,0.3)":"rgba(226,226,226,0.12)"};background:${t==="danger"?"rgba(255,141,120,0.08)":t==="success"?"rgba(125,211,200,0.08)":"rgba(255,255,255,0.03)"};backdrop-filter:blur(12px)">
+      <p class="text-[13px] text-text">${o(e)}</p>
+    </div>
+  `}function $e(){const e=document.getElementById("app");e&&(e.innerHTML=`
+    ${X()}
+    <main class="pb-20">
+      ${Z()}
+      ${ee()}
+      ${te()}
+      ${oe()}
+      ${ie()}
+      ${xe()}
+      ${ve()}
+    </main>
+    ${we()}
+  `,Y(),ae(),de(),ue(),ge(),ye())}async function E(){s.loading=!0;try{const e=await D();if(s.data=e,!s.playground.provider&&e.profiles.length&&(s.playground.provider=e.profiles[0].provider),!s.playground.model&&e.models.length){const t=e.models.filter(r=>r.provider===s.playground.provider);s.playground.model=t[0]?.id||e.models[0].id}}catch{s.data=null}finally{s.loading=!1,p()}}function ke(){document.addEventListener("keydown",e=>{e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||(e.key==="r"&&!e.ctrlKey&&!e.metaKey&&(e.preventDefault(),E()),e.key==="c"&&!e.ctrlKey&&!e.metaKey&&(e.preventDefault(),document.getElementById("pg-input")?.focus()),e.key==="Escape"&&(s.expandedLogId=null,s.expandedSection=null,p()))})}function Ee(){V($e),window.addEventListener("gm:refresh",()=>E()),ke(),E()}Ee();</script>
+    <style rel="stylesheet" crossorigin>/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-divide-y-reverse:0;--tw-border-style:solid;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-duration:initial}}}@layer theme{:root,:host{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:"JetBrains Mono", ui-monospace, monospace;--spacing:.25rem;--container-sm:24rem;--container-5xl:64rem;--font-weight-medium:500;--leading-relaxed:1.625;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--ease-out:cubic-bezier(.23, 1, .32, 1);--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-bg:#0e0e0d;--color-surface:#181816;--color-surface-elevated:#222220;--color-text:#faf9f6;--color-text-secondary:#afaeac;--color-text-muted:#868584;--color-text-faint:#666469;--color-border:#e2e2e214;--color-border-medium:#e2e2e21f;--color-border-strong:#e2e2e22e;--color-accent:#d7b46a;--color-accent-soft:#d7b46a1f;--color-accent-muted:#d7b46a0f;--color-success-bg:#7dd3c814;--color-success-border:#7dd3c833;--color-danger-bg:#ff8d7814;--color-danger-border:#ff8d7833;--color-frosted:#ffffff08;--color-frosted-hover:#ffffff0d;--font-matter:"DM Sans", -apple-system, BlinkMacSystemFont, sans-serif}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab,red,red)){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}*,:before,:after{box-sizing:border-box;margin:0;padding:0}html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}body{font-family:var(--font-matter);background-color:var(--color-bg);color:var(--color-text);letter-spacing:-.01em;min-height:100dvh;font-size:15px;font-weight:400;line-height:1.45;overflow-x:hidden}::selection{color:var(--color-text);background-color:#faf9f61f}:focus-visible{outline-offset:2px;outline:1px solid #d7b46a8c}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:10px}::-webkit-scrollbar-thumb:hover{background:#e2e2e24d}}@layer components;@layer utilities{.visible{visibility:visible}.fixed{position:fixed}.sticky{position:sticky}.start{inset-inline-start:var(--spacing)}.top-0{top:calc(var(--spacing) * 0)}.right-4{right:calc(var(--spacing) * 4)}.bottom-4{bottom:calc(var(--spacing) * 4)}.z-50{z-index:50}.z-\[100\]{z-index:100}.mx-1{margin-inline:calc(var(--spacing) * 1)}.mx-auto{margin-inline:auto}.mt-0\.5{margin-top:calc(var(--spacing) * .5)}.mt-1{margin-top:calc(var(--spacing) * 1)}.mt-1\.5{margin-top:calc(var(--spacing) * 1.5)}.mt-2{margin-top:calc(var(--spacing) * 2)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-4{margin-top:calc(var(--spacing) * 4)}.mt-6{margin-top:calc(var(--spacing) * 6)}.mb-1{margin-bottom:calc(var(--spacing) * 1)}.mb-2{margin-bottom:calc(var(--spacing) * 2)}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:calc(var(--spacing) * 1.5)}.h-2{height:calc(var(--spacing) * 2)}.h-5{height:calc(var(--spacing) * 5)}.h-7{height:calc(var(--spacing) * 7)}.h-8{height:calc(var(--spacing) * 8)}.h-9{height:calc(var(--spacing) * 9)}.h-14{height:calc(var(--spacing) * 14)}.h-24{height:calc(var(--spacing) * 24)}.max-h-\[200px\]{max-height:200px}.max-h-\[360px\]{max-height:360px}.min-h-\[48px\]{min-height:48px}.w-1\.5{width:calc(var(--spacing) * 1.5)}.w-2{width:calc(var(--spacing) * 2)}.w-5{width:calc(var(--spacing) * 5)}.w-7{width:calc(var(--spacing) * 7)}.w-40{width:calc(var(--spacing) * 40)}.w-full{width:100%}.max-w-5xl{max-width:var(--container-5xl)}.max-w-sm{max-width:var(--container-sm)}.min-w-0{min-width:calc(var(--spacing) * 0)}.flex-1{flex:1}.shrink-0{flex-shrink:0}.rotate-180{rotate:180deg}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.cursor-pointer{cursor:pointer}.resize-y{resize:vertical}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-baseline{align-items:baseline}.items-center{align-items:center}.items-end{align-items:flex-end}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.gap-1{gap:calc(var(--spacing) * 1)}.gap-1\.5{gap:calc(var(--spacing) * 1.5)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-2\.5{gap:calc(var(--spacing) * 2.5)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-4{gap:calc(var(--spacing) * 4)}.gap-x-3{column-gap:calc(var(--spacing) * 3)}.gap-x-6{column-gap:calc(var(--spacing) * 6)}.gap-y-0\.5{row-gap:calc(var(--spacing) * .5)}.gap-y-2{row-gap:calc(var(--spacing) * 2)}:where(.divide-y>:not(:last-child)){--tw-divide-y-reverse:0;border-bottom-style:var(--tw-border-style);border-top-style:var(--tw-border-style);border-top-width:calc(1px * var(--tw-divide-y-reverse));border-bottom-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)))}.self-end{align-self:flex-end}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.rounded-full{border-radius:3.40282e38px}.rounded-lg{border-radius:var(--radius-lg)}.rounded-md{border-radius:var(--radius-md)}.rounded-xl{border-radius:var(--radius-xl)}.border{border-style:var(--tw-border-style);border-width:1px}.border-y{border-block-style:var(--tw-border-style);border-block-width:1px}.border-t{border-top-style:var(--tw-border-style);border-top-width:1px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-dashed{--tw-border-style:dashed;border-style:dashed}.border-accent\/30{border-color:#d7b46a4d}@supports (color:color-mix(in lab,red,red)){.border-accent\/30{border-color:color-mix(in oklab,var(--color-accent) 30%,transparent)}}.border-accent\/40{border-color:#d7b46a66}@supports (color:color-mix(in lab,red,red)){.border-accent\/40{border-color:color-mix(in oklab,var(--color-accent) 40%,transparent)}}.border-danger-border{border-color:var(--color-danger-border)}.border-success-border{border-color:var(--color-success-border)}.bg-\[\#7dbeb3\]{background-color:#7dbeb3}.bg-\[\#ff8d78\]{background-color:#ff8d78}.bg-accent-muted{background-color:var(--color-accent-muted)}.bg-accent-soft{background-color:var(--color-accent-soft)}.bg-bg{background-color:var(--color-bg)}.bg-danger-bg{background-color:var(--color-danger-bg)}.bg-frosted{background-color:var(--color-frosted)}.bg-success-bg{background-color:var(--color-success-bg)}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.px-1\.5{padding-inline:calc(var(--spacing) * 1.5)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-2\.5{padding-inline:calc(var(--spacing) * 2.5)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-0\.5{padding-block:calc(var(--spacing) * .5)}.py-1{padding-block:calc(var(--spacing) * 1)}.py-1\.5{padding-block:calc(var(--spacing) * 1.5)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-4{padding-block:calc(var(--spacing) * 4)}.py-6{padding-block:calc(var(--spacing) * 6)}.py-12{padding-block:calc(var(--spacing) * 12)}.py-16{padding-block:calc(var(--spacing) * 16)}.pt-3{padding-top:calc(var(--spacing) * 3)}.pb-4{padding-bottom:calc(var(--spacing) * 4)}.pb-20{padding-bottom:calc(var(--spacing) * 20)}.text-right{text-align:right}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[12px\]{font-size:12px}.text-\[13px\]{font-size:13px}.text-\[14px\]{font-size:14px}.text-\[15px\]{font-size:15px}.text-\[18px\]{font-size:18px}.text-\[22px\]{font-size:22px}.leading-none{--tw-leading:1;line-height:1}.leading-relaxed{--tw-leading:var(--leading-relaxed);line-height:var(--leading-relaxed)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.tracking-\[-0\.01em\]{--tw-tracking:-.01em;letter-spacing:-.01em}.tracking-\[-0\.02em\]{--tw-tracking:-.02em;letter-spacing:-.02em}.break-all{word-break:break-all}.whitespace-pre-wrap{white-space:pre-wrap}.text-\[\#7dbeb3\]{color:#7dbeb3}.text-\[\#ff8d78\]{color:#ff8d78}.text-accent{color:var(--color-accent)}.text-bg{color:var(--color-bg)}.text-text{color:var(--color-text)}.text-text-faint{color:var(--color-text-faint)}.text-text-muted{color:var(--color-text-muted)}.text-text-secondary{color:var(--color-text-secondary)}.shadow-2xl{--tw-shadow:0 25px 50px -12px var(--tw-shadow-color,#00000040);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-all{transition-property:all;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-transform{transition-property:transform,translate,scale,rotate;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.duration-150{--tw-duration:.15s;transition-duration:.15s}.duration-200{--tw-duration:.2s;transition-duration:.2s}.duration-300{--tw-duration:.3s;transition-duration:.3s}.placeholder\:text-text-faint::placeholder{color:var(--color-text-faint)}.last\:mb-0:last-child{margin-bottom:calc(var(--spacing) * 0)}@media(hover:hover){.hover\:bg-accent\/20:hover{background-color:#d7b46a33}@supports (color:color-mix(in lab,red,red)){.hover\:bg-accent\/20:hover{background-color:color-mix(in oklab,var(--color-accent) 20%,transparent)}}.hover\:bg-frosted:hover{background-color:var(--color-frosted)}.hover\:bg-frosted-hover:hover{background-color:var(--color-frosted-hover)}.hover\:opacity-80:hover{opacity:.8}}.focus\:border-accent:focus{border-color:var(--color-accent)}.active\:scale-\[0\.97\]:active{scale:.97}@media(min-width:40rem){.sm\:w-64{width:calc(var(--spacing) * 64)}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:flex-row{flex-direction:row}.sm\:items-center{align-items:center}.sm\:justify-between{justify-content:space-between}}@media(min-width:48rem){.md\:flex{display:flex}.md\:px-6{padding-inline:calc(var(--spacing) * 6)}}@media(min-width:64rem){.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}.font-matter{font-family:var(--font-matter)}.font-mono{font-family:var(--font-mono)}.text-label{letter-spacing:.14em;text-transform:uppercase;font-size:11px;font-weight:500}.hairline{border-color:var(--color-border)}.hairline-medium{border-color:var(--color-border-medium)}.hairline-strong{border-color:var(--color-border-strong)}.surface{background-color:var(--color-surface)}.surface-elevated{background-color:var(--color-surface-elevated)}.tap-target{min-width:36px;min-height:36px}.animate-fade-in{animation:fadeIn .25s var(--ease-out) both}.animate-fade-up{animation:fadeUp .25s var(--ease-out) both}@keyframes fadeIn{0%{opacity:0}to{opacity:1}}@keyframes fadeUp{0%{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}}@media(prefers-reduced-motion:reduce){*,:before,:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}@property --tw-rotate-x{syntax:"*";inherits:false}@property --tw-rotate-y{syntax:"*";inherits:false}@property --tw-rotate-z{syntax:"*";inherits:false}@property --tw-skew-x{syntax:"*";inherits:false}@property --tw-skew-y{syntax:"*";inherits:false}@property --tw-divide-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-tracking{syntax:"*";inherits:false}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:"*";inherits:false}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:"*";inherits:false}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:"*";inherits:false}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:"*";inherits:false}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:"*";inherits:false}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-duration{syntax:"*";inherits:false}</style>
+  </head>
+  <body>
+    <div id="app"></div>
   </body>
 </html>
