@@ -631,6 +631,7 @@ version = "0.1.12"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
  "clap",
  "futures-util",
  "gunmetal-core",
@@ -646,6 +647,7 @@ dependencies = [
  "tokio",
  "uuid",
  "webbrowser",
+ "wiremock",
 ]
 
 [[package]]
