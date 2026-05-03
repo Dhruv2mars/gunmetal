@@ -29,14 +29,12 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
 const SETUP_WAIT_ATTEMPTS: usize = 90;
 const BASE_URL: &str = "http://127.0.0.1:4684/v1";
-const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           create a provider connection, sync models, create a Gunmetal key\n  gunmetal web             open the local Dashboard\n  gunmetal doctor          show what is missing and the next command\n  gunmetal chat            test a Gunmetal key against one provider-qualified model ID\n  gunmetal logs summary    inspect recent Local API request history\n  gunmetal start           keep the Local API running\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider-qualified model ID  ex: codex/gpt-5.4\n  Mode      chat/completions or responses\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
+const HELP_FOOTER: &str = "Golden path:\n  gunmetal setup           create a provider connection, sync models, create a Gunmetal key\n  gunmetal start           start the local Dashboard and API\n  gunmetal doctor          show what is missing and the next command\n  gunmetal chat            test a Gunmetal key against one provider-qualified model ID\n  gunmetal logs summary    inspect recent Local API request history\n  gunmetal status          confirm the service is live\n\nUse with apps:\n  Base URL  http://127.0.0.1:4684/v1\n  API Key   your Gunmetal key\n  Model     provider-qualified model ID  ex: codex/gpt-5.4\n  Mode      chat/completions or responses\n\nFirst test:\n  curl http://127.0.0.1:4684/v1/models -H 'Authorization: Bearer gm_...'";
 const DOCTOR_HELP_FOOTER: &str = "Use this when you are unsure what is missing.\nIt checks local service state plus saved providers, synced models, keys, and recent requests.";
 const SETUP_HELP_FOOTER: &str = "Golden path:\n  gunmetal setup\n\nWhat setup does:\n  1. create one provider connection\n  2. auth that provider\n  3. sync provider-qualified models\n  4. create one Gunmetal key\n  5. show one working Local API request snippet\n\nAdvanced flags stay optional.";
 const CHAT_HELP_FOOTER: &str = "Examples:\n  gunmetal chat\n  gunmetal chat --api-key gm_... --model codex/gpt-5.4\n  gunmetal chat --mode responses --prompt 'say ok'\n\nInteractive commands:\n  /clear   reset conversation history\n  /quit    exit the playground";
-const WEB_UI_PATH: &str = "/webui";
-const WEB_HELP_FOOTER: &str = "Golden path:\n  gunmetal web\n\nWhat it does:\n  1. starts Gunmetal if needed\n  2. opens the local Dashboard at http://127.0.0.1:4684/webui\n  3. keeps the Local API at http://127.0.0.1:4684/v1 on the same machine";
-const START_HELP_FOOTER: &str = "Use this when you want the local API running in the background.\nThen point apps at http://127.0.0.1:4684/v1 or open `gunmetal web`.";
-const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start` or open `gunmetal web`.";
+const START_HELP_FOOTER: &str = "Starts the local API and Dashboard, then opens it in your browser.\nPoint apps at http://127.0.0.1:4684/v1 or use `gunmetal status` to check the service.";
+const STATUS_HELP_FOOTER: &str = "Shows whether the managed local Gunmetal service is live.\nIf it is not running, start it with `gunmetal start`.";
 const PROVIDERS_LIST_HELP_FOOTER: &str = "Lists built-in provider support, auth mode, request modes, and priority.\nUse `gunmetal profiles list` for the providers you already saved locally.";
 const LOGS_LIST_HELP_FOOTER: &str = "Examples:\n  gunmetal logs list\n  gunmetal logs list --provider codex\n  gunmetal logs list --query timeout --status error\n  gunmetal logs list --model openai/gpt-5.4";
 
@@ -57,9 +55,7 @@ pub enum Command {
     Doctor(DoctorArgs),
     Setup(SetupArgs),
     Chat(ChatArgs),
-    #[command(about = "Open the local Dashboard. Starts Gunmetal if needed.")]
-    Web(WebArgs),
-    #[command(about = "Start the local Gunmetal API in the background.")]
+    #[command(about = "Start the local Dashboard and API, then open in browser.")]
     Start(StartArgs),
     #[command(about = "Run the local Gunmetal API in the foreground.")]
     Serve(ServeArgs),
@@ -151,21 +147,9 @@ pub struct StartArgs {
     pub host: IpAddr,
     #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
-}
-
-#[derive(Debug, clap::Args)]
-#[command(
-    about = "Open the local browser UI. Starts Gunmetal if needed.",
-    after_help = WEB_HELP_FOOTER
-)]
-pub struct WebArgs {
-    #[arg(long, default_value = DEFAULT_HOST, help = "Host for the local Gunmetal service.")]
-    pub host: IpAddr,
-    #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
-    pub port: u16,
     #[arg(
         long,
-        help = "Start the local browser UI without opening a browser window."
+        help = "Start the service without opening a browser window."
     )]
     pub no_open: bool,
 }
@@ -416,18 +400,10 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
         Command::Chat(args) => {
             chat(paths, &mut output, args).await?;
         }
-        Command::Web(args) => {
+        Command::Start(args) => {
             let status = ensure_daemon_running(paths, args.host, args.port).await?;
-            let app_url = format!("{}{}", status.url, WEB_UI_PATH);
-            writeln!(output, "Gunmetal browser UI")?;
-            if let Some(note) = &status.note {
-                writeln!(output, "{note}")?;
-            }
-            writeln!(output, "Open: {app_url}")?;
-            writeln!(output, "API: {}/v1", status.url)?;
-            if let Some(pid) = status.pid {
-                writeln!(output, "PID: {pid}")?;
-            }
+            write_service_report(&mut output, &status, ServiceVerb::Start)?;
+            let app_url = status.url.clone();
             if !args.no_open {
                 if let Err(error) = webbrowser::open(&app_url) {
                     writeln!(output, "Browser open failed: {error}")?;
@@ -435,10 +411,6 @@ pub async fn execute(command: Command, paths: &AppPaths, mut output: impl Write)
                     writeln!(output, "Opened in your default browser.")?;
                 }
             }
-        }
-        Command::Start(args) => {
-            let status = ensure_daemon_running(paths, args.host, args.port).await?;
-            write_service_report(&mut output, &status, ServiceVerb::Start)?;
         }
         Command::Serve(args) => {
             let address = SocketAddr::new(args.host, args.port);
@@ -2046,7 +2018,10 @@ fn write_service_report(
     if let Some(note) = &status.note {
         writeln!(output, "{note}")?;
     }
-    writeln!(output, "Base URL: {}/v1", status.url)?;
+    if status.running {
+        writeln!(output, "Dashboard: {}", status.url)?;
+    }
+    writeln!(output, "API: {}/v1", status.url)?;
     if let Some(pid) = status.pid {
         writeln!(output, "PID: {pid}")?;
     }
@@ -2054,7 +2029,7 @@ fn write_service_report(
         writeln!(output, "Health: {health}")?;
     }
     if !status.running {
-        writeln!(output, "Next: run `gunmetal start` or `gunmetal web`.")?;
+        writeln!(output, "Next: run `gunmetal start`.")?;
     }
     Ok(())
 }
@@ -2280,8 +2255,8 @@ mod tests {
         let cli = Cli::parse_from(["gunmetal", "doctor"]);
         assert!(matches!(cli.command.unwrap(), Command::Doctor(_)));
 
-        let cli = Cli::parse_from(["gunmetal", "web", "--no-open"]);
-        assert!(matches!(cli.command.unwrap(), Command::Web(_)));
+        let cli = Cli::parse_from(["gunmetal", "start", "--no-open"]);
+        assert!(matches!(cli.command.unwrap(), Command::Start(_)));
 
         let cli = Cli::parse_from(["gunmetal", "stop"]);
         assert!(matches!(cli.command.unwrap(), Command::Stop(_)));
@@ -2429,7 +2404,6 @@ mod tests {
         assert!(help.contains("gunmetal doctor"));
         assert!(help.contains("gunmetal chat"));
         assert!(help.contains("gunmetal logs summary"));
-        assert!(help.contains("gunmetal web"));
         assert!(help.contains("gunmetal start"));
         assert!(help.contains("gunmetal status"));
         assert!(help.contains("http://127.0.0.1:4684/v1"));
@@ -2483,18 +2457,11 @@ mod tests {
     #[test]
     fn service_and_logs_help_explain_public_paths() {
         let mut command = Cli::command();
-        let web = command.find_subcommand_mut("web").expect("web subcommand");
-        let web_help = web.render_help().to_string();
-        assert!(web_help.contains("Open the local Dashboard"));
-        assert!(web_help.contains("http://127.0.0.1:4684/webui"));
-
-        let mut command = Cli::command();
         let start = command
             .find_subcommand_mut("start")
             .expect("start subcommand");
         let start_help = start.render_help().to_string();
-        assert!(start_help.contains("Start the local Gunmetal API in the background."));
-        assert!(start_help.contains("gunmetal web"));
+        assert!(start_help.contains("Start the local Dashboard and API, then open in browser."));
         assert!(!start_help.contains("gunmetal tui"));
 
         let mut command = Cli::command();
@@ -2503,7 +2470,6 @@ mod tests {
             .expect("status subcommand");
         let status_help = status.render_help().to_string();
         assert!(status_help.contains("Check whether the local Gunmetal service is live."));
-        assert!(status_help.contains("gunmetal start"));
 
         let mut command = Cli::command();
         let logs = command
@@ -2595,7 +2561,7 @@ mod tests {
 
         let text = String::from_utf8(output).unwrap();
         assert!(text.contains("Gunmetal is not running."));
-        assert!(text.contains("Next: run `gunmetal start` or `gunmetal web`."));
+        assert!(text.contains("Next: run `gunmetal start`."));
         assert!(text.contains(&format!("http://127.0.0.1:{port}/v1")));
     }
 

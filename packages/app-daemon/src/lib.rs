@@ -38,9 +38,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-const BROWSER_APP_HTML: &str = include_str!("browser_app.html");
-const WEB_UI_PATH: &str = "/webui";
-
 #[derive(Clone)]
 pub struct DaemonState {
     pub paths: AppPaths,
@@ -136,7 +133,7 @@ impl RequestLogger {
 pub fn app(state: DaemonState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route(WEB_UI_PATH, get(browser_app))
+        .route("/", get(browser_app))
         .route("/webui/api/state", get(operator_state))
         .route("/webui/api/profiles", post(create_profile))
         .route("/webui/api/profiles/{id}/auth", post(auth_profile))
@@ -167,7 +164,7 @@ async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
 }
 
 async fn browser_app() -> Html<&'static str> {
-    Html(BROWSER_APP_HTML)
+    Html(include_str!("browser_app.html"))
 }
 
 async fn operator_state(State(state): State<DaemonState>) -> Response {
@@ -870,7 +867,7 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             version: state.version.clone(),
             home: state.paths.root.display().to_string(),
             api_base_url: "/v1".to_owned(),
-            web_url: WEB_UI_PATH.to_owned(),
+            web_url: "/".to_owned(),
         },
         counts: OperatorCountRow {
             profiles: profile_count,
@@ -2157,7 +2154,7 @@ mod tests {
         let response = app(fixture.state())
             .oneshot(
                 Request::builder()
-                    .uri("/webui")
+                    .uri("/")
                     .body(axum::body::Body::empty())
                     .unwrap(),
             )
@@ -2240,7 +2237,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_json(response).await;
         assert_eq!(body["counts"]["profiles"], 1);
-        assert_eq!(body["service"]["web_url"], "/webui");
+        assert_eq!(body["service"]["web_url"], "/");
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
         assert_eq!(body["counts"]["logs"], 2);
