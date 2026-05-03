@@ -1212,7 +1212,19 @@ struct ChatTurnResult {
 }
 
 async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Result<()> {
-    let interactive = io::stdin().is_terminal() && args.prompt.is_none();
+    let stdin = io::stdin();
+    let mut reader = stdin.lock();
+    let interactive = stdin.is_terminal() && args.prompt.is_none();
+    chat_with_reader(paths, output, args, &mut reader, interactive).await
+}
+
+async fn chat_with_reader(
+    paths: &AppPaths,
+    output: &mut impl Write,
+    args: ChatArgs,
+    reader: &mut impl std::io::BufRead,
+    interactive: bool,
+) -> Result<()> {
     let status = ensure_default_daemon_running(paths).await?;
     let storage = paths.storage_handle()?;
     let models = storage.list_models()?;
@@ -1222,10 +1234,9 @@ async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Resu
         );
     }
 
-    let api_key = resolve_chat_api_key(output, interactive, args.api_key)?;
-    let model = resolve_chat_model(output, interactive, args.model, &models)?;
+    let api_key = resolve_chat_api_key_with_reader(output, interactive, args.api_key, reader)?;
+    let model = resolve_chat_model_with_reader(output, interactive, args.model, &models, reader)?;
     let client = reqwest::Client::new();
-    let mut history = Vec::<ChatMessage>::new();
 
     writeln!(output, "Gunmetal chat")?;
     writeln!(output, "Base URL: {}/v1", status.url)?;
@@ -1240,10 +1251,10 @@ async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Resu
     writeln!(output, "Model: {model}")?;
 
     if let Some(prompt) = args.prompt {
-        history.push(ChatMessage {
+        let mut history = vec![ChatMessage {
             role: ChatRole::User,
             content: prompt,
-        });
+        }];
         let result = run_chat_turn(
             &client,
             &status.url,
@@ -1259,13 +1270,36 @@ async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Resu
         return Ok(());
     }
 
+    chat_repl_loop(
+        &client,
+        &status.url,
+        &api_key,
+        &model,
+        args.mode,
+        output,
+        reader,
+    )
+    .await
+}
+
+async fn chat_repl_loop(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+    mode: ChatMode,
+    output: &mut impl Write,
+    reader: &mut impl std::io::BufRead,
+) -> Result<()> {
+    let mut history = Vec::<ChatMessage>::new();
+
     writeln!(
         output,
         "Commands: /clear resets the conversation, /quit exits."
     )?;
 
     loop {
-        let prompt = prompt_line_allow_empty(output, "you", None)?;
+        let prompt = prompt_line_allow_empty_inner(output, "you", None, reader)?;
         let trimmed = prompt.trim();
         if trimmed.is_empty() {
             continue;
@@ -1284,11 +1318,11 @@ async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Resu
             content: prompt,
         });
         let result = run_chat_turn(
-            &client,
-            &status.url,
-            &api_key,
-            &model,
-            args.mode,
+            client,
+            base_url,
+            api_key,
+            model,
+            mode,
             &history,
             output,
         )
@@ -1304,28 +1338,53 @@ async fn chat(paths: &AppPaths, output: &mut impl Write, args: ChatArgs) -> Resu
     Ok(())
 }
 
+#[allow(dead_code)]
 fn resolve_chat_api_key(
     output: &mut impl Write,
     interactive: bool,
     value: Option<String>,
+) -> Result<String> {
+    let stdin = io::stdin();
+    let mut reader = stdin.lock();
+    resolve_chat_api_key_with_reader(output, interactive, value, &mut reader)
+}
+
+fn resolve_chat_api_key_with_reader(
+    output: &mut impl Write,
+    interactive: bool,
+    value: Option<String>,
+    reader: &mut impl std::io::BufRead,
 ) -> Result<String> {
     match value
         .or_else(|| std::env::var("GUNMETAL_API_KEY").ok())
         .filter(|value| !value.trim().is_empty())
     {
         Some(value) => Ok(value),
-        None if interactive => prompt_line(output, "Gunmetal key", None),
+        None if interactive => prompt_line_inner(output, "Gunmetal key", None, reader),
         None => anyhow::bail!(
             "missing Gunmetal key. pass `--api-key`, set `GUNMETAL_API_KEY`, or run interactively."
         ),
     }
 }
 
+#[allow(dead_code)]
 fn resolve_chat_model(
     output: &mut impl Write,
     interactive: bool,
     value: Option<String>,
     models: &[ModelDescriptor],
+) -> Result<String> {
+    let stdin = io::stdin();
+    let mut reader = stdin.lock();
+    resolve_chat_model_with_reader(output, interactive, value, models, &mut reader)
+}
+
+fn resolve_chat_model_with_reader(
+    output: &mut impl Write,
+    interactive: bool,
+    value: Option<String>,
+    models: &[ModelDescriptor],
+    reader: &mut impl std::io::BufRead,
 ) -> Result<String> {
     if let Some(value) = value.filter(|value| !value.trim().is_empty()) {
         return Ok(value);
@@ -1340,7 +1399,7 @@ fn resolve_chat_model(
         for model in models.iter().take(12) {
             writeln!(output, "- {}", model.id)?;
         }
-        return prompt_line(output, "Model", Some(models[0].id.clone()));
+        return prompt_line_inner(output, "Model", Some(models[0].id.clone()), reader);
     }
 
     anyhow::bail!(
@@ -1935,8 +1994,19 @@ fn prompt_optional(
 }
 
 fn prompt_line(output: &mut impl Write, label: &str, default: Option<String>) -> Result<String> {
+    let stdin = io::stdin();
+    let mut reader = stdin.lock();
+    prompt_line_inner(output, label, default, &mut reader)
+}
+
+fn prompt_line_inner(
+    output: &mut impl Write,
+    label: &str,
+    default: Option<String>,
+    reader: &mut impl std::io::BufRead,
+) -> Result<String> {
     loop {
-        let value = prompt_line_allow_empty(output, label, default.clone())?;
+        let value = prompt_line_allow_empty_inner(output, label, default.clone(), reader)?;
         if !value.trim().is_empty() {
             return Ok(value);
         }
@@ -1948,13 +2018,24 @@ fn prompt_line_allow_empty(
     label: &str,
     default: Option<String>,
 ) -> Result<String> {
+    let stdin = io::stdin();
+    let mut reader = stdin.lock();
+    prompt_line_allow_empty_inner(output, label, default, &mut reader)
+}
+
+fn prompt_line_allow_empty_inner(
+    output: &mut impl Write,
+    label: &str,
+    default: Option<String>,
+    reader: &mut impl std::io::BufRead,
+) -> Result<String> {
     match &default {
         Some(default) => write!(output, "{} [{}]: ", label, default)?,
         None => write!(output, "{}: ", label)?,
     }
     output.flush()?;
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer)?;
+    reader.read_line(&mut buffer)?;
     let trimmed = buffer.trim().to_owned();
     if trimmed.is_empty() {
         Ok(default.unwrap_or_default())
@@ -1997,8 +2078,12 @@ mod tests {
     };
 
     use async_trait::async_trait;
+    use chrono::Utc;
     use clap::{CommandFactory, Parser};
-    use gunmetal_core::{ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderKind, ProviderProfile};
+    use gunmetal_core::{
+        ChatMessage, ChatRole, GunmetalKey, KeyState, ProviderAuthState, ProviderAuthStatus,
+        ProviderContext, ProviderKind, ProviderProfile, RequestLogEntry, TokenUsage,
+    };
     use gunmetal_sdk::{
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
         ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
@@ -2006,6 +2091,12 @@ mod tests {
     use gunmetal_storage::AppPaths;
     use gunmetal_test_utils::provider_definition_fixture;
     use tempfile::TempDir;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use uuid::Uuid;
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
+    };
 
     use super::{
         AuthCommand, ChatArgs, ChatMode, Cli, Command, DoctorArgs, KeyCommand, LogCommand,
@@ -2705,5 +2796,449 @@ mod tests {
             Some(std::process::id()),
             "pid_from_port should discover the current process listening on {port}"
         );
+    }
+
+    #[tokio::test]
+    async fn chat_repl_loop_quit_and_clear() {
+        let mut output = Vec::new();
+        let mut reader = std::io::Cursor::new("/clear\n/quit\n");
+        super::chat_repl_loop(
+            &reqwest::Client::new(),
+            "http://localhost:99999",
+            "key",
+            "model",
+            super::ChatMode::Chat,
+            &mut output,
+            &mut reader,
+        )
+        .await
+        .unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("Commands:"));
+        assert!(text.contains("Conversation cleared."));
+    }
+
+    #[tokio::test]
+    async fn run_chat_turn_chat_mode() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_string(
+                        "data: {\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\ndata: [DONE]\n\n",
+                    ),
+            )
+            .mount(&server)
+            .await;
+
+        let mut output = Vec::new();
+        let messages = vec![ChatMessage {
+            role: ChatRole::User,
+            content: "say hi".to_owned(),
+        }];
+        let result = super::run_chat_turn(
+            &reqwest::Client::new(),
+            &server.uri(),
+            "gm_test",
+            "openai/gpt-5.4",
+            super::ChatMode::Chat,
+            &messages,
+            &mut output,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.content, "hello");
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("assistant> hello"));
+    }
+
+    #[tokio::test]
+    async fn run_chat_turn_responses_mode() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/responses"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_string(
+                        "event: response.output_text.delta\ndata: {\"delta\":\"hello\"}\n\n\
+                         event: response.completed\ndata: {\"response\":{\"output_text\":\"hello world\",\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"total_tokens\":3}}}\n\n",
+                    ),
+            )
+            .mount(&server)
+            .await;
+
+        let mut output = Vec::new();
+        let messages = vec![ChatMessage {
+            role: ChatRole::User,
+            content: "say hi".to_owned(),
+        }];
+        let result = super::run_chat_turn(
+            &reqwest::Client::new(),
+            &server.uri(),
+            "gm_test",
+            "openai/gpt-5.4",
+            super::ChatMode::Responses,
+            &messages,
+            &mut output,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.content, "hello world");
+        assert!(result.usage.is_some());
+        let usage = result.usage.unwrap();
+        assert_eq!(usage.input_tokens, Some(1));
+        assert_eq!(usage.output_tokens, Some(2));
+        assert_eq!(usage.total_tokens, Some(3));
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("assistant> hello"));
+    }
+
+    #[test]
+    fn log_matches_filters_all_variants() {
+        let profile_id = Uuid::new_v4();
+        let key_id = Uuid::new_v4();
+        let log = RequestLogEntry {
+            id: Uuid::new_v4(),
+            started_at: Utc::now(),
+            provider: ProviderKind::Codex,
+            profile_id: Some(profile_id),
+            key_id: Some(key_id),
+            model: "codex/gpt-5.4".to_owned(),
+            endpoint: "/v1/chat/completions".to_owned(),
+            status_code: Some(200),
+            duration_ms: 123,
+            usage: TokenUsage {
+                input_tokens: Some(10),
+                output_tokens: Some(20),
+                total_tokens: Some(30),
+            },
+            error_message: None,
+        };
+
+        let profiles = vec![ProviderProfile {
+            id: profile_id,
+            provider: ProviderKind::Codex,
+            name: "my-codex".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }];
+
+        let keys = vec![GunmetalKey {
+            id: key_id,
+            name: "default-key".to_owned(),
+            prefix: "gm_abcd".to_owned(),
+            scopes: vec![],
+            allowed_providers: vec![],
+            state: KeyState::Active,
+            expires_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_used_at: None,
+        }];
+
+        assert!(
+            super::log_matches_filters(&log, Some("codex"), None, None, None, &profiles, &keys)
+        );
+        assert!(
+            !super::log_matches_filters(&log, Some("openai"), None, None, None, &profiles, &keys)
+        );
+        assert!(
+            super::log_matches_filters(&log, None, Some("gpt-5.4"), None, None, &profiles, &keys)
+        );
+        assert!(
+            !super::log_matches_filters(&log, None, Some("gpt-4"), None, None, &profiles, &keys)
+        );
+        assert!(super::log_matches_filters(
+            &log,
+            None,
+            None,
+            Some("my-codex"),
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(super::log_matches_filters(
+            &log,
+            None,
+            None,
+            Some("default-key"),
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(super::log_matches_filters(
+            &log,
+            None,
+            None,
+            Some("chat/completions"),
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(!super::log_matches_filters(
+            &log,
+            None,
+            None,
+            Some("timeout"),
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(super::log_matches_filters(
+            &log,
+            None,
+            None,
+            None,
+            Some(super::LogStatus::Success),
+            &profiles,
+            &keys
+        ));
+        assert!(!super::log_matches_filters(
+            &log,
+            None,
+            None,
+            None,
+            Some(super::LogStatus::Error),
+            &profiles,
+            &keys
+        ));
+
+        let error_log = RequestLogEntry {
+            error_message: Some("timeout".to_owned()),
+            status_code: Some(500),
+            ..log.clone()
+        };
+        assert!(!super::log_matches_filters(
+            &error_log,
+            None,
+            None,
+            None,
+            Some(super::LogStatus::Success),
+            &profiles,
+            &keys
+        ));
+        assert!(super::log_matches_filters(
+            &error_log,
+            None,
+            None,
+            None,
+            Some(super::LogStatus::Error),
+            &profiles,
+            &keys
+        ));
+    }
+
+    #[test]
+    fn write_log_summary_formats_expected_output() {
+        let logs = vec![
+            RequestLogEntry {
+                id: Uuid::new_v4(),
+                started_at: Utc::now(),
+                provider: ProviderKind::Codex,
+                profile_id: None,
+                key_id: None,
+                model: "codex/gpt-5.4".to_owned(),
+                endpoint: "/v1/chat/completions".to_owned(),
+                status_code: Some(200),
+                duration_ms: 100,
+                usage: TokenUsage {
+                    input_tokens: Some(5),
+                    output_tokens: Some(10),
+                    total_tokens: Some(15),
+                },
+                error_message: None,
+            },
+            RequestLogEntry {
+                id: Uuid::new_v4(),
+                started_at: Utc::now(),
+                provider: ProviderKind::OpenAi,
+                profile_id: None,
+                key_id: None,
+                model: "openai/gpt-5.4".to_owned(),
+                endpoint: "/v1/responses".to_owned(),
+                status_code: Some(500),
+                duration_ms: 200,
+                usage: TokenUsage {
+                    input_tokens: Some(0),
+                    output_tokens: Some(0),
+                    total_tokens: Some(0),
+                },
+                error_message: Some("boom".to_owned()),
+            },
+        ];
+
+        let mut output = Vec::new();
+        super::write_log_summary(&mut output, &logs).unwrap();
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("recent=2"));
+        assert!(text.contains("success=1"));
+        assert!(text.contains("errors=1"));
+        assert!(text.contains("providers:"));
+        assert!(text.contains("models:"));
+        assert!(text.contains("codex"));
+        assert!(text.contains("openai"));
+    }
+
+    #[tokio::test]
+    async fn start_daemon_process_argument_construction() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let port = 46840u16;
+
+        let handle = {
+            let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
+                .await
+                .unwrap();
+            tokio::spawn(async move {
+                loop {
+                    let (mut socket, _) = listener.accept().await.unwrap();
+                    tokio::spawn(async move {
+                        let mut buf = [0u8; 1024];
+                        let _ = socket.read(&mut buf).await;
+                        let _ = socket
+                            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                            .await;
+                    });
+                }
+            })
+        };
+
+        let manager =
+            gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
+        let status = manager
+            .start("127.0.0.1".parse().unwrap(), port)
+            .await
+            .unwrap();
+        assert!(status.running);
+        assert!(
+            status.note.as_deref().unwrap_or("").contains("already running")
+        );
+
+        handle.abort();
+    }
+
+    #[tokio::test]
+    async fn stop_daemon_success_and_failure_paths() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let port = 46841u16;
+
+        let manager =
+            gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
+
+        let status = manager
+            .stop("127.0.0.1".parse().unwrap(), port)
+            .await
+            .unwrap();
+        assert!(!status.running);
+        assert_eq!(status.state, "stopped");
+        assert!(status.note.as_deref().unwrap_or("").contains("not running"));
+
+        std::fs::remove_file(paths.daemon_pid_file()).ok();
+        std::fs::create_dir(paths.daemon_pid_file()).unwrap();
+        let result = manager.stop("127.0.0.1".parse().unwrap(), port).await;
+        assert!(result.is_err(), "stop should fail when pid file is a directory");
+    }
+
+    #[tokio::test]
+    async fn key_disable_revoke_delete_flows() {
+        let temp = TempDir::new().unwrap();
+        let paths =
+            gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::Create {
+                    name: "test-key".to_owned(),
+                    scopes: vec![],
+                    providers: vec![],
+                },
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        assert!(String::from_utf8(output.clone()).unwrap().contains("created key test-key"));
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::List,
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("test-key"));
+        assert!(text.contains("active"));
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::Disable {
+                    key: "test-key".to_owned(),
+                },
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        assert!(String::from_utf8(output).unwrap().contains("disabled key test-key"));
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::Revoke {
+                    key: "test-key".to_owned(),
+                },
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        assert!(String::from_utf8(output).unwrap().contains("revoked key test-key"));
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::Delete {
+                    key: "test-key".to_owned(),
+                },
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        assert!(String::from_utf8(output).unwrap().contains("deleted key test-key"));
+
+        let mut output = Vec::new();
+        execute(
+            Command::Keys {
+                command: KeyCommand::List,
+            },
+            &paths,
+            &mut output,
+        )
+        .await
+        .unwrap();
+        assert!(!String::from_utf8(output).unwrap().contains("test-key"));
     }
 }
