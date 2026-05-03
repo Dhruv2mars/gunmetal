@@ -22,85 +22,6 @@ use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
-#[cfg(test)]
-fn provider_definition_fixture(
-    kind: ProviderKind,
-    class: gunmetal_sdk::ProviderClass,
-    priority: usize,
-) -> gunmetal_sdk::ProviderDefinition {
-    let (label, auth_method, supports_base_url, helper_title, helper_body, base_url_placeholder) =
-        match kind {
-            ProviderKind::Codex => (
-                "codex",
-                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::Copilot => (
-                "copilot",
-                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::OpenRouter => (
-                "openrouter",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Gateway provider",
-                "Save the upstream API key here.",
-                "https://openrouter.ai/api/v1",
-            ),
-            ProviderKind::Zen => (
-                "zen",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Gateway provider",
-                "Save the upstream API key here.",
-                "https://opencode.ai/zen/v1",
-            ),
-            ProviderKind::OpenAi => (
-                "openai",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "https://api.openai.com/v1",
-            ),
-            ProviderKind::Custom(_) | ProviderKind::Azure | ProviderKind::Nvidia => (
-                "custom",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "optional override",
-            ),
-        };
-    gunmetal_sdk::ProviderDefinition {
-        kind,
-        label,
-        class,
-        priority,
-        capabilities: gunmetal_sdk::ProviderCapabilities {
-            auth_method,
-            supports_base_url,
-            supports_model_sync: true,
-            supports_chat_completions: true,
-            supports_responses_api: true,
-            supports_streaming: true,
-        },
-        ux: gunmetal_sdk::ProviderUxHints {
-            helper_title,
-            helper_body,
-            suggested_name: label,
-            base_url_placeholder,
-        },
-    }
-}
-
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 #[cfg(windows)]
@@ -2377,11 +2298,12 @@ mod tests {
         ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
     use gunmetal_storage::AppPaths;
+    use gunmetal_test_utils::provider_definition_fixture;
     use tempfile::TempDir;
 
     use super::{
         AuthCommand, ChatArgs, ChatMode, Cli, Command, DoctorArgs, KeyCommand, LogCommand,
-        ModelCommand, ProfileCommand, SetupArgs, StatusArgs, execute, provider_definition_fixture,
+        ModelCommand, ProfileCommand, SetupArgs, StatusArgs, execute,
     };
 
     #[test]
