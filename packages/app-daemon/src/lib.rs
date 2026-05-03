@@ -2109,21 +2109,21 @@ mod tests {
         http::{Request, StatusCode, header},
         response::Response,
     };
+    use futures_util::stream::StreamExt;
     use gunmetal_core::{
         ChatCompletionResult, ChatMessage, ChatRole, KeyScope, KeyState, NewGunmetalKey,
         NewProviderProfile, ProviderAuthState, ProviderAuthStatus, ProviderKind,
         ProviderLoginSession, RequestMode, TokenUsage,
     };
-    use futures_util::stream::StreamExt;
     use gunmetal_sdk::{
-        ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderChatResult, ProviderClass,
-        ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
-        ProviderRawSseResult, ProviderRegistry,
+        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
+        ProviderHub, ProviderLoginResult, ProviderModelSyncResult, ProviderRawSseResult,
+        ProviderRegistry,
     };
     use gunmetal_storage::{AppPaths, StorageHandle};
+    use gunmetal_test_utils::provider_definition_fixture;
     use serde_json::{Value, json};
     use tempfile::TempDir;
-    use gunmetal_test_utils::provider_definition_fixture;
     use tower::util::ServiceExt;
     use uuid::Uuid;
 
@@ -3674,9 +3674,7 @@ mod tests {
                     .method("POST")
                     .uri(format!("/webui/api/keys/{}/state", key.id))
                     .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(
-                        json!({ "state": "revoked" }).to_string(),
-                    ))
+                    .body(Body::from(json!({ "state": "revoked" }).to_string()))
                     .unwrap(),
             )
             .await
@@ -3734,7 +3732,10 @@ mod tests {
             updated_at: chrono::Utc::now(),
         };
         cache.insert_profile(profile.clone());
-        assert_eq!(cache.profile(profile.id).map(|p| p.name), Some("p".to_owned()));
+        assert_eq!(
+            cache.profile(profile.id).map(|p| p.name),
+            Some("p".to_owned())
+        );
 
         cache.clear();
         assert!(cache.model("m1").is_none());

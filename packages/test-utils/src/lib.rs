@@ -2,14 +2,13 @@ use anyhow::Result;
 use async_trait::async_trait;
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
-    ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderKind, ProviderLoginSession,
-    ProviderProfile, TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderKind, ProviderProfile,
+    TokenUsage,
 };
 use gunmetal_sdk::{
     ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderCapabilities,
-    ProviderChatResult, ProviderClass, ProviderDefinition, ProviderEventStream,
-    ProviderLoginResult, ProviderModelSyncResult, ProviderRawSseResult, ProviderStreamResult,
-    ProviderUxHints,
+    ProviderChatResult, ProviderClass, ProviderDefinition, ProviderLoginResult,
+    ProviderModelSyncResult, ProviderUxHints,
 };
 use serde_json::{Value, json};
 

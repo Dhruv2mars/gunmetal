@@ -9,6 +9,8 @@ use std::{
 
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
@@ -182,9 +184,7 @@ impl DaemonManager {
         let status = self.status(host, port).await?;
         Ok(ServiceStatus {
             state: "stopping".to_owned(),
-            note: Some(
-                "Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned(),
-            ),
+            note: Some("Gunmetal is still shutting down. Run `gunmetal status` again.".to_owned()),
             ..status
         })
     }
@@ -203,12 +203,19 @@ impl DaemonManager {
     pub fn diagnose_start_failure(&self, port: u16) -> String {
         let mut lines = vec!["Gunmetal failed to start.".to_owned()];
 
-        if let Ok(stderr) = fs::read_to_string(&self.stderr_log) {
-            if !stderr.is_empty() {
-                lines.push("Recent daemon stderr:".to_owned());
-                for line in stderr.lines().rev().take(6).collect::<Vec<_>>().into_iter().rev() {
-                    lines.push(format!("  {line}"));
-                }
+        if let Ok(stderr) = fs::read_to_string(&self.stderr_log)
+            && !stderr.is_empty()
+        {
+            lines.push("Recent daemon stderr:".to_owned());
+            for line in stderr
+                .lines()
+                .rev()
+                .take(6)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+            {
+                lines.push(format!("  {line}"));
             }
         }
 
@@ -268,7 +275,12 @@ impl DaemonManager {
         Ok(())
     }
 
-    async fn wait_for_health(&self, host: IpAddr, port: u16, attempts: usize) -> Result<ServiceStatus> {
+    async fn wait_for_health(
+        &self,
+        host: IpAddr,
+        port: u16,
+        attempts: usize,
+    ) -> Result<ServiceStatus> {
         for _ in 0..attempts {
             let status = self.status(host, port).await?;
             if status.running {

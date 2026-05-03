@@ -20,8 +20,6 @@ use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
@@ -147,10 +145,7 @@ pub struct StartArgs {
     pub host: IpAddr,
     #[arg(long, default_value_t = DEFAULT_PORT, help = "Port for the local Gunmetal service.")]
     pub port: u16,
-    #[arg(
-        long,
-        help = "Start the service without opening a browser window."
-    )]
+    #[arg(long, help = "Start the service without opening a browser window.")]
     pub no_open: bool,
 }
 
@@ -1306,7 +1301,7 @@ async fn chat_with_reader(
     writeln!(output, "Model: {model}")?;
 
     if let Some(prompt) = args.prompt {
-        let mut history = vec![ChatMessage {
+        let history = vec![ChatMessage {
             role: ChatRole::User,
             content: prompt,
         }];
@@ -1372,16 +1367,8 @@ async fn chat_repl_loop(
             role: ChatRole::User,
             content: prompt,
         });
-        let result = run_chat_turn(
-            client,
-            base_url,
-            api_key,
-            model,
-            mode,
-            &history,
-            output,
-        )
-        .await?;
+        let result =
+            run_chat_turn(client, base_url, api_key, model, mode, &history, output).await?;
         writeln!(output)?;
         write_chat_summary(output, &result)?;
         history.push(ChatMessage {
@@ -2146,7 +2133,6 @@ mod tests {
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
         ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
-    use gunmetal_storage::AppPaths;
     use gunmetal_test_utils::provider_definition_fixture;
     use tempfile::TempDir;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -2996,18 +2982,42 @@ mod tests {
             last_used_at: None,
         }];
 
-        assert!(
-            super::log_matches_filters(&log, Some("codex"), None, None, None, &profiles, &keys)
-        );
-        assert!(
-            !super::log_matches_filters(&log, Some("openai"), None, None, None, &profiles, &keys)
-        );
-        assert!(
-            super::log_matches_filters(&log, None, Some("gpt-5.4"), None, None, &profiles, &keys)
-        );
-        assert!(
-            !super::log_matches_filters(&log, None, Some("gpt-4"), None, None, &profiles, &keys)
-        );
+        assert!(super::log_matches_filters(
+            &log,
+            Some("codex"),
+            None,
+            None,
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(!super::log_matches_filters(
+            &log,
+            Some("openai"),
+            None,
+            None,
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(super::log_matches_filters(
+            &log,
+            None,
+            Some("gpt-5.4"),
+            None,
+            None,
+            &profiles,
+            &keys
+        ));
+        assert!(!super::log_matches_filters(
+            &log,
+            None,
+            Some("gpt-4"),
+            None,
+            None,
+            &profiles,
+            &keys
+        ));
         assert!(super::log_matches_filters(
             &log,
             None,
@@ -3164,15 +3174,18 @@ mod tests {
             })
         };
 
-        let manager =
-            gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
+        let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
         let status = manager
             .start("127.0.0.1".parse().unwrap(), port)
             .await
             .unwrap();
         assert!(status.running);
         assert!(
-            status.note.as_deref().unwrap_or("").contains("already running")
+            status
+                .note
+                .as_deref()
+                .unwrap_or("")
+                .contains("already running")
         );
 
         handle.abort();
@@ -3185,8 +3198,7 @@ mod tests {
             gunmetal_storage::AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let port = 46841u16;
 
-        let manager =
-            gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
+        let manager = gunmetal_daemon::daemon_manager::DaemonManager::new(&paths.root).unwrap();
 
         let status = manager
             .stop("127.0.0.1".parse().unwrap(), port)
@@ -3199,7 +3211,10 @@ mod tests {
         std::fs::remove_file(paths.daemon_pid_file()).ok();
         std::fs::create_dir(paths.daemon_pid_file()).unwrap();
         let result = manager.stop("127.0.0.1".parse().unwrap(), port).await;
-        assert!(result.is_err(), "stop should fail when pid file is a directory");
+        assert!(
+            result.is_err(),
+            "stop should fail when pid file is a directory"
+        );
     }
 
     #[tokio::test]
@@ -3222,7 +3237,11 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(String::from_utf8(output.clone()).unwrap().contains("created key test-key"));
+        assert!(
+            String::from_utf8(output.clone())
+                .unwrap()
+                .contains("created key test-key")
+        );
 
         let mut output = Vec::new();
         execute(
@@ -3250,7 +3269,11 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(String::from_utf8(output).unwrap().contains("disabled key test-key"));
+        assert!(
+            String::from_utf8(output)
+                .unwrap()
+                .contains("disabled key test-key")
+        );
 
         let mut output = Vec::new();
         execute(
@@ -3264,7 +3287,11 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(String::from_utf8(output).unwrap().contains("revoked key test-key"));
+        assert!(
+            String::from_utf8(output)
+                .unwrap()
+                .contains("revoked key test-key")
+        );
 
         let mut output = Vec::new();
         execute(
@@ -3278,7 +3305,11 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(String::from_utf8(output).unwrap().contains("deleted key test-key"));
+        assert!(
+            String::from_utf8(output)
+                .unwrap()
+                .contains("deleted key test-key")
+        );
 
         let mut output = Vec::new();
         execute(

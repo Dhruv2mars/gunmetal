@@ -687,7 +687,9 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, duplex};
 
     use super::{CodexClient, render_prompt};
-    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole, ProviderAuthState, RequestOptions};
+    use gunmetal_core::{
+        ChatCompletionRequest, ChatMessage, ChatRole, ProviderAuthState, RequestOptions,
+    };
 
     #[test]
     fn prompt_renderer_keeps_role_order() {
@@ -852,23 +854,20 @@ mod tests {
                 let request: Value = serde_json::from_str(&line).unwrap();
                 let id = request.get("id").and_then(Value::as_u64);
                 let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-                match method {
-                    "account/login/start" => {
-                        server_writer
-                            .write_all(
-                                format!(
-                                    "{}\n",
-                                    json!({
-                                        "id": id,
-                                        "result": { "loginId": "login-1", "authUrl": "https://chatgpt.com/auth" }
-                                    })
-                                )
-                                .as_bytes(),
+                if method == "account/login/start" {
+                    server_writer
+                        .write_all(
+                            format!(
+                                "{}\n",
+                                json!({
+                                    "id": id,
+                                    "result": { "loginId": "login-1", "authUrl": "https://chatgpt.com/auth" }
+                                })
                             )
-                            .await
-                            .unwrap();
-                    }
-                    _ => {}
+                            .as_bytes(),
+                        )
+                        .await
+                        .unwrap();
                 }
             }
         });
@@ -898,16 +897,11 @@ mod tests {
                 let request: Value = serde_json::from_str(&line).unwrap();
                 let id = request.get("id").and_then(Value::as_u64);
                 let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-                match method {
-                    "account/logout" => {
-                        server_writer
-                            .write_all(
-                                format!("{}\n", json!({ "id": id, "result": {} })).as_bytes(),
-                            )
-                            .await
-                            .unwrap();
-                    }
-                    _ => {}
+                if method == "account/logout" {
+                    server_writer
+                        .write_all(format!("{}\n", json!({ "id": id, "result": {} })).as_bytes())
+                        .await
+                        .unwrap();
                 }
             }
         });
@@ -934,23 +928,20 @@ mod tests {
                 let request: Value = serde_json::from_str(&line).unwrap();
                 let id = request.get("id").and_then(Value::as_u64);
                 let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-                match method {
-                    "account/read" => {
-                        server_writer
-                            .write_all(
-                                format!(
-                                    "{}\n",
-                                    json!({
-                                        "id": id,
-                                        "result": { "account": { "email": "user@example.com", "planType": "plus" } }
-                                    })
-                                )
-                                .as_bytes(),
+                if method == "account/read" {
+                    server_writer
+                        .write_all(
+                            format!(
+                                "{}\n",
+                                json!({
+                                    "id": id,
+                                    "result": { "account": { "email": "user@example.com", "planType": "plus" } }
+                                })
                             )
-                            .await
-                            .unwrap();
-                    }
-                    _ => {}
+                            .as_bytes(),
+                        )
+                        .await
+                        .unwrap();
                 }
             }
         });
@@ -979,23 +970,20 @@ mod tests {
                 let request: Value = serde_json::from_str(&line).unwrap();
                 let id = request.get("id").and_then(Value::as_u64);
                 let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-                match method {
-                    "account/read" => {
-                        server_writer
-                            .write_all(
-                                format!(
-                                    "{}\n",
-                                    json!({
-                                        "id": id,
-                                        "result": { "account": null }
-                                    })
-                                )
-                                .as_bytes(),
+                if method == "account/read" {
+                    server_writer
+                        .write_all(
+                            format!(
+                                "{}\n",
+                                json!({
+                                    "id": id,
+                                    "result": { "account": null }
+                                })
                             )
-                            .await
-                            .unwrap();
-                    }
-                    _ => {}
+                            .as_bytes(),
+                        )
+                        .await
+                        .unwrap();
                 }
             }
         });

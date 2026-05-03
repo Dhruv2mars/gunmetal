@@ -180,7 +180,9 @@ pub trait ProviderAdapter: Send + Sync {
         context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderRawSseResult> {
-        let result = self.stream_chat_completion(profile, context, request).await?;
+        let result = self
+            .stream_chat_completion(profile, context, request)
+            .await?;
         Ok(ProviderRawSseResult {
             credentials: result.credentials,
             stream: synthetic_chat_sse_stream(request.model.clone(), result.stream),

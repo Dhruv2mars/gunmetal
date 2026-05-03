@@ -358,7 +358,10 @@ impl Storage for InMemoryStorage {
 
         self.key_secrets.lock().unwrap().insert(id, secret.clone());
 
-        Ok(CreatedGunmetalKey { record: key, secret })
+        Ok(CreatedGunmetalKey {
+            record: key,
+            secret,
+        })
     }
 
     fn list_keys(&self) -> Result<Vec<GunmetalKey>> {
@@ -366,7 +369,13 @@ impl Storage for InMemoryStorage {
     }
 
     fn get_key(&self, id: Uuid) -> Result<Option<GunmetalKey>> {
-        Ok(self.keys.lock().unwrap().iter().find(|k| k.id == id).cloned())
+        Ok(self
+            .keys
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|k| k.id == id)
+            .cloned())
     }
 
     fn authenticate_key(&self, secret: &str) -> Result<Option<GunmetalKey>> {
@@ -375,14 +384,14 @@ impl Storage for InMemoryStorage {
         let secrets = self.key_secrets.lock().unwrap();
 
         for (id, stored_secret) in secrets.iter() {
-            if Self::hash_secret(stored_secret) == hash {
-                if let Some(key) = keys.iter().find(|k| k.id == *id) {
-                    let now = Utc::now();
-                    if !key.is_usable_at(now) {
-                        return Ok(None);
-                    }
-                    return Ok(Some(key.clone()));
+            if Self::hash_secret(stored_secret) == hash
+                && let Some(key) = keys.iter().find(|k| k.id == *id)
+            {
+                let now = Utc::now();
+                if !key.is_usable_at(now) {
+                    return Ok(None);
                 }
+                return Ok(Some(key.clone()));
             }
         }
         Ok(None)
@@ -467,7 +476,13 @@ impl Storage for InMemoryStorage {
     }
 
     fn get_profile(&self, id: Uuid) -> Result<Option<ProviderProfile>> {
-        Ok(self.profiles.lock().unwrap().iter().find(|p| p.id == id).cloned())
+        Ok(self
+            .profiles
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|p| p.id == id)
+            .cloned())
     }
 
     fn update_profile_credentials(
@@ -506,7 +521,13 @@ impl Storage for InMemoryStorage {
     }
 
     fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>> {
-        Ok(self.models.lock().unwrap().iter().find(|m| m.id == id).cloned())
+        Ok(self
+            .models
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|m| m.id == id)
+            .cloned())
     }
 
     fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry> {
