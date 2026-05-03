@@ -596,4 +596,59 @@ mod tests {
             "https://openrouter.ai/api/v1"
         );
     }
+
+    #[tokio::test]
+    async fn codex_cached_client_reuses_existing_client() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = AppPaths::from_root(temp.path().to_path_buf()).unwrap();
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Codex,
+            name: "codex".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        let adapter = CodexAdapter::default();
+        let mock_client = Arc::new(Mutex::new(CodexClient::mock("test")));
+        {
+            let mut clients = adapter.clients.lock().await;
+            clients.insert(profile.id, mock_client.clone());
+        }
+
+        let cached = adapter.cached_client(&profile, &paths).await.unwrap();
+        assert!(Arc::ptr_eq(&cached, &mock_client));
+    }
+
+    #[tokio::test]
+    async fn codex_evict_client_removes_cached_entry() {
+        let adapter = CodexAdapter::default();
+        let profile_id = uuid::Uuid::new_v4();
+        {
+            let mut clients = adapter.clients.lock().await;
+            clients.insert(profile_id, Arc::new(Mutex::new(CodexClient::mock("test"))));
+        }
+        assert!(adapter.clients.lock().await.contains_key(&profile_id));
+        adapter.evict_client(profile_id).await;
+        assert!(!adapter.clients.lock().await.contains_key(&profile_id));
+    }
+
+    #[tokio::test]
+    async fn copilot_logout_returns_none() {
+        let adapter = CopilotAdapter;
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Copilot,
+            name: "copilot".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        let result = adapter.logout(&profile, &AppPaths::resolve().unwrap()).await.unwrap();
+        assert!(result.is_none());
+    }
 }
