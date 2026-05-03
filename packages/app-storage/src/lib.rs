@@ -384,14 +384,14 @@ impl Storage for InMemoryStorage {
         let secrets = self.key_secrets.lock().unwrap();
 
         for (id, stored_secret) in secrets.iter() {
-            if Self::hash_secret(stored_secret) == hash {
-                if let Some(key) = keys.iter().find(|k| k.id == *id) {
-                    let now = Utc::now();
-                    if !key.is_usable_at(now) {
-                        return Ok(None);
-                    }
-                    return Ok(Some(key.clone()));
+            if Self::hash_secret(stored_secret) == hash
+                && let Some(key) = keys.iter().find(|k| k.id == *id)
+            {
+                let now = Utc::now();
+                if !key.is_usable_at(now) {
+                    return Ok(None);
                 }
+                return Ok(Some(key.clone()));
             }
         }
         Ok(None)

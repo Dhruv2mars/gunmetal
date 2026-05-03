@@ -203,19 +203,19 @@ impl DaemonManager {
     pub fn diagnose_start_failure(&self, port: u16) -> String {
         let mut lines = vec!["Gunmetal failed to start.".to_owned()];
 
-        if let Ok(stderr) = fs::read_to_string(&self.stderr_log) {
-            if !stderr.is_empty() {
-                lines.push("Recent daemon stderr:".to_owned());
-                for line in stderr
-                    .lines()
-                    .rev()
-                    .take(6)
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                {
-                    lines.push(format!("  {line}"));
-                }
+        if let Ok(stderr) = fs::read_to_string(&self.stderr_log)
+            && !stderr.is_empty()
+        {
+            lines.push("Recent daemon stderr:".to_owned());
+            for line in stderr
+                .lines()
+                .rev()
+                .take(6)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+            {
+                lines.push(format!("  {line}"));
             }
         }
 

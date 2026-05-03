@@ -2116,9 +2116,9 @@ mod tests {
         ProviderLoginSession, RequestMode, TokenUsage,
     };
     use gunmetal_sdk::{
-        ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderChatResult, ProviderClass,
-        ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
-        ProviderRawSseResult, ProviderRegistry,
+        ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
+        ProviderHub, ProviderLoginResult, ProviderModelSyncResult, ProviderRawSseResult,
+        ProviderRegistry,
     };
     use gunmetal_storage::{AppPaths, StorageHandle};
     use gunmetal_test_utils::provider_definition_fixture;

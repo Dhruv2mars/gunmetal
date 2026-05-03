@@ -230,8 +230,8 @@ try {
     cwd: repoRoot,
     env: smokeEnv,
   });
-  if (!String(status.stdout).includes("Base URL: http://127.0.0.1:4684/v1")) {
-    fail(`status output missing base url\n${status.stdout}`);
+  if (!String(status.stdout).includes("API: http://127.0.0.1:4684/v1")) {
+    fail(`status output missing api url\n${status.stdout}`);
   }
 
   const modelsResponse = await fetch("http://127.0.0.1:4684/v1/models", {

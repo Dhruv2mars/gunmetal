@@ -20,8 +20,6 @@ use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
@@ -1303,7 +1301,7 @@ async fn chat_with_reader(
     writeln!(output, "Model: {model}")?;
 
     if let Some(prompt) = args.prompt {
-        let mut history = vec![ChatMessage {
+        let history = vec![ChatMessage {
             role: ChatRole::User,
             content: prompt,
         }];
@@ -2135,7 +2133,6 @@ mod tests {
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
         ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
-    use gunmetal_storage::AppPaths;
     use gunmetal_test_utils::provider_definition_fixture;
     use tempfile::TempDir;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
