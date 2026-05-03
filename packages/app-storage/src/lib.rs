@@ -1,15 +1,45 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::{DateTime, Utc};
 use gunmetal_core::{
     CreatedGunmetalKey, GunmetalKey, KeyScope, KeyState, ModelDescriptor, NewGunmetalKey,
-    NewProviderProfile, NewRequestLogEntry, ProviderKind, ProviderProfile, RequestLogEntry,
-    TokenUsage,
+    NewProviderProfile, NewRequestLogEntry, ProviderContext, ProviderKind, ProviderProfile,
+    RequestLogEntry, TokenUsage,
 };
 use rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
+
+pub trait Storage: Send + Sync {
+    fn create_key(&self, draft: NewGunmetalKey) -> Result<CreatedGunmetalKey>;
+    fn list_keys(&self) -> Result<Vec<GunmetalKey>>;
+    fn get_key(&self, id: Uuid) -> Result<Option<GunmetalKey>>;
+    fn authenticate_key(&self, secret: &str) -> Result<Option<GunmetalKey>>;
+    fn set_key_state(&self, id: Uuid, state: KeyState) -> Result<()>;
+    fn delete_key(&self, id: Uuid) -> Result<()>;
+    fn create_profile(&self, draft: NewProviderProfile) -> Result<ProviderProfile>;
+    fn delete_profile(&self, id: Uuid) -> Result<()>;
+    fn list_profiles(&self) -> Result<Vec<ProviderProfile>>;
+    fn get_profile(&self, id: Uuid) -> Result<Option<ProviderProfile>>;
+    fn update_profile_credentials(
+        &self,
+        id: Uuid,
+        credentials: Option<serde_json::Value>,
+    ) -> Result<()>;
+    fn replace_models_for_profile(
+        &self,
+        provider: &ProviderKind,
+        profile_id: Option<Uuid>,
+        models: &[ModelDescriptor],
+    ) -> Result<()>;
+    fn list_models(&self) -> Result<Vec<ModelDescriptor>>;
+    fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>>;
+    fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry>;
+    fn list_request_logs(&self, limit: usize) -> Result<Vec<RequestLogEntry>>;
+}
 
 const LAST_USED_TOUCH_INTERVAL_SECONDS: i64 = 60;
 
@@ -82,6 +112,16 @@ impl AppPaths {
     }
 }
 
+impl ProviderContext for AppPaths {
+    fn helpers_dir(&self) -> &Path {
+        &self.helpers_dir
+    }
+
+    fn empty_workspace_dir(&self) -> &Path {
+        &self.empty_workspace_dir
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StorageHandle {
     path: PathBuf,
@@ -98,8 +138,8 @@ impl StorageHandle {
         &self.path
     }
 
-    pub fn storage(&self) -> Result<Storage> {
-        Storage::open(&self.path)
+    pub fn storage(&self) -> Result<SqliteStorage> {
+        SqliteStorage::open(&self.path)
     }
 
     pub fn create_key(&self, draft: NewGunmetalKey) -> Result<CreatedGunmetalKey> {
@@ -177,11 +217,329 @@ impl StorageHandle {
     }
 }
 
-pub struct Storage {
+impl Storage for StorageHandle {
+    fn create_key(&self, draft: NewGunmetalKey) -> Result<CreatedGunmetalKey> {
+        self.storage()?.create_key(draft)
+    }
+
+    fn list_keys(&self) -> Result<Vec<GunmetalKey>> {
+        self.storage()?.list_keys()
+    }
+
+    fn get_key(&self, id: Uuid) -> Result<Option<GunmetalKey>> {
+        self.storage()?.get_key(id)
+    }
+
+    fn authenticate_key(&self, secret: &str) -> Result<Option<GunmetalKey>> {
+        self.storage()?.authenticate_key(secret)
+    }
+
+    fn set_key_state(&self, id: Uuid, state: KeyState) -> Result<()> {
+        self.storage()?.set_key_state(id, state)
+    }
+
+    fn delete_key(&self, id: Uuid) -> Result<()> {
+        self.storage()?.delete_key(id)
+    }
+
+    fn create_profile(&self, draft: NewProviderProfile) -> Result<ProviderProfile> {
+        self.storage()?.create_profile(draft)
+    }
+
+    fn delete_profile(&self, id: Uuid) -> Result<()> {
+        self.storage()?.delete_profile(id)
+    }
+
+    fn list_profiles(&self) -> Result<Vec<ProviderProfile>> {
+        self.storage()?.list_profiles()
+    }
+
+    fn get_profile(&self, id: Uuid) -> Result<Option<ProviderProfile>> {
+        self.storage()?.get_profile(id)
+    }
+
+    fn update_profile_credentials(
+        &self,
+        id: Uuid,
+        credentials: Option<serde_json::Value>,
+    ) -> Result<()> {
+        self.storage()?.update_profile_credentials(id, credentials)
+    }
+
+    fn replace_models_for_profile(
+        &self,
+        provider: &ProviderKind,
+        profile_id: Option<Uuid>,
+        models: &[ModelDescriptor],
+    ) -> Result<()> {
+        self.storage()?
+            .replace_models_for_profile(provider, profile_id, models)
+    }
+
+    fn list_models(&self) -> Result<Vec<ModelDescriptor>> {
+        self.storage()?.list_models()
+    }
+
+    fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>> {
+        self.storage()?.get_model(id)
+    }
+
+    fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry> {
+        self.storage()?.log_request(entry)
+    }
+
+    fn list_request_logs(&self, limit: usize) -> Result<Vec<RequestLogEntry>> {
+        self.storage()?.list_request_logs(limit)
+    }
+}
+
+pub struct InMemoryStorage {
+    keys: Mutex<Vec<GunmetalKey>>,
+    key_secrets: Mutex<HashMap<Uuid, String>>,
+    profiles: Mutex<Vec<ProviderProfile>>,
+    models: Mutex<Vec<ModelDescriptor>>,
+    request_logs: Mutex<Vec<RequestLogEntry>>,
+}
+
+impl InMemoryStorage {
+    pub fn new() -> Self {
+        Self {
+            keys: Mutex::new(Vec::new()),
+            key_secrets: Mutex::new(HashMap::new()),
+            profiles: Mutex::new(Vec::new()),
+            models: Mutex::new(Vec::new()),
+            request_logs: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn hash_secret(secret: &str) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(secret.as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+}
+
+impl Default for InMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Storage for InMemoryStorage {
+    fn create_key(&self, draft: NewGunmetalKey) -> Result<CreatedGunmetalKey> {
+        if draft.name.trim().is_empty() {
+            bail!("key name cannot be empty");
+        }
+        if draft.scopes.is_empty() {
+            bail!("at least one scope is required");
+        }
+
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        let secret = format!("gm_{}_{}", id.simple(), Uuid::new_v4().simple());
+        let prefix = format!("gm_{}", &id.simple().to_string()[..8]);
+
+        let key = GunmetalKey {
+            id,
+            name: draft.name,
+            prefix,
+            state: KeyState::Active,
+            scopes: draft.scopes,
+            allowed_providers: draft.allowed_providers,
+            expires_at: draft.expires_at,
+            created_at: now,
+            updated_at: now,
+            last_used_at: None,
+        };
+
+        let mut keys = self.keys.lock().unwrap();
+        keys.push(key.clone());
+        drop(keys);
+
+        self.key_secrets.lock().unwrap().insert(id, secret.clone());
+
+        Ok(CreatedGunmetalKey { record: key, secret })
+    }
+
+    fn list_keys(&self) -> Result<Vec<GunmetalKey>> {
+        Ok(self.keys.lock().unwrap().clone())
+    }
+
+    fn get_key(&self, id: Uuid) -> Result<Option<GunmetalKey>> {
+        Ok(self.keys.lock().unwrap().iter().find(|k| k.id == id).cloned())
+    }
+
+    fn authenticate_key(&self, secret: &str) -> Result<Option<GunmetalKey>> {
+        let hash = Self::hash_secret(secret);
+        let keys = self.keys.lock().unwrap();
+        let secrets = self.key_secrets.lock().unwrap();
+
+        for (id, stored_secret) in secrets.iter() {
+            if Self::hash_secret(stored_secret) == hash {
+                if let Some(key) = keys.iter().find(|k| k.id == *id) {
+                    let now = Utc::now();
+                    if !key.is_usable_at(now) {
+                        return Ok(None);
+                    }
+                    return Ok(Some(key.clone()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    fn set_key_state(&self, id: Uuid, state: KeyState) -> Result<()> {
+        let mut keys = self.keys.lock().unwrap();
+        let key = keys.iter_mut().find(|k| k.id == id);
+        match key {
+            Some(k) => {
+                k.state = state;
+                k.updated_at = Utc::now();
+                Ok(())
+            }
+            None => bail!("key not found"),
+        }
+    }
+
+    fn delete_key(&self, id: Uuid) -> Result<()> {
+        let mut keys = self.keys.lock().unwrap();
+        let pos = keys.iter().position(|k| k.id == id);
+        match pos {
+            Some(p) => {
+                keys.remove(p);
+                drop(keys);
+                self.key_secrets.lock().unwrap().remove(&id);
+                Ok(())
+            }
+            None => bail!("key not found"),
+        }
+    }
+
+    fn create_profile(&self, draft: NewProviderProfile) -> Result<ProviderProfile> {
+        let name = draft.name.trim();
+        if name.is_empty() {
+            bail!("profile name cannot be empty");
+        }
+
+        let mut profiles = self.profiles.lock().unwrap();
+        let now = Utc::now();
+
+        if let Some(existing) = profiles.iter_mut().find(|p| p.provider == draft.provider) {
+            existing.name = name.to_owned();
+            existing.base_url = draft.base_url;
+            existing.enabled = draft.enabled;
+            existing.credentials = draft.credentials;
+            existing.updated_at = now;
+            return Ok(existing.clone());
+        }
+
+        let profile = ProviderProfile {
+            id: Uuid::new_v4(),
+            provider: draft.provider,
+            name: name.to_owned(),
+            base_url: draft.base_url,
+            enabled: draft.enabled,
+            credentials: draft.credentials,
+            created_at: now,
+            updated_at: now,
+        };
+        profiles.push(profile.clone());
+        Ok(profile)
+    }
+
+    fn delete_profile(&self, id: Uuid) -> Result<()> {
+        let mut profiles = self.profiles.lock().unwrap();
+        let pos = profiles.iter().position(|p| p.id == id);
+        match pos {
+            Some(p) => {
+                profiles.remove(p);
+                drop(profiles);
+                let mut models = self.models.lock().unwrap();
+                models.retain(|m| m.profile_id != Some(id));
+                Ok(())
+            }
+            None => bail!("profile not found"),
+        }
+    }
+
+    fn list_profiles(&self) -> Result<Vec<ProviderProfile>> {
+        Ok(self.profiles.lock().unwrap().clone())
+    }
+
+    fn get_profile(&self, id: Uuid) -> Result<Option<ProviderProfile>> {
+        Ok(self.profiles.lock().unwrap().iter().find(|p| p.id == id).cloned())
+    }
+
+    fn update_profile_credentials(
+        &self,
+        id: Uuid,
+        credentials: Option<serde_json::Value>,
+    ) -> Result<()> {
+        let mut profiles = self.profiles.lock().unwrap();
+        let profile = profiles.iter_mut().find(|p| p.id == id);
+        match profile {
+            Some(p) => {
+                p.credentials = credentials;
+                p.updated_at = Utc::now();
+                Ok(())
+            }
+            None => bail!("profile not found"),
+        }
+    }
+
+    fn replace_models_for_profile(
+        &self,
+        provider: &ProviderKind,
+        _profile_id: Option<Uuid>,
+        models: &[ModelDescriptor],
+    ) -> Result<()> {
+        let mut stored = self.models.lock().unwrap();
+        stored.retain(|m| m.provider != *provider);
+        for model in models {
+            stored.push(model.clone());
+        }
+        Ok(())
+    }
+
+    fn list_models(&self) -> Result<Vec<ModelDescriptor>> {
+        Ok(self.models.lock().unwrap().clone())
+    }
+
+    fn get_model(&self, id: &str) -> Result<Option<ModelDescriptor>> {
+        Ok(self.models.lock().unwrap().iter().find(|m| m.id == id).cloned())
+    }
+
+    fn log_request(&self, entry: NewRequestLogEntry) -> Result<RequestLogEntry> {
+        let log = RequestLogEntry {
+            id: Uuid::new_v4(),
+            started_at: Utc::now(),
+            key_id: entry.key_id,
+            profile_id: entry.profile_id,
+            provider: entry.provider,
+            model: entry.model,
+            endpoint: entry.endpoint,
+            status_code: entry.status_code,
+            duration_ms: entry.duration_ms,
+            usage: entry.usage,
+            error_message: entry.error_message,
+        };
+        self.request_logs.lock().unwrap().push(log.clone());
+        Ok(log)
+    }
+
+    fn list_request_logs(&self, limit: usize) -> Result<Vec<RequestLogEntry>> {
+        let logs = self.request_logs.lock().unwrap();
+        let mut result: Vec<_> = logs.iter().rev().take(limit).cloned().collect();
+        result.reverse();
+        Ok(result)
+    }
+}
+
+pub struct SqliteStorage {
     conn: Connection,
 }
 
-impl Storage {
+impl SqliteStorage {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
 
@@ -954,11 +1312,11 @@ mod tests {
     use serde_json::json;
     use tempfile::TempDir;
 
-    use super::{AppPaths, Storage, StorageHandle};
+    use super::{AppPaths, SqliteStorage, StorageHandle};
 
     #[test]
     fn creates_authenticates_and_revokes_keys() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
 
         let created = storage
             .create_key(gunmetal_core::NewGunmetalKey {
@@ -991,7 +1349,7 @@ mod tests {
 
     #[test]
     fn deletes_keys_cleanly() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let created = storage
             .create_key(gunmetal_core::NewGunmetalKey {
                 name: "throwaway".to_owned(),
@@ -1007,7 +1365,7 @@ mod tests {
 
     #[test]
     fn creates_profiles_and_model_registry() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let profile = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::OpenRouter,
@@ -1062,7 +1420,7 @@ mod tests {
 
     #[test]
     fn creating_same_provider_updates_existing_connection() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let first = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::OpenAi,
@@ -1104,7 +1462,7 @@ mod tests {
 
     #[test]
     fn deletes_profiles_and_their_models() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let profile = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::OpenRouter,
@@ -1138,7 +1496,7 @@ mod tests {
 
     #[test]
     fn authenticate_key_throttles_last_used_updates() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let created = storage
             .create_key(gunmetal_core::NewGunmetalKey {
                 name: "default".to_owned(),
@@ -1157,7 +1515,7 @@ mod tests {
 
     #[test]
     fn writes_lightweight_request_logs() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let log = storage
             .log_request(NewRequestLogEntry {
                 key_id: None,
@@ -1217,7 +1575,7 @@ mod tests {
 
     #[test]
     fn replacing_models_keeps_other_providers_and_refreshes_one_provider_catalog() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let codex = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::Codex,
@@ -1292,7 +1650,7 @@ mod tests {
 
     #[test]
     fn replacing_models_for_second_profile_of_same_provider_replaces_provider_catalog() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let first = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::Codex,
@@ -1350,7 +1708,7 @@ mod tests {
 
     #[test]
     fn updates_profile_credentials_in_place() {
-        let storage = Storage::open_in_memory().unwrap();
+        let storage = SqliteStorage::open_in_memory().unwrap();
         let profile = storage
             .create_profile(NewProviderProfile {
                 provider: ProviderKind::Copilot,

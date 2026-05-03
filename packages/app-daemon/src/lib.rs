@@ -33,7 +33,7 @@ use gunmetal_sdk::{
     ProviderAuthMethod, ProviderByteStream, ProviderClass, ProviderDefinition, ProviderEventStream,
     ProviderHub, ProviderStreamEvent,
 };
-use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -44,7 +44,7 @@ const WEB_UI_PATH: &str = "/webui";
 #[derive(Clone)]
 pub struct DaemonState {
     pub paths: AppPaths,
-    pub storage: StorageHandle,
+    pub storage: Arc<dyn Storage>,
     pub providers: ProviderHub,
     pub version: String,
     request_logger: RequestLogger,
@@ -53,7 +53,7 @@ pub struct DaemonState {
 
 impl DaemonState {
     pub fn new(paths: AppPaths) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let providers = builtin_provider_hub(paths.clone());
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
@@ -67,7 +67,7 @@ impl DaemonState {
     }
 
     pub fn with_provider_hub(paths: AppPaths, providers: ProviderHub) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
@@ -115,7 +115,7 @@ impl RequestCache {
 }
 
 impl RequestLogger {
-    fn new(storage: StorageHandle) -> Self {
+    fn new(storage: Arc<dyn Storage>) -> Self {
         let (sender, receiver) = mpsc::channel::<NewRequestLogEntry>();
         thread::Builder::new()
             .name("gunmetal-request-logger".to_owned())
@@ -2101,6 +2101,7 @@ async fn invoke_provider_raw_stream(
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
+    use gunmetal_core::ProviderContext;
     use std::{
         sync::{Arc, Mutex},
         time::Duration,
@@ -2116,16 +2117,18 @@ mod tests {
         NewProviderProfile, ProviderAuthState, ProviderAuthStatus, ProviderKind,
         ProviderLoginSession, RequestMode, TokenUsage,
     };
+    use futures_util::stream::StreamExt;
     use gunmetal_sdk::{
         ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderChatResult, ProviderClass,
         ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
-        ProviderRegistry,
+        ProviderRawSseResult, ProviderRegistry,
     };
-    use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage, StorageHandle};
     use serde_json::{Value, json};
     use tempfile::TempDir;
     use gunmetal_test_utils::provider_definition_fixture;
     use tower::util::ServiceExt;
+    use uuid::Uuid;
 
     use super::{DaemonState, app};
 
@@ -3073,6 +3076,41 @@ mod tests {
                 )
                 .unwrap();
         }
+
+        fn state_with_adapter<A: ProviderAdapter + 'static>(&self, adapter: A) -> DaemonState {
+            let mut registry = ProviderRegistry::default();
+            registry.register(adapter);
+            let providers = ProviderHub::with_registry(self.paths.clone(), registry);
+            DaemonState::with_provider_hub(self.paths.clone(), providers).unwrap()
+        }
+
+        fn seed_openai_models(&self) -> gunmetal_core::ProviderProfile {
+            let profile = self
+                .storage
+                .create_profile(NewProviderProfile {
+                    provider: ProviderKind::OpenAi,
+                    name: "openai".to_owned(),
+                    base_url: None,
+                    enabled: true,
+                    credentials: Some(json!({ "api_key": "sk-test" })),
+                })
+                .unwrap();
+            self.storage
+                .replace_models_for_profile(
+                    &ProviderKind::OpenAi,
+                    Some(profile.id),
+                    &[gunmetal_core::ModelDescriptor {
+                        id: "openai/gpt-5.4".to_owned(),
+                        provider: ProviderKind::OpenAi,
+                        profile_id: Some(profile.id),
+                        upstream_name: "gpt-5.4".to_owned(),
+                        display_name: "GPT-5.4".to_owned(),
+                        metadata: None,
+                    }],
+                )
+                .unwrap();
+            profile
+        }
     }
 
     async fn to_json(response: Response) -> Value {
@@ -3110,7 +3148,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3124,7 +3162,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3141,7 +3179,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3149,7 +3187,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3167,7 +3205,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -3195,6 +3233,97 @@ mod tests {
 
     #[async_trait]
     impl ProviderAdapter for SpyCodexAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            provider_definition_fixture(ProviderKind::Codex, ProviderClass::Subscription, 1)
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _context: &dyn ProviderContext,
+        ) -> anyhow::Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "codex".to_owned(),
+                },
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _context: &dyn ProviderContext,
+            _open_browser: bool,
+        ) -> anyhow::Result<ProviderLoginResult> {
+            Ok(ProviderLoginResult {
+                credentials: None,
+                session: ProviderLoginSession {
+                    login_id: "mock".to_owned(),
+                    auth_url: "https://example.com".to_owned(),
+                    user_code: None,
+                    interval_seconds: None,
+                },
+            })
+        }
+
+        async fn logout(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _context: &dyn ProviderContext,
+        ) -> anyhow::Result<Option<Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            profile: &gunmetal_core::ProviderProfile,
+            _context: &dyn ProviderContext,
+        ) -> anyhow::Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: None,
+                models: vec![gunmetal_core::ModelDescriptor {
+                    id: "codex/gpt-5.4".to_owned(),
+                    provider: ProviderKind::Codex,
+                    profile_id: Some(profile.id),
+                    upstream_name: "gpt-5.4".to_owned(),
+                    display_name: "GPT-5.4".to_owned(),
+                    metadata: None,
+                }],
+            })
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _context: &dyn ProviderContext,
+            request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<ProviderChatResult> {
+            *self.seen.lock().unwrap() = Some(request.clone());
+            Ok(ProviderChatResult {
+                credentials: None,
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello from codex".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: TokenUsage {
+                        input_tokens: Some(5),
+                        output_tokens: Some(2),
+                        total_tokens: Some(7),
+                    },
+                },
+            })
+        }
+    }
+
+    struct MockRawSseAdapter;
+
+    #[async_trait]
+    impl ProviderAdapter for MockRawSseAdapter {
         fn definition(&self) -> ProviderDefinition {
             provider_definition_fixture(ProviderKind::Codex, ProviderClass::Subscription, 1)
         }
@@ -3262,7 +3391,6 @@ mod tests {
             _paths: &AppPaths,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
-            *self.seen.lock().unwrap() = Some(request.clone());
             Ok(ProviderChatResult {
                 credentials: None,
                 completion: ChatCompletionResult {
@@ -3280,5 +3408,368 @@ mod tests {
                 },
             })
         }
+
+        async fn raw_stream_chat_completion(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            _request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<ProviderRawSseResult> {
+            let chunks: Vec<std::result::Result<Vec<u8>, anyhow::Error>> = vec![
+                Ok(b"data: {\"chunk\":1}\n\n".to_vec()),
+                Ok(b"data: [DONE]\n\n".to_vec()),
+            ];
+            Ok(ProviderRawSseResult {
+                credentials: None,
+                stream: futures_util::stream::iter(chunks).boxed(),
+            })
+        }
+    }
+
+    struct MockApiKeyAdapter;
+
+    #[async_trait]
+    impl ProviderAdapter for MockApiKeyAdapter {
+        fn definition(&self) -> ProviderDefinition {
+            provider_definition_fixture(ProviderKind::OpenAi, ProviderClass::Direct, 2)
+        }
+
+        async fn auth_status(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderAuthResult> {
+            Ok(ProviderAuthResult {
+                credentials: None,
+                status: ProviderAuthStatus {
+                    state: ProviderAuthState::Connected,
+                    label: "ready".to_owned(),
+                },
+            })
+        }
+
+        async fn login(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            _open_browser: bool,
+        ) -> anyhow::Result<ProviderLoginResult> {
+            anyhow::bail!("api key login not used")
+        }
+
+        async fn logout(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<Option<Value>> {
+            Ok(None)
+        }
+
+        async fn sync_models(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+        ) -> anyhow::Result<ProviderModelSyncResult> {
+            Ok(ProviderModelSyncResult {
+                credentials: None,
+                models: vec![],
+            })
+        }
+
+        async fn chat_completion(
+            &self,
+            _profile: &gunmetal_core::ProviderProfile,
+            _paths: &AppPaths,
+            request: &gunmetal_core::ChatCompletionRequest,
+        ) -> anyhow::Result<ProviderChatResult> {
+            Ok(ProviderChatResult {
+                credentials: None,
+                completion: ChatCompletionResult {
+                    model: request.model.clone(),
+                    message: ChatMessage {
+                        role: ChatRole::Assistant,
+                        content: "hello from openai".to_owned(),
+                    },
+                    finish_reason: "stop".to_owned(),
+                    usage: TokenUsage {
+                        input_tokens: Some(3),
+                        output_tokens: Some(1),
+                        total_tokens: Some(4),
+                    },
+                },
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn raw_sse_streaming_returns_custom_chunks() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+        let response = app(fixture.state_with_adapter(MockRawSseAdapter))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "messages": [{ "role": "user", "content": "ping" }],
+                            "stream": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_text(response).await;
+        assert!(body.contains("data: {\"chunk\":1}"));
+        assert!(body.contains("data: [DONE]"));
+    }
+
+    #[tokio::test]
+    async fn responses_non_stream_with_input_items() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![ProviderKind::Codex]);
+
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/responses")
+                    .header(header::AUTHORIZATION, format!("Bearer {secret}"))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "codex/gpt-5.4",
+                            "instructions": "system",
+                            "input": [
+                                { "role": "user", "content": [{ "type": "input_text", "text": "hello" }] }
+                            ]
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["output_text"], "hello from codex");
+        assert_eq!(body["output"][0]["role"], "assistant");
+    }
+
+    #[tokio::test]
+    async fn auth_profile_for_api_key_provider() {
+        let fixture = Fixture::new();
+        let profile = fixture.seed_openai_models();
+        let response = app(fixture.state_with_adapter(MockApiKeyAdapter))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/webui/api/profiles/{}/auth", profile.id))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert!(body["message"].as_str().unwrap().contains("Auth"));
+        assert!(body["auth_url"].is_null());
+    }
+
+    #[tokio::test]
+    async fn logout_profile_returns_success() {
+        let fixture = Fixture::new();
+        fixture.seed_models();
+        let profile = fixture.storage.list_profiles().unwrap().pop().unwrap();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/webui/api/profiles/{}/logout", profile.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["message"], "Logged out default.");
+    }
+
+    #[tokio::test]
+    async fn sync_profile_updates_models() {
+        let fixture = Fixture::new();
+        let profile = fixture
+            .storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Codex,
+                name: "codex".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: None,
+            })
+            .unwrap();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/webui/api/profiles/{}/sync", profile.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert!(body["message"].as_str().unwrap().contains("Synced"));
+        let models = fixture.storage.list_models().unwrap();
+        assert!(!models.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_profile_endpoint_returns_message() {
+        let fixture = Fixture::new();
+        let profile = fixture
+            .storage
+            .create_profile(NewProviderProfile {
+                provider: ProviderKind::Zen,
+                name: "zen".to_owned(),
+                base_url: None,
+                enabled: true,
+                credentials: Some(json!({ "api_key": "zen_test_key" })),
+            })
+            .unwrap();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/webui/api/profiles/{}", profile.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["message"], "Deleted provider zen.");
+        assert!(fixture.storage.get_profile(profile.id).unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn set_key_state_updates_key() {
+        let fixture = Fixture::new();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![]);
+        let key = fixture.storage.authenticate_key(&secret).unwrap().unwrap();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/webui/api/keys/{}/state", key.id))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({ "state": "revoked" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert!(body["message"].as_str().unwrap().contains("revoked"));
+        let updated = fixture.storage.get_key(key.id).unwrap().unwrap();
+        assert_eq!(updated.state, KeyState::Revoked);
+    }
+
+    #[tokio::test]
+    async fn delete_key_removes_key() {
+        let fixture = Fixture::new();
+        let secret = fixture.create_key(vec![KeyScope::Inference], vec![]);
+        let key = fixture.storage.authenticate_key(&secret).unwrap().unwrap();
+        let response = app(fixture.state())
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/webui/api/keys/{}", key.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_json(response).await;
+        assert_eq!(body["message"], "Deleted key test.");
+        assert!(fixture.storage.get_key(key.id).unwrap().is_none());
+    }
+
+    #[test]
+    fn request_cache_invalidation() {
+        let cache = super::RequestCache::default();
+        let model = gunmetal_core::ModelDescriptor {
+            id: "m1".to_owned(),
+            provider: ProviderKind::Codex,
+            profile_id: None,
+            upstream_name: "m1".to_owned(),
+            display_name: "M1".to_owned(),
+            metadata: None,
+        };
+        cache.insert_model(model.clone());
+        assert_eq!(cache.model("m1").map(|m| m.id), Some("m1".to_owned()));
+
+        let profile = gunmetal_core::ProviderProfile {
+            id: Uuid::new_v4(),
+            provider: ProviderKind::Codex,
+            name: "p".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        cache.insert_profile(profile.clone());
+        assert_eq!(cache.profile(profile.id).map(|p| p.name), Some("p".to_owned()));
+
+        cache.clear();
+        assert!(cache.model("m1").is_none());
+        assert!(cache.profile(profile.id).is_none());
+    }
+
+    #[tokio::test]
+    async fn request_logger_flushes_async() {
+        let temp = TempDir::new().unwrap();
+        let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
+        let storage = paths.storage_handle().unwrap();
+        let logger = super::RequestLogger::new(storage.clone());
+        let entry = gunmetal_core::NewRequestLogEntry {
+            key_id: None,
+            profile_id: None,
+            provider: ProviderKind::Codex,
+            model: "m".to_owned(),
+            endpoint: "/v1/test".to_owned(),
+            status_code: Some(200),
+            duration_ms: 1,
+            usage: TokenUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+            },
+            error_message: None,
+        };
+        logger.log(entry);
+        let immediate = storage.list_request_logs(10).unwrap();
+        assert_eq!(immediate.len(), 0);
+        let logs = wait_for_logs(&storage, 1);
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0].endpoint, "/v1/test");
     }
 }

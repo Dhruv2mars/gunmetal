@@ -10,9 +10,9 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
-    ProviderAuthState, ProviderAuthStatus, ProviderLoginSession, ProviderProfile, TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderLoginSession, ProviderProfile,
+    TokenUsage,
 };
-use gunmetal_storage::AppPaths;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::{
@@ -52,7 +52,7 @@ pub struct CodexClientOptions {
 }
 
 impl CodexClientOptions {
-    pub fn from_profile(profile: &ProviderProfile, paths: &AppPaths) -> Self {
+    pub fn from_profile(profile: &ProviderProfile, context: &dyn ProviderContext) -> Self {
         let settings = profile
             .credentials
             .as_ref()
@@ -60,9 +60,9 @@ impl CodexClientOptions {
             .and_then(|value| serde_json::from_value::<CodexProfileSettings>(value).ok())
             .unwrap_or_default();
         let fallback_helper = if cfg!(windows) {
-            paths.helpers_dir.join("codex.exe")
+            context.helpers_dir().join("codex.exe")
         } else {
-            paths.helpers_dir.join("codex")
+            context.helpers_dir().join("codex")
         };
         let codex_bin = settings
             .bin_path
@@ -76,7 +76,7 @@ impl CodexClientOptions {
             codex_bin,
             cwd: settings
                 .cwd
-                .unwrap_or_else(|| paths.empty_workspace_dir.clone()),
+                .unwrap_or_else(|| context.empty_workspace_dir().to_path_buf()),
         }
     }
 }
@@ -687,7 +687,7 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, duplex};
 
     use super::{CodexClient, render_prompt};
-    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole, RequestOptions};
+    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole, ProviderAuthState, RequestOptions};
 
     #[test]
     fn prompt_renderer_keeps_role_order() {
@@ -832,6 +832,263 @@ mod tests {
             .await?;
         assert_eq!(completion.message.content, "Hello");
         assert_eq!(completion.usage.total_tokens, Some(20));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn login_returns_session_via_rpc() -> Result<()> {
+        let (client_io, server_io) = duplex(8192);
+        let (client_reader, client_writer) = tokio::io::split(client_io);
+        let (server_reader, mut server_writer) = tokio::io::split(server_io);
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).await.ok() == Some(0) {
+                    break;
+                }
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let id = request.get("id").and_then(Value::as_u64);
+                let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+                match method {
+                    "account/login/start" => {
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({
+                                        "id": id,
+                                        "result": { "loginId": "login-1", "authUrl": "https://chatgpt.com/auth" }
+                                    })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let client = CodexClient::from_parts(client_reader, client_writer);
+        let session = client.login().await?;
+        assert_eq!(session.login_id, "login-1");
+        assert_eq!(session.auth_url, "https://chatgpt.com/auth");
+        assert!(session.user_code.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn logout_sends_rpc_request() -> Result<()> {
+        let (client_io, server_io) = duplex(8192);
+        let (client_reader, client_writer) = tokio::io::split(client_io);
+        let (server_reader, mut server_writer) = tokio::io::split(server_io);
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).await.ok() == Some(0) {
+                    break;
+                }
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let id = request.get("id").and_then(Value::as_u64);
+                let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+                match method {
+                    "account/logout" => {
+                        server_writer
+                            .write_all(
+                                format!("{}\n", json!({ "id": id, "result": {} })).as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let client = CodexClient::from_parts(client_reader, client_writer);
+        client.logout().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn auth_status_authenticated() -> Result<()> {
+        let (client_io, server_io) = duplex(8192);
+        let (client_reader, client_writer) = tokio::io::split(client_io);
+        let (server_reader, mut server_writer) = tokio::io::split(server_io);
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).await.ok() == Some(0) {
+                    break;
+                }
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let id = request.get("id").and_then(Value::as_u64);
+                let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+                match method {
+                    "account/read" => {
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({
+                                        "id": id,
+                                        "result": { "account": { "email": "user@example.com", "planType": "plus" } }
+                                    })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let client = CodexClient::from_parts(client_reader, client_writer);
+        let status = client.auth_status().await?;
+        assert_eq!(status.state, ProviderAuthState::Connected);
+        assert_eq!(status.label, "user@example.com (plus)");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn auth_status_unauthenticated() -> Result<()> {
+        let (client_io, server_io) = duplex(8192);
+        let (client_reader, client_writer) = tokio::io::split(client_io);
+        let (server_reader, mut server_writer) = tokio::io::split(server_io);
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).await.ok() == Some(0) {
+                    break;
+                }
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let id = request.get("id").and_then(Value::as_u64);
+                let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+                match method {
+                    "account/read" => {
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({
+                                        "id": id,
+                                        "result": { "account": null }
+                                    })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let client = CodexClient::from_parts(client_reader, client_writer);
+        let status = client.auth_status().await?;
+        assert_eq!(status.state, ProviderAuthState::SignedOut);
+        assert_eq!(status.label, "Signed out");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn chat_completion_propagates_error_notification() -> Result<()> {
+        let (client_io, server_io) = duplex(8192);
+        let (client_reader, client_writer) = tokio::io::split(client_io);
+        let (server_reader, mut server_writer) = tokio::io::split(server_io);
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).await.ok() == Some(0) {
+                    break;
+                }
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let id = request.get("id").and_then(Value::as_u64);
+                let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+                match method {
+                    "thread/start" => {
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({ "id": id, "result": { "thread": { "id": "thr_err" } } })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    "turn/start" => {
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({ "id": id, "result": { "turn": { "id": "turn_err" } } })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                        server_writer
+                            .write_all(
+                                format!(
+                                    "{}\n",
+                                    json!({
+                                        "method": "error",
+                                        "params": {
+                                            "threadId": "thr_err",
+                                            "turnId": "turn_err",
+                                            "error": { "message": "codex_test_error" }
+                                        }
+                                    })
+                                )
+                                .as_bytes(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let client = CodexClient::from_parts(client_reader, client_writer);
+        let result = client
+            .chat_completion(
+                uuid::Uuid::nil(),
+                &ChatCompletionRequest {
+                    model: "codex/gpt-5.4".to_owned(),
+                    messages: vec![ChatMessage {
+                        role: ChatRole::User,
+                        content: "ping".to_owned(),
+                    }],
+                    stream: false,
+                    options: RequestOptions::default(),
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("codex_test_error"));
         Ok(())
     }
 }

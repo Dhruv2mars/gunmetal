@@ -1,9 +1,14 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
+
+pub trait ProviderContext: Send + Sync {
+    fn helpers_dir(&self) -> &Path;
+    fn empty_workspace_dir(&self) -> &Path;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
@@ -399,5 +404,249 @@ mod tests {
         assert_eq!(options.mode, RequestMode::Normalized);
         assert!(options.provider_options.is_empty());
         assert!(options.metadata.is_empty());
+    }
+
+    #[test]
+    fn gunmetal_key_roundtrip() {
+        let now = Utc::now();
+        let original = GunmetalKey {
+            id: Uuid::new_v4(),
+            name: "test-key".to_owned(),
+            prefix: "gm_test".to_owned(),
+            state: KeyState::Active,
+            scopes: vec![KeyScope::Inference, KeyScope::ModelsRead],
+            allowed_providers: vec![ProviderKind::Codex, ProviderKind::Custom("edge".to_owned())],
+            expires_at: Some(now + Duration::hours(1)),
+            created_at: now,
+            updated_at: now,
+            last_used_at: None,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: GunmetalKey = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn provider_profile_roundtrip() {
+        let now = Utc::now();
+        let original = ProviderProfile {
+            id: Uuid::new_v4(),
+            provider: ProviderKind::OpenAi,
+            name: "openai".to_owned(),
+            base_url: Some("https://api.openai.com".to_owned()),
+            enabled: true,
+            credentials: Some(serde_json::json!({"key": "secret"})),
+            created_at: now,
+            updated_at: now,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ProviderProfile = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn model_descriptor_roundtrip() {
+        let original = ModelDescriptor {
+            id: "openai/gpt-4".to_owned(),
+            provider: ProviderKind::OpenAi,
+            profile_id: Some(Uuid::new_v4()),
+            upstream_name: "gpt-4".to_owned(),
+            display_name: "GPT-4".to_owned(),
+            metadata: Some(ModelMetadata {
+                family: Some("gpt".to_owned()),
+                release_date: Some("2023-03-14".to_owned()),
+                last_updated: None,
+                input_modalities: vec!["text".to_owned()],
+                output_modalities: vec!["text".to_owned()],
+                context_window: Some(8192),
+                max_output_tokens: Some(4096),
+                supports_attachments: Some(false),
+                supports_reasoning: Some(true),
+                supports_tools: Some(true),
+                open_weights: Some(false),
+            }),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ModelDescriptor = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn token_usage_roundtrip() {
+        let original = TokenUsage {
+            input_tokens: Some(10),
+            output_tokens: Some(20),
+            total_tokens: Some(30),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: TokenUsage = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn request_options_roundtrip() {
+        let mut metadata = Map::new();
+        metadata.insert(
+            "user".to_owned(),
+            serde_json::Value::String("alice".to_owned()),
+        );
+        let original = RequestOptions {
+            temperature: Some(0.7),
+            top_p: Some(0.9),
+            max_output_tokens: Some(256),
+            stop: vec!["STOP".to_owned()],
+            metadata,
+            provider_options: Map::new(),
+            mode: RequestMode::Passthrough,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: RequestOptions = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn chat_completion_request_roundtrip() {
+        let original = ChatCompletionRequest {
+            model: "gpt-4".to_owned(),
+            messages: vec![
+                ChatMessage {
+                    role: ChatRole::System,
+                    content: "You are helpful.".to_owned(),
+                },
+                ChatMessage {
+                    role: ChatRole::User,
+                    content: "Hello".to_owned(),
+                },
+            ],
+            stream: true,
+            options: RequestOptions::default(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ChatCompletionRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn chat_completion_result_roundtrip() {
+        let original = ChatCompletionResult {
+            model: "gpt-4".to_owned(),
+            message: ChatMessage {
+                role: ChatRole::Assistant,
+                content: "Hi there!".to_owned(),
+            },
+            finish_reason: "stop".to_owned(),
+            usage: TokenUsage {
+                input_tokens: Some(1),
+                output_tokens: Some(2),
+                total_tokens: Some(3),
+            },
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ChatCompletionResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn chat_message_roundtrip() {
+        let original = ChatMessage {
+            role: ChatRole::User,
+            content: "test".to_owned(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ChatMessage = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn provider_auth_status_roundtrip() {
+        let original = ProviderAuthStatus {
+            state: ProviderAuthState::Connected,
+            label: "Connected to OpenAI".to_owned(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ProviderAuthStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn chat_message_empty_content_roundtrip() {
+        let original = ChatMessage {
+            role: ChatRole::Assistant,
+            content: "".to_owned(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ChatMessage = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn token_usage_missing_fields_deserialize() {
+        let json = r#"{"input_tokens":10}"#;
+        let deserialized: TokenUsage = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized.input_tokens, Some(10));
+        assert_eq!(deserialized.output_tokens, None);
+        assert_eq!(deserialized.total_tokens, None);
+    }
+
+    #[test]
+    fn request_options_defaults_when_missing() {
+        let json = r#"{"temperature":0.5}"#;
+        let deserialized: RequestOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized.temperature, Some(0.5));
+        assert!(deserialized.stop.is_empty());
+        assert!(deserialized.metadata.is_empty());
+        assert!(deserialized.provider_options.is_empty());
+        assert_eq!(deserialized.mode, RequestMode::Normalized);
+    }
+
+    #[test]
+    fn model_descriptor_null_metadata() {
+        let json = r#"{
+            "id": "openai/gpt-4",
+            "provider": {"kind":"open_ai","value":null},
+            "profile_id": null,
+            "upstream_name": "gpt-4",
+            "display_name": "GPT-4",
+            "metadata": null
+        }"#;
+        let deserialized: ModelDescriptor = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized.metadata, None);
+    }
+
+    #[test]
+    fn provider_auth_state_enum_variants() {
+        for state in [
+            ProviderAuthState::SignedOut,
+            ProviderAuthState::SigningIn,
+            ProviderAuthState::Connected,
+            ProviderAuthState::Expired,
+            ProviderAuthState::Error,
+        ] {
+            let status = ProviderAuthStatus {
+                state,
+                label: "test".to_owned(),
+            };
+            let json = serde_json::to_string(&status).unwrap();
+            let deserialized: ProviderAuthStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(status, deserialized);
+        }
+    }
+
+    #[test]
+    fn provider_kind_enum_variants() {
+        for kind in [
+            ProviderKind::Codex,
+            ProviderKind::Copilot,
+            ProviderKind::OpenRouter,
+            ProviderKind::Zen,
+            ProviderKind::OpenAi,
+            ProviderKind::Azure,
+            ProviderKind::Nvidia,
+            ProviderKind::Custom("x".to_owned()),
+        ] {
+            let json = serde_json::to_string(&kind).unwrap();
+            let deserialized: ProviderKind = serde_json::from_str(&json).unwrap();
+            assert_eq!(kind, deserialized);
+        }
     }
 }

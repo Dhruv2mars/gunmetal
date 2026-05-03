@@ -2082,7 +2082,7 @@ mod tests {
     use clap::{CommandFactory, Parser};
     use gunmetal_core::{
         ChatMessage, ChatRole, GunmetalKey, KeyState, ProviderAuthState, ProviderAuthStatus,
-        ProviderKind, ProviderProfile, RequestLogEntry, TokenUsage,
+        ProviderContext, ProviderKind, ProviderProfile, RequestLogEntry, TokenUsage,
     };
     use gunmetal_sdk::{
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
@@ -2674,7 +2674,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -2688,7 +2688,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             anyhow::bail!("browser login not used in this test")
@@ -2697,7 +2697,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<serde_json::Value>> {
             Ok(None)
         }
@@ -2705,7 +2705,7 @@ mod tests {
         async fn sync_models(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             self.sync_called.store(true, Ordering::SeqCst);
             anyhow::bail!("sync should have been skipped")
@@ -2714,7 +2714,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             anyhow::bail!("chat not used in this test")

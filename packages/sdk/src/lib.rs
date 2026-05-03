@@ -8,7 +8,8 @@ use futures_util::{
 };
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ModelDescriptor, ModelMetadata,
-    ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile, TokenUsage,
+    ProviderAuthStatus, ProviderContext, ProviderKind, ProviderLoginSession, ProviderProfile,
+    TokenUsage,
 };
 use gunmetal_storage::AppPaths;
 use reqwest::{Client, Response};
@@ -131,38 +132,42 @@ pub trait ProviderAdapter: Send + Sync {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult>;
 
     async fn login(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         open_browser: bool,
     ) -> Result<ProviderLoginResult>;
 
-    async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>>;
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        context: &dyn ProviderContext,
+    ) -> Result<Option<Value>>;
 
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult>;
 
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult>;
 
     async fn stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderStreamResult> {
-        let result = self.chat_completion(profile, paths, request).await?;
+        let result = self.chat_completion(profile, context, request).await?;
         Ok(ProviderStreamResult {
             credentials: result.credentials,
             stream: synthetic_completion_stream(result.completion),
@@ -172,10 +177,10 @@ pub trait ProviderAdapter: Send + Sync {
     async fn raw_stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderRawSseResult> {
-        let result = self.stream_chat_completion(profile, paths, request).await?;
+        let result = self.stream_chat_completion(profile, context, request).await?;
         Ok(ProviderRawSseResult {
             credentials: result.credentials,
             stream: synthetic_chat_sse_stream(request.model.clone(), result.stream),
@@ -900,6 +905,293 @@ mod tests {
         assert!(definition.capabilities.supports_responses_api);
     }
 
+    #[tokio::test]
+    async fn synthetic_chat_sse_stream_emits_expected_events() {
+        let events: ProviderEventStream = stream::iter(vec![
+            Ok(ProviderStreamEvent::TextDelta("Hello".to_owned())),
+            Ok(ProviderStreamEvent::TextDelta(" world".to_owned())),
+            Ok(ProviderStreamEvent::Complete {
+                model: "gpt-4".to_owned(),
+                finish_reason: "stop".to_owned(),
+                usage: TokenUsage {
+                    input_tokens: Some(1),
+                    output_tokens: Some(2),
+                    total_tokens: Some(3),
+                },
+            }),
+        ])
+        .boxed();
+
+        let byte_stream = synthetic_chat_sse_stream("gpt-4".to_owned(), events);
+        let chunks: Vec<Vec<u8>> = byte_stream
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let output = String::from_utf8(chunks.concat()).unwrap();
+
+        assert!(output.contains("chat.completion.chunk"));
+        assert!(output.contains("\"role\":\"assistant\""));
+        assert!(output.contains("Hello"));
+        assert!(output.contains(" world"));
+        assert!(output.contains("[DONE]"));
+        assert!(output.contains("\"finish_reason\":\"stop\""));
+    }
+
+    #[tokio::test]
+    async fn synthetic_completion_stream_emits_text_then_complete() {
+        let completion = ChatCompletionResult {
+            model: "test-model".to_owned(),
+            message: ChatMessage {
+                role: ChatRole::Assistant,
+                content: "Hello world".to_owned(),
+            },
+            finish_reason: "stop".to_owned(),
+            usage: TokenUsage {
+                input_tokens: Some(1),
+                output_tokens: Some(1),
+                total_tokens: Some(2),
+            },
+        };
+
+        let stream = synthetic_completion_stream(completion);
+        let events: Vec<ProviderStreamEvent> = stream
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert_eq!(
+            events[0],
+            ProviderStreamEvent::TextDelta("Hello world".to_owned())
+        );
+        match &events[1] {
+            ProviderStreamEvent::Complete {
+                model,
+                finish_reason,
+                usage,
+            } => {
+                assert_eq!(model, "test-model");
+                assert_eq!(finish_reason, "stop");
+                assert_eq!(usage.total_tokens, Some(2));
+            }
+            _ => panic!("expected Complete event"),
+        }
+    }
+
+    #[tokio::test]
+    async fn synthetic_completion_stream_empty_content() {
+        let completion = ChatCompletionResult {
+            model: "m".to_owned(),
+            message: ChatMessage {
+                role: ChatRole::Assistant,
+                content: "".to_owned(),
+            },
+            finish_reason: "stop".to_owned(),
+            usage: TokenUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+            },
+        };
+
+        let stream = synthetic_completion_stream(completion);
+        let events: Vec<ProviderStreamEvent> = stream
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0], ProviderStreamEvent::TextDelta("".to_owned()));
+    }
+
+    #[test]
+    fn sse_decoder_complete_event() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"data: hello\n\n");
+        assert_eq!(decoder.next_event(), Some("hello".to_owned()));
+        assert_eq!(decoder.next_event(), None);
+    }
+
+    #[test]
+    fn sse_decoder_multiple_events() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"data: first\n\ndata: second\n\n");
+        assert_eq!(decoder.next_event(), Some("first".to_owned()));
+        assert_eq!(decoder.next_event(), Some("second".to_owned()));
+        assert_eq!(decoder.next_event(), None);
+    }
+
+    #[test]
+    fn sse_decoder_partial_chunks() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"data: hel");
+        assert_eq!(decoder.next_event(), None);
+        decoder.push(b"lo\n\n");
+        assert_eq!(decoder.next_event(), Some("hello".to_owned()));
+    }
+
+    #[test]
+    fn sse_decoder_malformed_no_data_prefix() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"event: message\n\n");
+        assert_eq!(decoder.next_event(), None);
+    }
+
+    #[test]
+    fn sse_decoder_empty_chunk() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"");
+        assert_eq!(decoder.next_event(), None);
+    }
+
+    #[test]
+    fn sse_decoder_multiline_data() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"data: line1\ndata: line2\n\n");
+        assert_eq!(decoder.next_event(), Some("line1\nline2".to_owned()));
+    }
+
+    #[test]
+    fn sse_decoder_carriage_return() {
+        let mut decoder = SseDecoder::default();
+        decoder.push(b"data: hello\r\n\r\n");
+        assert_eq!(decoder.next_event(), Some("hello".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn openai_compatible_event_stream_parses_text_and_complete() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/stream"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"},\"finish_reason\":null}]}\n\n\
+                 data: {\"choices\":[{\"delta\":{\"content\":\" world\"},\"finish_reason\":null}]}\n\n\
+                 data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":2,\"total_tokens\":3}}\n\n\
+                 data: [DONE]\n\n",
+            ))
+            .mount(&server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!("{}/stream", server.uri()))
+            .send()
+            .await
+            .unwrap();
+
+        let stream =
+            openai_compatible_event_stream(response, "fallback-model".to_owned(), |s| s.to_owned());
+        let events: Vec<ProviderStreamEvent> = stream
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+
+        assert_eq!(events.len(), 3);
+        assert_eq!(
+            events[0],
+            ProviderStreamEvent::TextDelta("Hello".to_owned())
+        );
+        assert_eq!(
+            events[1],
+            ProviderStreamEvent::TextDelta(" world".to_owned())
+        );
+        match &events[2] {
+            ProviderStreamEvent::Complete {
+                model,
+                finish_reason,
+                usage,
+            } => {
+                assert_eq!(model, "fallback-model");
+                assert_eq!(finish_reason, "stop");
+                assert_eq!(usage.total_tokens, Some(3));
+            }
+            _ => panic!("expected Complete"),
+        }
+    }
+
+    #[tokio::test]
+    async fn models_dev_http_failure_returns_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/api.json"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let catalog = ModelsDevCatalog::new(format!("{}/api.json", server.uri()));
+        let mut models = vec![ModelDescriptor {
+            id: "test".to_owned(),
+            provider: ProviderKind::OpenAi,
+            profile_id: None,
+            upstream_name: "gpt-4".to_owned(),
+            display_name: "GPT-4".to_owned(),
+            metadata: None,
+        }];
+
+        let result = catalog.enrich(&mut models).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn models_dev_cache_reuses_index() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/api.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "openai": {
+                    "models": {
+                        "gpt-4": {
+                            "family": "gpt",
+                            "modalities": { "input": ["text"], "output": ["text"] },
+                            "limit": { "context": 8192, "output": 4096 }
+                        }
+                    }
+                }
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let catalog = ModelsDevCatalog::new(format!("{}/api.json", server.uri()));
+
+        let mut models = vec![ModelDescriptor {
+            id: "openai/gpt-4".to_owned(),
+            provider: ProviderKind::OpenAi,
+            profile_id: None,
+            upstream_name: "gpt-4".to_owned(),
+            display_name: "GPT-4".to_owned(),
+            metadata: None,
+        }];
+
+        catalog.enrich(&mut models).await.unwrap();
+        assert_eq!(
+            models[0].metadata.as_ref().unwrap().family,
+            Some("gpt".to_owned())
+        );
+
+        let mut models2 = vec![ModelDescriptor {
+            id: "openai/gpt-4".to_owned(),
+            provider: ProviderKind::OpenAi,
+            profile_id: None,
+            upstream_name: "gpt-4".to_owned(),
+            display_name: "GPT-4".to_owned(),
+            metadata: None,
+        }];
+        catalog.enrich(&mut models2).await.unwrap();
+        assert_eq!(
+            models2[0].metadata.as_ref().unwrap().family,
+            Some("gpt".to_owned())
+        );
+    }
+
     #[derive(Default)]
     struct MockAdapter;
 
@@ -931,7 +1223,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: Some(json!({ "token": "updated" })),
@@ -945,7 +1237,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> Result<ProviderLoginResult> {
             bail!("not implemented")
@@ -954,7 +1246,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<Option<Value>> {
             Ok(None)
         }
@@ -962,7 +1254,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: Some(json!({ "token": "updated" })),
@@ -980,7 +1272,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &ChatCompletionRequest,
         ) -> Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -1032,7 +1324,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -1046,7 +1338,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> Result<ProviderLoginResult> {
             bail!("not implemented")
@@ -1055,7 +1347,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<Option<Value>> {
             Ok(None)
         }
@@ -1063,7 +1355,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -1081,7 +1373,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &ChatCompletionRequest,
         ) -> Result<ProviderChatResult> {
             Ok(ProviderChatResult {

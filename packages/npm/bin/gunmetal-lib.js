@@ -7,11 +7,10 @@ import {
   packageManagerHintFromEnv,
   readInstalledVersion,
   resolveInstalledBin,
-  shouldInstallBinary
+  shouldInstallBinary,
+  SUPPORTED_PACKAGE_MANAGERS,
+  PACKAGE_NAME
 } from "./install-lib.js";
-
-const PACKAGE_NAME = "@dhruv2mars/gunmetal@latest";
-const SUPPORTED_PACKAGE_MANAGERS = new Set(["bun", "npm", "pnpm", "yarn"]);
 
 export { resolveInstalledBin, shouldInstallBinary };
 
@@ -24,15 +23,10 @@ export function shouldRunUpdateCommand(args) {
 }
 
 export function defaultProbe(command, runner = spawnSync) {
-  const args = command === "bun"
-    ? ["pm", "ls", "-g"]
-    : command === "pnpm"
-      ? ["list", "-g", "--depth=0"]
-      : command === "yarn"
-        ? ["global", "list", "--depth=0"]
-        : ["list", "-g", "--depth=0"];
+  const config = SUPPORTED_PACKAGE_MANAGERS[command];
+  if (!config) return { status: 1, stdout: "" };
   try {
-    const result = runner(command, args, { encoding: "utf8", stdio: "pipe" });
+    const result = runner(command, config.listGlobalArgs, { encoding: "utf8", stdio: "pipe" });
     return {
       status: result.status ?? 1,
       stdout: String(result.stdout || "")
@@ -43,9 +37,10 @@ export function defaultProbe(command, runner = spawnSync) {
 }
 
 export function detectInstalledPackageManager(probe = defaultProbe, preferred = null) {
-  const searchOrder = preferred && SUPPORTED_PACKAGE_MANAGERS.has(preferred)
-    ? [preferred, ...[...SUPPORTED_PACKAGE_MANAGERS].filter((value) => value !== preferred)]
-    : [...SUPPORTED_PACKAGE_MANAGERS];
+  const managers = Object.keys(SUPPORTED_PACKAGE_MANAGERS);
+  const searchOrder = preferred && managers.includes(preferred)
+    ? [preferred, ...managers.filter((value) => value !== preferred)]
+    : managers;
   for (const command of searchOrder) {
     const result = probe(command);
     if (result.status !== 0) continue;
@@ -57,10 +52,8 @@ export function detectInstalledPackageManager(probe = defaultProbe, preferred = 
 }
 
 function updateArgsFor(manager) {
-  if (manager === "bun") return ["add", "-g", PACKAGE_NAME];
-  if (manager === "pnpm") return ["add", "-g", PACKAGE_NAME];
-  if (manager === "yarn") return ["global", "add", PACKAGE_NAME];
-  return ["install", "-g", PACKAGE_NAME];
+  const config = SUPPORTED_PACKAGE_MANAGERS[manager];
+  return config ? config.installGlobalArgs : SUPPORTED_PACKAGE_MANAGERS.npm.installGlobalArgs;
 }
 
 export function resolveUpdateCommand(env = process.env) {

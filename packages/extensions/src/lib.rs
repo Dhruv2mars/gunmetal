@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Result, bail};
 use async_trait::async_trait;
-use gunmetal_core::{ChatCompletionRequest, ProviderKind, ProviderProfile};
+use gunmetal_core::{ChatCompletionRequest, ProviderContext, ProviderKind, ProviderProfile};
 use gunmetal_storage::AppPaths;
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -40,7 +40,7 @@ impl CodexAdapter {
     async fn cached_client(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<Arc<Mutex<CodexClient>>> {
         {
             let clients = self.clients.lock().await;
@@ -50,7 +50,7 @@ impl CodexAdapter {
         }
 
         let client = Arc::new(Mutex::new(
-            CodexClient::spawn(CodexClientOptions::from_profile(profile, paths)).await?,
+            CodexClient::spawn(CodexClientOptions::from_profile(profile, context)).await?,
         ));
         let mut clients = self.clients.lock().await;
         Ok(clients
@@ -110,9 +110,9 @@ impl ProviderAdapter for CodexAdapter {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
-        let client = self.cached_client(profile, paths).await?;
+        let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         Ok(ProviderAuthResult {
             credentials: None,
@@ -123,10 +123,10 @@ impl ProviderAdapter for CodexAdapter {
     async fn login(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         open_browser: bool,
     ) -> Result<ProviderLoginResult> {
-        let client = self.cached_client(profile, paths).await?;
+        let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         let session = client.login().await?;
         if open_browser {
@@ -138,8 +138,8 @@ impl ProviderAdapter for CodexAdapter {
         })
     }
 
-    async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>> {
-        let client = self.cached_client(profile, paths).await?;
+    async fn logout(&self, profile: &ProviderProfile, context: &dyn ProviderContext) -> Result<Option<Value>> {
+        let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         client.logout().await?;
         drop(client);
@@ -150,9 +150,9 @@ impl ProviderAdapter for CodexAdapter {
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
-        let client = self.cached_client(profile, paths).await?;
+        let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         Ok(ProviderModelSyncResult {
             credentials: None,
@@ -163,10 +163,10 @@ impl ProviderAdapter for CodexAdapter {
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
-        let client = self.cached_client(profile, paths).await?;
+        let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         Ok(ProviderChatResult {
             credentials: None,
@@ -203,7 +203,7 @@ impl ProviderAdapter for CopilotAdapter {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
             .auth_status(profile)
@@ -217,7 +217,7 @@ impl ProviderAdapter for CopilotAdapter {
     async fn login(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
@@ -229,14 +229,14 @@ impl ProviderAdapter for CopilotAdapter {
         })
     }
 
-    async fn logout(&self, _profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+    async fn logout(&self, _profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
         Ok(None)
     }
 
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
             .list_models(profile)
@@ -250,7 +250,7 @@ impl ProviderAdapter for CopilotAdapter {
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         let result = CopilotClient::with_options(CopilotClientOptions::from_profile(profile))
@@ -291,7 +291,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
             .auth_status(profile)
@@ -305,7 +305,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn login(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         _open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         bail!(
@@ -314,7 +314,7 @@ impl ProviderAdapter for OpenRouterAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
         Ok(
             OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
                 .clear_credentials(),
@@ -324,7 +324,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
             .list_models(profile)
@@ -338,7 +338,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
@@ -353,7 +353,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderStreamResult> {
         let result = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
@@ -368,7 +368,7 @@ impl ProviderAdapter for OpenRouterAdapter {
     async fn raw_stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderRawSseResult> {
         let client = OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile));
@@ -407,7 +407,7 @@ impl ProviderAdapter for ZenAdapter {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
             .auth_status(profile)
@@ -421,7 +421,7 @@ impl ProviderAdapter for ZenAdapter {
     async fn login(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         _open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         bail!(
@@ -430,14 +430,14 @@ impl ProviderAdapter for ZenAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
         Ok(ZenClient::with_options(ZenClientOptions::from_profile(profile)).clear_credentials())
     }
 
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
             .list_models(profile)
@@ -451,7 +451,7 @@ impl ProviderAdapter for ZenAdapter {
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         let result = ZenClient::with_options(ZenClientOptions::from_profile(profile))
@@ -492,7 +492,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         Ok(ProviderAuthResult {
             credentials: profile.credentials.clone(),
@@ -505,7 +505,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn login(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         _open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         bail!(
@@ -514,7 +514,7 @@ impl ProviderAdapter for OpenAiAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &AppPaths) -> Result<Option<Value>> {
+    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
         Ok(
             OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
                 .clear_credentials(),
@@ -524,7 +524,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         Ok(ProviderModelSyncResult {
             credentials: profile.credentials.clone(),
@@ -537,7 +537,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         Ok(ProviderChatResult {
@@ -551,7 +551,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderStreamResult> {
         Ok(ProviderStreamResult {
@@ -565,7 +565,7 @@ impl ProviderAdapter for OpenAiAdapter {
     async fn raw_stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderRawSseResult> {
         let client = OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile));
@@ -595,5 +595,60 @@ mod tests {
             providers[2].ux.base_url_placeholder,
             "https://openrouter.ai/api/v1"
         );
+    }
+
+    #[tokio::test]
+    async fn codex_cached_client_reuses_existing_client() {
+        let temp = tempfile::tempdir().unwrap();
+        let paths = AppPaths::from_root(temp.path().to_path_buf()).unwrap();
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Codex,
+            name: "codex".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        let adapter = CodexAdapter::default();
+        let mock_client = Arc::new(Mutex::new(CodexClient::mock("test")));
+        {
+            let mut clients = adapter.clients.lock().await;
+            clients.insert(profile.id, mock_client.clone());
+        }
+
+        let cached = adapter.cached_client(&profile, &paths).await.unwrap();
+        assert!(Arc::ptr_eq(&cached, &mock_client));
+    }
+
+    #[tokio::test]
+    async fn codex_evict_client_removes_cached_entry() {
+        let adapter = CodexAdapter::default();
+        let profile_id = uuid::Uuid::new_v4();
+        {
+            let mut clients = adapter.clients.lock().await;
+            clients.insert(profile_id, Arc::new(Mutex::new(CodexClient::mock("test"))));
+        }
+        assert!(adapter.clients.lock().await.contains_key(&profile_id));
+        adapter.evict_client(profile_id).await;
+        assert!(!adapter.clients.lock().await.contains_key(&profile_id));
+    }
+
+    #[tokio::test]
+    async fn copilot_logout_returns_none() {
+        let adapter = CopilotAdapter;
+        let profile = ProviderProfile {
+            id: uuid::Uuid::new_v4(),
+            provider: ProviderKind::Copilot,
+            name: "copilot".to_owned(),
+            base_url: None,
+            enabled: true,
+            credentials: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        let result = adapter.logout(&profile, &AppPaths::resolve().unwrap()).await.unwrap();
+        assert!(result.is_none());
     }
 }
