@@ -1,9 +1,14 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
+
+pub trait ProviderContext: Send + Sync {
+    fn helpers_dir(&self) -> &Path;
+    fn empty_workspace_dir(&self) -> &Path;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]

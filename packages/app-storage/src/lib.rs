@@ -6,8 +6,8 @@ use anyhow::{Context, Result, anyhow, bail};
 use chrono::{DateTime, Utc};
 use gunmetal_core::{
     CreatedGunmetalKey, GunmetalKey, KeyScope, KeyState, ModelDescriptor, NewGunmetalKey,
-    NewProviderProfile, NewRequestLogEntry, ProviderKind, ProviderProfile, RequestLogEntry,
-    TokenUsage,
+    NewProviderProfile, NewRequestLogEntry, ProviderContext, ProviderKind, ProviderProfile,
+    RequestLogEntry, TokenUsage,
 };
 use rusqlite::{Connection, OptionalExtension, params};
 use sha2::{Digest, Sha256};
@@ -109,6 +109,16 @@ impl AppPaths {
 
     pub fn daemon_stderr_log(&self) -> PathBuf {
         self.logs_dir.join("daemon.stderr.log")
+    }
+}
+
+impl ProviderContext for AppPaths {
+    fn helpers_dir(&self) -> &Path {
+        &self.helpers_dir
+    }
+
+    fn empty_workspace_dir(&self) -> &Path {
+        &self.empty_workspace_dir
     }
 }
 

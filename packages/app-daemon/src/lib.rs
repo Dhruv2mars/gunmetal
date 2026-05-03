@@ -2099,6 +2099,7 @@ async fn invoke_provider_raw_stream(
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
+    use gunmetal_core::ProviderContext;
     use std::{
         sync::{Arc, Mutex},
         time::Duration,
@@ -3166,7 +3167,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3180,7 +3181,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3197,7 +3198,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3205,7 +3206,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3223,7 +3224,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -3258,7 +3259,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3272,7 +3273,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3289,7 +3290,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3297,7 +3298,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3315,7 +3316,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             *self.seen.lock().unwrap() = Some(request.clone());
