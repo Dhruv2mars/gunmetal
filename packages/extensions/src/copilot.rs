@@ -1561,7 +1561,10 @@ mod tests {
 
         let options = client.options().unwrap();
         let session = options.session.clone().unwrap();
-        let result = client.refresh_if_needed(&options, session.clone()).await.unwrap();
+        let result = client
+            .refresh_if_needed(&options, session.clone())
+            .await
+            .unwrap();
         assert_eq!(result.token, session.token);
         assert_eq!(result.account_label, session.account_label);
     }
@@ -1634,23 +1637,35 @@ mod tests {
 
         {
             let mut cache = client.model_cache.lock().unwrap();
-            cache.insert("gpt-5.4".to_owned(), super::LiveModel {
-                family: Some("gpt-5.4".to_owned()),
-                id: "gpt-5.4".to_owned(),
-                label: "GPT-5.4".to_owned(),
-                model_picker_enabled: true,
-                policy_state: Some("enabled".to_owned()),
-                preview: false,
-                supported_endpoints: vec!["/chat/completions".to_owned(), "/responses".to_owned()],
-                model_type: Some("chat".to_owned()),
-            });
+            cache.insert(
+                "gpt-5.4".to_owned(),
+                super::LiveModel {
+                    family: Some("gpt-5.4".to_owned()),
+                    id: "gpt-5.4".to_owned(),
+                    label: "GPT-5.4".to_owned(),
+                    model_picker_enabled: true,
+                    policy_state: Some("enabled".to_owned()),
+                    preview: false,
+                    supported_endpoints: vec![
+                        "/chat/completions".to_owned(),
+                        "/responses".to_owned(),
+                    ],
+                    model_type: Some("chat".to_owned()),
+                },
+            );
         }
 
         let options = client.options().unwrap();
         let completion = client
-            .complete_with_fallback(&options, "token", "gpt-5.4", &[
-                ChatMessage { role: ChatRole::User, content: "hi".to_owned() }
-            ])
+            .complete_with_fallback(
+                &options,
+                "token",
+                "gpt-5.4",
+                &[ChatMessage {
+                    role: ChatRole::User,
+                    content: "hi".to_owned(),
+                }],
+            )
             .await
             .unwrap();
         assert_eq!(completion.message.content, "fallback ok");

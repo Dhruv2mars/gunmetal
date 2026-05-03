@@ -138,7 +138,11 @@ impl ProviderAdapter for CodexAdapter {
         })
     }
 
-    async fn logout(&self, profile: &ProviderProfile, context: &dyn ProviderContext) -> Result<Option<Value>> {
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        context: &dyn ProviderContext,
+    ) -> Result<Option<Value>> {
         let client = self.cached_client(profile, context).await?;
         let client = client.lock().await;
         client.logout().await?;
@@ -229,7 +233,11 @@ impl ProviderAdapter for CopilotAdapter {
         })
     }
 
-    async fn logout(&self, _profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
+    async fn logout(
+        &self,
+        _profile: &ProviderProfile,
+        _paths: &dyn ProviderContext,
+    ) -> Result<Option<Value>> {
         Ok(None)
     }
 
@@ -314,7 +322,11 @@ impl ProviderAdapter for OpenRouterAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &dyn ProviderContext,
+    ) -> Result<Option<Value>> {
         Ok(
             OpenRouterClient::with_options(OpenRouterClientOptions::from_profile(profile))
                 .clear_credentials(),
@@ -430,7 +442,11 @@ impl ProviderAdapter for ZenAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &dyn ProviderContext,
+    ) -> Result<Option<Value>> {
         Ok(ZenClient::with_options(ZenClientOptions::from_profile(profile)).clear_credentials())
     }
 
@@ -514,7 +530,11 @@ impl ProviderAdapter for OpenAiAdapter {
         )
     }
 
-    async fn logout(&self, profile: &ProviderProfile, _paths: &dyn ProviderContext) -> Result<Option<Value>> {
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        _paths: &dyn ProviderContext,
+    ) -> Result<Option<Value>> {
         Ok(
             OpenAiClient::with_options(OpenAiClientOptions::from_profile(profile))
                 .clear_credentials(),
@@ -648,7 +668,10 @@ mod tests {
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
-        let result = adapter.logout(&profile, &AppPaths::resolve().unwrap()).await.unwrap();
+        let result = adapter
+            .logout(&profile, &AppPaths::resolve().unwrap())
+            .await
+            .unwrap();
         assert!(result.is_none());
     }
 }

@@ -687,7 +687,9 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, duplex};
 
     use super::{CodexClient, render_prompt};
-    use gunmetal_core::{ChatCompletionRequest, ChatMessage, ChatRole, ProviderAuthState, RequestOptions};
+    use gunmetal_core::{
+        ChatCompletionRequest, ChatMessage, ChatRole, ProviderAuthState, RequestOptions,
+    };
 
     #[test]
     fn prompt_renderer_keeps_role_order() {
