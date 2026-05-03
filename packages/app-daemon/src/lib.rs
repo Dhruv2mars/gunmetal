@@ -31,7 +31,7 @@ use gunmetal_sdk::{
     ProviderAuthMethod, ProviderByteStream, ProviderClass, ProviderDefinition, ProviderEventStream,
     ProviderHub, ProviderStreamEvent,
 };
-use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -42,7 +42,7 @@ const WEB_UI_PATH: &str = "/webui";
 #[derive(Clone)]
 pub struct DaemonState {
     pub paths: AppPaths,
-    pub storage: StorageHandle,
+    pub storage: Arc<dyn Storage>,
     pub providers: ProviderHub,
     pub version: String,
     request_logger: RequestLogger,
@@ -51,7 +51,7 @@ pub struct DaemonState {
 
 impl DaemonState {
     pub fn new(paths: AppPaths) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let providers = builtin_provider_hub(paths.clone());
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
@@ -65,7 +65,7 @@ impl DaemonState {
     }
 
     pub fn with_provider_hub(paths: AppPaths, providers: ProviderHub) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
@@ -113,7 +113,7 @@ impl RequestCache {
 }
 
 impl RequestLogger {
-    fn new(storage: StorageHandle) -> Self {
+    fn new(storage: Arc<dyn Storage>) -> Self {
         let (sender, receiver) = mpsc::channel::<NewRequestLogEntry>();
         thread::Builder::new()
             .name("gunmetal-request-logger".to_owned())
@@ -2119,7 +2119,7 @@ mod tests {
         ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
         ProviderRegistry,
     };
-    use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage, StorageHandle};
     use serde_json::{Value, json};
     use tempfile::TempDir;
     use tower::util::ServiceExt;
