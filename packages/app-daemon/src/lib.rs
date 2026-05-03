@@ -33,7 +33,7 @@ use gunmetal_sdk::{
     ProviderAuthMethod, ProviderByteStream, ProviderClass, ProviderDefinition, ProviderEventStream,
     ProviderHub, ProviderStreamEvent,
 };
-use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -44,7 +44,7 @@ const WEB_UI_PATH: &str = "/webui";
 #[derive(Clone)]
 pub struct DaemonState {
     pub paths: AppPaths,
-    pub storage: StorageHandle,
+    pub storage: Arc<dyn Storage>,
     pub providers: ProviderHub,
     pub version: String,
     request_logger: RequestLogger,
@@ -53,7 +53,7 @@ pub struct DaemonState {
 
 impl DaemonState {
     pub fn new(paths: AppPaths) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let providers = builtin_provider_hub(paths.clone());
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
@@ -67,7 +67,7 @@ impl DaemonState {
     }
 
     pub fn with_provider_hub(paths: AppPaths, providers: ProviderHub) -> Result<Self> {
-        let storage = paths.storage_handle()?;
+        let storage: Arc<dyn Storage> = Arc::new(paths.storage_handle()?);
         let request_logger = RequestLogger::new(storage.clone());
         Ok(Self {
             paths,
@@ -115,7 +115,7 @@ impl RequestCache {
 }
 
 impl RequestLogger {
-    fn new(storage: StorageHandle) -> Self {
+    fn new(storage: Arc<dyn Storage>) -> Self {
         let (sender, receiver) = mpsc::channel::<NewRequestLogEntry>();
         thread::Builder::new()
             .name("gunmetal-request-logger".to_owned())
@@ -2101,6 +2101,7 @@ async fn invoke_provider_raw_stream(
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
+    use gunmetal_core::ProviderContext;
     use std::{
         sync::{Arc, Mutex},
         time::Duration,
@@ -2121,71 +2122,13 @@ mod tests {
         ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
         ProviderRegistry,
     };
-    use gunmetal_storage::{AppPaths, StorageHandle};
+use gunmetal_storage::{AppPaths, Storage, StorageHandle};
     use serde_json::{Value, json};
     use tempfile::TempDir;
+    use gunmetal_test_utils::provider_definition_fixture;
     use tower::util::ServiceExt;
 
     use super::{DaemonState, app};
-
-    fn provider_definition_fixture(
-        kind: ProviderKind,
-        class: ProviderClass,
-        priority: usize,
-    ) -> ProviderDefinition {
-        let (
-            label,
-            auth_method,
-            supports_base_url,
-            helper_title,
-            helper_body,
-            base_url_placeholder,
-        ) = match kind {
-            ProviderKind::Codex => (
-                "codex",
-                ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::Custom(_)
-            | ProviderKind::OpenRouter
-            | ProviderKind::Zen
-            | ProviderKind::OpenAi
-            | ProviderKind::Azure
-            | ProviderKind::Nvidia
-            | ProviderKind::Copilot => (
-                "custom",
-                ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "optional override",
-            ),
-        };
-
-        ProviderDefinition {
-            kind,
-            label,
-            class,
-            priority,
-            capabilities: gunmetal_sdk::ProviderCapabilities {
-                auth_method,
-                supports_base_url,
-                supports_model_sync: true,
-                supports_chat_completions: true,
-                supports_responses_api: true,
-                supports_streaming: true,
-            },
-            ux: gunmetal_sdk::ProviderUxHints {
-                helper_title,
-                helper_body,
-                suggested_name: label,
-                base_url_placeholder,
-            },
-        }
-    }
 
     #[tokio::test]
     async fn health_endpoint_is_live() {
@@ -3168,7 +3111,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3182,7 +3125,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3199,7 +3142,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3207,7 +3150,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3225,7 +3168,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -3260,7 +3203,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3274,7 +3217,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3291,7 +3234,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3299,7 +3242,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3317,7 +3260,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             *self.seen.lock().unwrap() = Some(request.clone());

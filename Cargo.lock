@@ -638,6 +638,7 @@ dependencies = [
  "gunmetal-providers",
  "gunmetal-sdk",
  "gunmetal-storage",
+ "gunmetal-test-utils",
  "libc",
  "reqwest",
  "serde_json",
@@ -666,14 +667,12 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
- "dirs",
  "futures-util",
  "gunmetal-core",
  "gunmetal-providers",
  "gunmetal-sdk",
  "gunmetal-storage",
- "libc",
- "reqwest",
+ "gunmetal-test-utils",
  "serde",
  "serde_json",
  "tempfile",
@@ -737,6 +736,19 @@ dependencies = [
  "sha2",
  "tempfile",
  "uuid",
+]
+
+[[package]]
+name = "gunmetal-test-utils"
+version = "0.1.12"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "gunmetal-core",
+ "gunmetal-sdk",
+ "gunmetal-storage",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

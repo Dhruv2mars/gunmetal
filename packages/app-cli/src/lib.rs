@@ -20,84 +20,10 @@ use gunmetal_storage::AppPaths;
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
-#[cfg(test)]
-fn provider_definition_fixture(
-    kind: ProviderKind,
-    class: gunmetal_sdk::ProviderClass,
-    priority: usize,
-) -> gunmetal_sdk::ProviderDefinition {
-    let (label, auth_method, supports_base_url, helper_title, helper_body, base_url_placeholder) =
-        match kind {
-            ProviderKind::Codex => (
-                "codex",
-                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::Copilot => (
-                "copilot",
-                gunmetal_sdk::ProviderAuthMethod::BrowserSession,
-                false,
-                "Browser sign-in provider",
-                "Save the provider, then auth it in the browser.",
-                "not used for this provider",
-            ),
-            ProviderKind::OpenRouter => (
-                "openrouter",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Gateway provider",
-                "Save the upstream API key here.",
-                "https://openrouter.ai/api/v1",
-            ),
-            ProviderKind::Zen => (
-                "zen",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Gateway provider",
-                "Save the upstream API key here.",
-                "https://opencode.ai/zen/v1",
-            ),
-            ProviderKind::OpenAi => (
-                "openai",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "https://api.openai.com/v1",
-            ),
-            ProviderKind::Custom(_) | ProviderKind::Azure | ProviderKind::Nvidia => (
-                "custom",
-                gunmetal_sdk::ProviderAuthMethod::ApiKey,
-                true,
-                "Direct provider",
-                "Save the upstream API key here.",
-                "optional override",
-            ),
-        };
-    gunmetal_sdk::ProviderDefinition {
-        kind,
-        label,
-        class,
-        priority,
-        capabilities: gunmetal_sdk::ProviderCapabilities {
-            auth_method,
-            supports_base_url,
-            supports_model_sync: true,
-            supports_chat_completions: true,
-            supports_responses_api: true,
-            supports_streaming: true,
-        },
-        ux: gunmetal_sdk::ProviderUxHints {
-            helper_title,
-            helper_body,
-            suggested_name: label,
-            base_url_placeholder,
-        },
-    }
-}
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const DEFAULT_HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4684;
@@ -2072,17 +1998,18 @@ mod tests {
 
     use async_trait::async_trait;
     use clap::{CommandFactory, Parser};
-    use gunmetal_core::{ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile};
+    use gunmetal_core::{ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderKind, ProviderProfile};
     use gunmetal_sdk::{
         ProviderAdapter, ProviderAuthResult, ProviderChatResult, ProviderClass, ProviderDefinition,
         ProviderLoginResult, ProviderModelSyncResult, ProviderRegistry,
     };
     use gunmetal_storage::AppPaths;
+    use gunmetal_test_utils::provider_definition_fixture;
     use tempfile::TempDir;
 
     use super::{
         AuthCommand, ChatArgs, ChatMode, Cli, Command, DoctorArgs, KeyCommand, LogCommand,
-        ModelCommand, ProfileCommand, SetupArgs, StatusArgs, execute, provider_definition_fixture,
+        ModelCommand, ProfileCommand, SetupArgs, StatusArgs, execute,
     };
 
     #[test]
@@ -2656,7 +2583,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -2670,7 +2597,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             anyhow::bail!("browser login not used in this test")
@@ -2679,7 +2606,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<Option<serde_json::Value>> {
             Ok(None)
         }
@@ -2687,7 +2614,7 @@ mod tests {
         async fn sync_models(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             self.sync_called.store(true, Ordering::SeqCst);
             anyhow::bail!("sync should have been skipped")
@@ -2696,7 +2623,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             anyhow::bail!("chat not used in this test")

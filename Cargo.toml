@@ -6,7 +6,8 @@ members = [
   "packages/app-storage",
   "packages/extensions",
   "packages/sdk",
-  "packages/sdk-core"
+  "packages/sdk-core",
+  "packages/test-utils"
 ]
 resolver = "3"
 

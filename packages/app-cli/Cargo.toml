@@ -22,5 +22,6 @@ webbrowser.workspace = true
 
 [dev-dependencies]
 async-trait.workspace = true
+gunmetal-test-utils = { path = "../test-utils" }
 tempfile.workspace = true
 tokio.workspace = true

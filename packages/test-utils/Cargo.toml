@@ -1,0 +1,18 @@
+[package]
+name = "gunmetal-test-utils"
+description = "Shared test fixtures and mock adapters for the Gunmetal workspace."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+gunmetal-core = { version = "0.1.11", path = "../sdk-core" }
+gunmetal-sdk = { version = "0.1.11", path = "../sdk" }
+gunmetal-storage = { version = "0.1.11", path = "../app-storage" }
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
