@@ -2,8 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, ModelDescriptor,
-    ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile,
-    TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderContext, ProviderKind, ProviderLoginSession,
+    ProviderProfile, TokenUsage,
 };
 use gunmetal_sdk::{
     ProviderAdapter, ProviderAuthMethod, ProviderAuthResult, ProviderCapabilities,
@@ -11,7 +11,6 @@ use gunmetal_sdk::{
     ProviderLoginResult, ProviderModelSyncResult, ProviderRawSseResult, ProviderStreamResult,
     ProviderUxHints,
 };
-use gunmetal_storage::AppPaths;
 use serde_json::{Value, json};
 
 pub fn provider_definition_fixture(
@@ -108,7 +107,7 @@ impl ProviderAdapter for MockAdapter {
     async fn auth_status(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         Ok(ProviderAuthResult {
             credentials: Some(json!({ "token": "updated" })),
@@ -122,7 +121,7 @@ impl ProviderAdapter for MockAdapter {
     async fn login(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
         _open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         anyhow::bail!("not implemented")
@@ -131,7 +130,7 @@ impl ProviderAdapter for MockAdapter {
     async fn logout(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<Option<Value>> {
         Ok(None)
     }
@@ -139,7 +138,7 @@ impl ProviderAdapter for MockAdapter {
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         Ok(ProviderModelSyncResult {
             credentials: Some(json!({ "token": "updated" })),
@@ -157,7 +156,7 @@ impl ProviderAdapter for MockAdapter {
     async fn chat_completion(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         Ok(ProviderChatResult {
@@ -191,7 +190,7 @@ impl ProviderAdapter for MockCodexAdapter {
     async fn auth_status(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult> {
         Ok(ProviderAuthResult {
             credentials: None,
@@ -205,7 +204,7 @@ impl ProviderAdapter for MockCodexAdapter {
     async fn login(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
         _open_browser: bool,
     ) -> Result<ProviderLoginResult> {
         anyhow::bail!("not implemented")
@@ -214,7 +213,7 @@ impl ProviderAdapter for MockCodexAdapter {
     async fn logout(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<Option<Value>> {
         Ok(None)
     }
@@ -222,7 +221,7 @@ impl ProviderAdapter for MockCodexAdapter {
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult> {
         Ok(ProviderModelSyncResult {
             credentials: None,
@@ -240,7 +239,7 @@ impl ProviderAdapter for MockCodexAdapter {
     async fn chat_completion(
         &self,
         _profile: &ProviderProfile,
-        _paths: &AppPaths,
+        _paths: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult> {
         Ok(ProviderChatResult {

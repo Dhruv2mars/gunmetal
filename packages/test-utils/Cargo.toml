@@ -11,7 +11,6 @@ anyhow.workspace = true
 async-trait.workspace = true
 gunmetal-core = { version = "0.1.11", path = "../sdk-core" }
 gunmetal-sdk = { version = "0.1.11", path = "../sdk" }
-gunmetal-storage = { version = "0.1.11", path = "../app-storage" }
 serde_json.workspace = true
 
 [dev-dependencies]

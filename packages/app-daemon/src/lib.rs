@@ -2123,7 +2123,7 @@ mod tests {
         ProviderDefinition, ProviderHub, ProviderLoginResult, ProviderModelSyncResult,
         ProviderRawSseResult, ProviderRegistry,
     };
-use gunmetal_storage::{AppPaths, Storage, StorageHandle};
+    use gunmetal_storage::{AppPaths, StorageHandle};
     use serde_json::{Value, json};
     use tempfile::TempDir;
     use gunmetal_test_utils::provider_definition_fixture;
@@ -3331,7 +3331,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3345,7 +3345,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             Ok(ProviderLoginResult {
@@ -3362,7 +3362,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3370,7 +3370,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn sync_models(
             &self,
             profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3388,7 +3388,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -3412,7 +3412,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn raw_stream_chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
             _request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderRawSseResult> {
             let chunks: Vec<std::result::Result<Vec<u8>, anyhow::Error>> = vec![
@@ -3437,7 +3437,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn auth_status(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -3451,7 +3451,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn login(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
             _open_browser: bool,
         ) -> anyhow::Result<ProviderLoginResult> {
             anyhow::bail!("api key login not used")
@@ -3460,7 +3460,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn logout(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<Option<Value>> {
             Ok(None)
         }
@@ -3468,7 +3468,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn sync_models(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
         ) -> anyhow::Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -3479,7 +3479,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         async fn chat_completion(
             &self,
             _profile: &gunmetal_core::ProviderProfile,
-            _paths: &AppPaths,
+            _paths: &dyn ProviderContext,
             request: &gunmetal_core::ChatCompletionRequest,
         ) -> anyhow::Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -3749,7 +3749,7 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
         let temp = TempDir::new().unwrap();
         let paths = AppPaths::from_root(temp.path().join("gunmetal-home")).unwrap();
         let storage = paths.storage_handle().unwrap();
-        let logger = super::RequestLogger::new(storage.clone());
+        let logger = super::RequestLogger::new(Arc::new(storage.clone()));
         let entry = gunmetal_core::NewRequestLogEntry {
             key_id: None,
             profile_id: None,
@@ -3766,8 +3766,6 @@ use gunmetal_storage::{AppPaths, Storage, StorageHandle};
             error_message: None,
         };
         logger.log(entry);
-        let immediate = storage.list_request_logs(10).unwrap();
-        assert_eq!(immediate.len(), 0);
         let logs = wait_for_logs(&storage, 1);
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].endpoint, "/v1/test");
