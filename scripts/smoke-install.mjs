@@ -202,17 +202,21 @@ try {
     "--base-url", upstreamBaseUrl,
     "--api-key", "sk-openai-test",
     "--key-name", "smoke-key",
+    "--json",
   ], {
     cwd: repoRoot,
     env: smokeEnv,
   });
-  const setupText = `${setup.stdout}\n${setup.stderr || ""}`;
-  const apiKey = setupText.match(/API key:\s+(gm_[A-Za-z0-9_]+)/)?.[1];
-  const model = setupText.match(/First model:\s+([^\s]+)/)?.[1];
-  if (!apiKey) fail(`setup did not print a Gunmetal key\n${setupText}`);
-  if (!model) fail(`setup did not print a first model\n${setupText}`);
-  if (!setupText.includes("What just happened")) fail("setup summary missing");
-  if (!setupText.includes("What to do next")) fail("setup next-step guidance missing");
+  let setupJson;
+  try {
+    setupJson = JSON.parse(setup.stdout);
+  } catch {
+    fail(`setup did not emit valid JSON\n${setup.stdout}\n${setup.stderr || ""}`);
+  }
+  const apiKey = setupJson.api_key;
+  const model = setupJson.first_model;
+  if (!apiKey) fail(`setup JSON missing api_key\n${setup.stdout}`);
+  if (!model) fail(`setup JSON missing first_model\n${setup.stdout}`);
 
   const start = await runAsyncCapture(globalLauncher, ["start"], {
     cwd: repoRoot,
