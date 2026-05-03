@@ -2163,21 +2163,15 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_text(response).await;
-        assert!(body.contains("Gunmetal Web"));
+        assert!(body.contains("Gunmetal"));
         assert!(body.contains("/webui/api"));
-        assert!(body.contains("Local WebUI"));
-        assert!(body.contains("setup-grid"));
-        assert!(body.contains("traffic-grid"));
-        assert!(body.contains("profile-form-helper"));
-        assert!(body.contains("playground-form"));
-        assert!(body.contains("playground-transcript"));
-        assert!(body.contains("playground-provider"));
-        assert!(body.contains("request-summary"));
-        assert!(body.contains("request-filters"));
-        assert!(body.contains("request-detail"));
-        assert!(body.contains("latest 8"));
-        assert!(body.contains("Gunmetal key only"));
-        assert!(body.contains("models-note"));
+        assert!(body.contains("btn-add-provider"));
+        assert!(body.contains("pg-form"));
+        assert!(body.contains("filt-p"));
+        assert!(body.contains("mod-q"));
+        assert!(body.contains("logo-wrap"));
+        assert!(body.contains("btn-copy"));
+        assert!(body.contains("btn-refresh"));
     }
 
     #[tokio::test]
