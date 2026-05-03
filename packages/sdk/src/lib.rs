@@ -8,7 +8,8 @@ use futures_util::{
 };
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ModelDescriptor, ModelMetadata,
-    ProviderAuthStatus, ProviderKind, ProviderLoginSession, ProviderProfile, TokenUsage,
+    ProviderAuthStatus, ProviderContext, ProviderKind, ProviderLoginSession, ProviderProfile,
+    TokenUsage,
 };
 use gunmetal_storage::AppPaths;
 use reqwest::{Client, Response};
@@ -131,38 +132,42 @@ pub trait ProviderAdapter: Send + Sync {
     async fn auth_status(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderAuthResult>;
 
     async fn login(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         open_browser: bool,
     ) -> Result<ProviderLoginResult>;
 
-    async fn logout(&self, profile: &ProviderProfile, paths: &AppPaths) -> Result<Option<Value>>;
+    async fn logout(
+        &self,
+        profile: &ProviderProfile,
+        context: &dyn ProviderContext,
+    ) -> Result<Option<Value>>;
 
     async fn sync_models(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
     ) -> Result<ProviderModelSyncResult>;
 
     async fn chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderChatResult>;
 
     async fn stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderStreamResult> {
-        let result = self.chat_completion(profile, paths, request).await?;
+        let result = self.chat_completion(profile, context, request).await?;
         Ok(ProviderStreamResult {
             credentials: result.credentials,
             stream: synthetic_completion_stream(result.completion),
@@ -172,10 +177,10 @@ pub trait ProviderAdapter: Send + Sync {
     async fn raw_stream_chat_completion(
         &self,
         profile: &ProviderProfile,
-        paths: &AppPaths,
+        context: &dyn ProviderContext,
         request: &ChatCompletionRequest,
     ) -> Result<ProviderRawSseResult> {
-        let result = self.stream_chat_completion(profile, paths, request).await?;
+        let result = self.stream_chat_completion(profile, context, request).await?;
         Ok(ProviderRawSseResult {
             credentials: result.credentials,
             stream: synthetic_chat_sse_stream(request.model.clone(), result.stream),
@@ -931,7 +936,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: Some(json!({ "token": "updated" })),
@@ -945,7 +950,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> Result<ProviderLoginResult> {
             bail!("not implemented")
@@ -954,7 +959,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<Option<Value>> {
             Ok(None)
         }
@@ -962,7 +967,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: Some(json!({ "token": "updated" })),
@@ -980,7 +985,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &ChatCompletionRequest,
         ) -> Result<ProviderChatResult> {
             Ok(ProviderChatResult {
@@ -1032,7 +1037,7 @@ mod tests {
         async fn auth_status(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderAuthResult> {
             Ok(ProviderAuthResult {
                 credentials: None,
@@ -1046,7 +1051,7 @@ mod tests {
         async fn login(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             _open_browser: bool,
         ) -> Result<ProviderLoginResult> {
             bail!("not implemented")
@@ -1055,7 +1060,7 @@ mod tests {
         async fn logout(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<Option<Value>> {
             Ok(None)
         }
@@ -1063,7 +1068,7 @@ mod tests {
         async fn sync_models(
             &self,
             profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
         ) -> Result<ProviderModelSyncResult> {
             Ok(ProviderModelSyncResult {
                 credentials: None,
@@ -1081,7 +1086,7 @@ mod tests {
         async fn chat_completion(
             &self,
             _profile: &ProviderProfile,
-            _paths: &AppPaths,
+            _context: &dyn ProviderContext,
             request: &ChatCompletionRequest,
         ) -> Result<ProviderChatResult> {
             Ok(ProviderChatResult {

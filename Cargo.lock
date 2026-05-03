@@ -631,7 +631,6 @@ version = "0.1.12"
 dependencies = [
  "anyhow",
  "async-trait",
- "chrono",
  "clap",
  "futures-util",
  "gunmetal-core",
@@ -647,7 +646,6 @@ dependencies = [
  "tokio",
  "uuid",
  "webbrowser",
- "wiremock",
 ]
 
 [[package]]
@@ -669,15 +667,12 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
- "dirs",
  "futures-util",
  "gunmetal-core",
  "gunmetal-providers",
  "gunmetal-sdk",
  "gunmetal-storage",
  "gunmetal-test-utils",
- "libc",
- "reqwest",
  "serde",
  "serde_json",
  "tempfile",
