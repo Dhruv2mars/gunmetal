@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run --filter @gunmetal/web build && bun run --filter @dhruv2mars/gunmetal build && cargo build --workspace",
+    "build": "bun run --filter @gunmetal/web build && cd packages/app-daemon/webui && bun run build && cd ../../.. && bun run --filter @dhruv2mars/gunmetal build && cargo build --workspace",
     "check": "bun run --filter @gunmetal/web lint && bun run --filter @dhruv2mars/gunmetal check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
     "dev": "bun run --filter @gunmetal/web dev",
     "pack:npm": "npm pack ./packages/npm",
