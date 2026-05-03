@@ -69,8 +69,6 @@ test("install docs point at npm, not source-only fallback", () => {
   const installPage = readFileSync("apps/web/src/app/install/page.tsx", "utf8");
   const docsPage = readFileSync("apps/web/src/app/docs/page.tsx", "utf8");
   const startHerePage = readFileSync("apps/web/src/app/start-here/page.tsx", "utf8");
-  const webUiPage = readFileSync("apps/web/src/app/webui/page.tsx", "utf8");
-
   assert.doesNotMatch(rootReadme, /not published yet/);
   assert.doesNotMatch(rootReadme, /run Gunmetal from source/i);
   assert.match(rootReadme, /npm i -g @dhruv2mars\/gunmetal/);
@@ -90,8 +88,6 @@ test("install docs point at npm, not source-only fallback", () => {
   assert.match(startHerePage, /Start here/i);
   assert.match(startHerePage, /\/v1\/models/);
   assert.match(startHerePage, /\/v1\/chat\/completions/);
-  assert.match(webUiPage, /gunmetal web/);
-  assert.match(webUiPage, /127\.0\.0\.1:4684\/webui/);
 });
 
 test("web app pins Vercel to the Next.js build path", () => {

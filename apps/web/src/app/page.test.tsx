@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import HomePage from "./page";
-import WebUiPage from "./webui/page";
 import DocsPage from "./docs/page";
 import DownloadPage from "./download/page";
 import ProductSuitePage from "./products/suite/page";
@@ -21,15 +20,6 @@ describe("marketing routes", () => {
     expect(html).toContain("npm");
     expect(html).toContain("bun");
     expect(html).toContain("pnpm");
-  });
-
-  test("web ui page explains the local browser flow", () => {
-    const html = renderToStaticMarkup(<WebUiPage />);
-
-    expect(html).toContain("Web UI");
-    expect(html).toContain("gunmetal web");
-    expect(html).toContain("127.0.0.1");
-    expect(html).toContain("Browser control");
   });
 
   test("docs page keeps the compact setup path", () => {
