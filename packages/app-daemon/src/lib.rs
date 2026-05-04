@@ -2165,12 +2165,12 @@ mod tests {
         let body = to_text(response).await;
         assert!(body.contains("Gunmetal"));
         assert!(body.contains("/webui/api"));
-        assert!(body.contains("btn-add-provider"));
+        assert!(body.contains("provider-toggle"));
         assert!(body.contains("pg-form"));
         assert!(body.contains("filt-p"));
         assert!(body.contains("mod-q"));
-        assert!(body.contains("logo-wrap"));
-        assert!(body.contains("btn-copy"));
+        assert!(body.contains("btn-create-key"));
+        assert!(body.contains("btn-copy-url"));
         assert!(body.contains("btn-refresh"));
     }
 

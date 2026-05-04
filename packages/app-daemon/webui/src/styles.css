@@ -2,6 +2,7 @@
 
 @theme {
   --color-bg: #0e0e0d;
+  --color-sidebar: #111110;
   --color-text: #faf9f6;
   --color-muted: #868584;
   --color-faint: #4a4a48;
@@ -15,6 +16,7 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @layer base {
@@ -22,7 +24,7 @@
   html { -webkit-font-smoothing: antialiased; }
   body {
     font-family: var(--font-matter);
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.45;
     font-weight: 400;
     background: var(--color-bg);
@@ -32,6 +34,11 @@
   }
   ::selection { background: rgba(250, 249, 246, 0.12); }
   :focus-visible { outline: 1px solid rgba(215, 180, 106, 0.5); outline-offset: 2px; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border: 2px solid var(--color-bg); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 @layer utilities {
@@ -49,25 +56,212 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes viewEnter {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes logoPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Interactive */
+.interactive {
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.interactive:active {
+  transform: scale(0.97);
+}
+
+/* Chat bubbles */
+.chat-user {
+  background: rgba(215, 180, 106, 0.08);
+  border: 1px solid rgba(215, 180, 106, 0.12);
+  border-bottom-right-radius: 4px;
+}
+.chat-assistant {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-bottom-left-radius: 4px;
+}
+
+/* Code blocks */
+.code-block {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 180ms var(--ease-out);
+}
+.modal-card {
+  background: var(--color-sidebar);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  margin: 16px;
+  animation: scaleIn 220ms var(--ease-out);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+/* Toggle switch */
+.toggle-track {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--color-faint);
+  cursor: pointer;
+  transition: background 200ms var(--ease-out);
+  flex-shrink: 0;
+}
+.toggle-track.on {
+  background: var(--color-accent);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition: transform 200ms var(--ease-out);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.toggle-track.on::after {
+  transform: translateX(18px);
+}
+
+/* Status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.status-dot.pulse {
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+/* Sparkline bars */
+.spark-bar {
+  width: 100%;
+  min-width: 3px;
+  border-radius: 1px;
+  background: var(--color-accent);
+  opacity: 0.6;
+  transition: opacity 200ms;
+}
+.spark-bar:hover {
+  opacity: 1;
+}
+
+/* Provider card */
+.provider-card {
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 18px;
+  transition: all 200ms var(--ease-out);
+}
+.provider-card:hover {
+  border-color: var(--color-line-hover);
+  background: var(--color-surface);
+}
+
+/* Activity row */
+.activity-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 140px 90px 80px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 120ms;
+}
+.activity-row:hover {
+  background: var(--color-surface);
+}
+.activity-row:last-child {
+  border-bottom: none;
+}
+
+/* Key row */
+.key-row {
+  display: grid;
+  grid-template-columns: 1fr 200px 120px 48px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 120ms;
+}
+.key-row:hover {
+  background: var(--color-surface);
+}
+.key-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .activity-row {
+    grid-template-columns: 24px 1fr 80px;
+  }
+  .key-row {
+    grid-template-columns: 1fr 120px 48px;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .provider-row:hover,
-  .log-row:hover,
-  .key-row:hover,
-  .model-row:hover {
-    background-color: rgba(255, 255, 255, 0.02);
-  }
-  .logo-wrap:hover {
-    transform: scale(1.05);
-  }
-  .toggle-btn:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-    border-color: rgba(226, 226, 226, 0.12);
-  }
+  .list-row:hover { background-color: var(--color-surface); }
+  .nav-item:hover { background-color: var(--color-surface); color: var(--color-text); }
+  .btn:hover { background-color: var(--color-surface); border-color: var(--color-line-hover); }
+  .btn-accent:hover { filter: brightness(1.1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,270 +7,524 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin>(function(){const e=document.createElement("link").relList;if(e&&e.supports&&e.supports("modulepreload"))return;for(const r of document.querySelectorAll('link[rel="modulepreload"]'))a(r);new MutationObserver(r=>{for(const i of r)if(i.type==="childList")for(const l of i.addedNodes)l.tagName==="LINK"&&l.rel==="modulepreload"&&a(l)}).observe(document,{childList:!0,subtree:!0});function o(r){const i={};return r.integrity&&(i.integrity=r.integrity),r.referrerPolicy&&(i.referrerPolicy=r.referrerPolicy),r.crossOrigin==="use-credentials"?i.credentials="include":r.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function a(r){if(r.ep)return;r.ep=!0;const i=o(r);fetch(r.href,i)}})();const y="/webui/api";async function h(t,e){const o=await fetch(t,{headers:{"Content-Type":"application/json"},...e}),a=await o.text(),r=a?JSON.parse(a):{};if(!o.ok)throw new Error(r?.error?.message||r?.message||"Failed");return r}const x={state:()=>h(`${y}/state`),createProfile:t=>h(`${y}/profiles`,{method:"POST",body:JSON.stringify(t)}),action:(t,e)=>h(`${y}/profiles/${t}/${e}`,{method:"POST"}),createKey:(t,e)=>h(`${y}/profiles/${t}/keys`,{method:"POST",body:JSON.stringify({name:e})}),setKeyState:(t,e)=>h(`${y}/keys/${t}/state`,{method:"POST",body:JSON.stringify({state:e})}),deleteKey:t=>h(`${y}/keys/${t}`,{method:"DELETE"}),deleteProfile:t=>h(`${y}/profiles/${t}`,{method:"DELETE"}),chat:(t,e,o,a)=>fetch(t==="responses"?"/v1/responses":"/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${e}`},body:JSON.stringify(t==="responses"?{model:o,stream:!0,input:a.map(r=>({role:r.role==="system"?"developer":r.role,content:[{type:"input_text",text:r.content}]}))}:{model:o,stream:!0,messages:a})})},d=t=>document.getElementById(t),n=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"),T=t=>{const e=new Date(t);if(isNaN(e.getTime()))return t;const o=Math.floor((Date.now()-e.getTime())/1e3);return o<60?"just now":o<3600?`${Math.floor(o/60)}m ago`:o<86400?`${Math.floor(o/3600)}h ago`:o<604800?`${Math.floor(o/86400)}d ago`:e.toLocaleDateString()},z=async t=>{try{if(navigator.clipboard?.writeText)return await navigator.clipboard.writeText(t),!0}catch{}const e=document.createElement("textarea");e.value=t,e.style.position="fixed",e.style.opacity="0",document.body.appendChild(e),e.select();const o=document.execCommand("copy");return e.remove(),o};let m=null,w=null,L=null,v=new Set,s={key:"",provider:"",model:"",mode:"chat",running:!1,messages:[],usage:null},k={provider:"all",status:"all",query:"",limit:"8"},P="";function p(t,e=!0){w={msg:t,ok:e},u(),setTimeout(()=>{w=null,u()},2200)}function D(t){v.has(t)?v.delete(t):v.add(t),u()}const A=`<svg viewBox="0 0 120 120" fill="none" class="w-full h-full">
-  <defs><clipPath id="bl"><rect x="0" y="0" width="60" height="120"/></clipPath></defs>
-  <circle cx="60" cy="60" r="52" stroke="currentColor" stroke-width="3" opacity="0.9"/>
-  <g clip-path="url(#bl)">
-    <path d="M60 14 C58 16 56 18 54 21 C52 24 50 28 48 32 C44 40 42 48 41 56 C40 64 40 72 41 80 C42 84 43 88 45 90 C47 92 49 93 52 93 C54 93 56 92 58 90 C60 88 61 84 61 80 C61 72 61 64 61 56 C61 48 61 40 61 32 C61 28 61 24 61 21 C61 18 61 16 60 14Z" fill="currentColor" opacity="0.85"/>
-  </g>
-  <g transform="translate(120 0) scale(-1 1)" clip-path="url(#bl)">
-    <path d="M60 14 C58 16 56 18 54 21 C52 24 50 28 48 32 C44 40 42 48 41 56 C40 64 40 72 41 80 C42 84 43 88 45 90 C47 92 49 93 52 93 C54 93 56 92 58 90 C60 88 61 84 61 80 C61 72 61 64 61 56 C61 48 61 40 61 32 C61 28 61 24 61 21 C61 18 61 16 60 14Z" fill="currentColor" opacity="0.35"/>
-  </g>
-</svg>`;function u(){const t=d("app");if(!t)return;const e=m,o=e?new URL(e.service.api_base_url,location.origin).toString():"";t.innerHTML=`
-    <div class="fixed inset-0 pointer-events-none" style="background:radial-gradient(ellipse 80% 50% at 50% 20%,rgba(250,249,246,0.025),transparent 60%)"></div>
-
-    <nav class="fixed top-0 left-0 right-0 z-50 border-b" style="border-color:rgba(226,226,226,0.06);background:rgba(14,14,13,0.85);backdrop-filter:blur(20px)">
-      <div class="mx-auto flex h-14 max-w-2xl items-center justify-between px-6">
-        <div class="flex items-center gap-2.5">
-          <div class="h-5 w-5 text-[var(--text)]">${A}</div>
-          <span class="text-[14px] font-medium tracking-tight" style="font-family:var(--font-matter)">Gunmetal</span>
+    <script type="module" crossorigin>(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const r of document.querySelectorAll('link[rel="modulepreload"]'))n(r);new MutationObserver(r=>{for(const i of r)if(i.type==="childList")for(const o of i.addedNodes)o.tagName==="LINK"&&o.rel==="modulepreload"&&n(o)}).observe(document,{childList:!0,subtree:!0});function s(r){const i={};return r.integrity&&(i.integrity=r.integrity),r.referrerPolicy&&(i.referrerPolicy=r.referrerPolicy),r.crossOrigin==="use-credentials"?i.credentials="include":r.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function n(r){if(r.ep)return;r.ep=!0;const i=s(r);fetch(r.href,i)}})();let c=null,L="overview",B=null,S=null,M=!1,j="confirm",O="",I="",q=null,H="",K="",D={provider:"all",status:"all",limit:"8",query:""},a={provider:"",model:"",key:"",mode:"chat",messages:[],running:!1,usage:null};const _="/webui/api";async function E(e,t){const s=await fetch(e,{headers:{"Content-Type":"application/json"},...t}),n=await s.text(),r=n?JSON.parse(n):{};if(!s.ok)throw new Error(r.error?.message||r.message||`HTTP ${s.status}`);return r}const C={state:()=>E(`${_}/state`),createProfile:e=>E(`${_}/profiles`,{method:"POST",body:JSON.stringify(e)}),action:(e,t)=>E(`${_}/profiles/${e}/${t}`,{method:"POST"}),createKey:(e,t)=>E(`${_}/profiles/${e}/keys`,{method:"POST",body:JSON.stringify({name:t})}),setKeyState:(e,t)=>E(`${_}/keys/${e}/state`,{method:"POST",body:JSON.stringify({state:t})}),deleteKey:e=>E(`${_}/keys/${e}`,{method:"DELETE"}),deleteProfile:e=>E(`${_}/profiles/${e}`,{method:"DELETE"}),chat:(e,t,s,n)=>fetch(e==="responses"?"/v1/responses":"/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify(e==="responses"?{model:s,stream:!0,input:n.map(r=>({role:r.role==="system"?"developer":r.role,content:[{type:"input_text",text:r.content}]}))}:{model:s,stream:!0,messages:n})})},p=e=>document.getElementById(e),l=e=>String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");function Y(e){const t=new Date(e);return isNaN(t.getTime())?e:t.toLocaleString()}function Z(e){const t=new Date(e);if(isNaN(t.getTime()))return e;const n=new Date().getTime()-t.getTime(),r=Math.floor(n/1e3);if(r<60)return`${r}s ago`;const i=Math.floor(r/60);if(i<60)return`${i}m ago`;const o=Math.floor(i/60);if(o<24)return`${o}h ago`;const x=Math.floor(o/24);return x<7?`${x}d ago`:t.toLocaleDateString()}function v(e,t=!0){S={msg:e,ok:t},J(),B&&clearTimeout(B),B=setTimeout(()=>{S=null,J()},3e3)}async function z(e){try{return await navigator.clipboard.writeText(e),!0}catch{return!1}}function V(e,t,s){M=!0,j="confirm",O=e,I=t,q=s,A()}function F(e){M=!0,j="auth",O=`Connect ${e}`,I="",H=e,A()}function ee(){M=!0,j="create-key",O="Create API Key",I="",A()}function te(e,t){M=!0,j="delete-key",O="Delete API Key",I=`Are you sure you want to delete "${t}"? This action cannot be undone.`,q=()=>{C.deleteKey(e).then(s=>{v(s.message),k()}).catch(s=>v(s.message,!1))},A()}function T(){M=!1,q=null,A()}const Q=()=>'<svg viewBox="0 0 120 120" fill="none" class="w-full h-full"><defs><clipPath id="bl"><rect x="0" y="0" width="60" height="120"/></clipPath></defs><circle cx="60" cy="60" r="52" stroke="currentColor" stroke-width="3" opacity="0.9"/><g clip-path="url(#bl)"><path d="M60 14 C58 16 56 18 54 21 C52 24 50 28 48 32 C44 40 42 48 41 56 C40 64 40 72 41 80 C42 84 43 88 45 90 C47 92 49 93 52 93 C54 93 56 92 58 90 C60 88 61 84 61 80 C61 72 61 64 61 56 C61 48 61 40 61 32 C61 28 61 24 61 21 C61 18 61 16 60 14Z" fill="currentColor" opacity="0.85"/></g><g transform="translate(120 0) scale(-1 1)" clip-path="url(#bl)"><path d="M60 14 C58 16 56 18 54 21 C52 24 50 28 48 32 C44 40 42 48 41 56 C40 64 40 72 41 80 C42 84 43 88 45 90 C47 92 49 93 52 93 C54 93 56 92 58 90 C60 88 61 84 61 80 C61 72 61 64 61 56 C61 48 61 40 61 32 C61 28 61 24 61 21 C61 18 61 16 60 14Z" fill="currentColor" opacity="0.35"/></g></svg>',u={overview:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>',providers:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>',models:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',keys:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',activity:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',playground:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',check:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',search:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',refresh:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',copy:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',trash:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',plus:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',external:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',chevronRight:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',close:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',send:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'};function X(){const e=p("app");e&&(e.innerHTML=`
+    <div class="flex h-dvh w-full overflow-hidden bg-bg">
+      <aside class="w-[240px] shrink-0 border-r border-line flex flex-col z-20 bg-sidebar">
+        <div class="h-14 shrink-0 flex items-center px-4 border-b border-line">
+          <div class="flex items-center gap-2.5">
+            <div class="h-[18px] w-[18px] text-text">${Q()}</div>
+            <span class="text-sm font-medium tracking-tight">Gunmetal</span>
+          </div>
         </div>
+        <nav id="sidebar-nav" class="flex-1 overflow-y-auto p-2 space-y-0.5"></nav>
+        <div id="sidebar-footer" class="p-3 border-t border-line shrink-0"></div>
+      </aside>
+      <main id="main-scroll" class="flex-1 overflow-y-auto relative bg-bg">
+        <div id="main-content" class="max-w-5xl mx-auto p-8 lg:p-10"></div>
+      </main>
+      <div id="toast-container" class="fixed bottom-5 right-5 z-[100]"></div>
+      <div id="modal-container" class="fixed inset-0 z-[60] pointer-events-none"></div>
+    </div>
+  `)}function ne(){const e=p("sidebar-nav"),t=p("sidebar-footer");if(!e||!t)return;if(!c){e.innerHTML='<div class="p-4 text-xs text-muted text-center animate-pulse">Loading...</div>';return}const s=[{id:"overview",label:"Overview",icon:u.overview},{id:"providers",label:"Providers",icon:u.providers,count:c.counts.profiles},{id:"models",label:"Models",icon:u.models,count:c.counts.models},{id:"keys",label:"API Keys",icon:u.keys,count:c.counts.keys},{id:"activity",label:"Activity",icon:u.activity,count:c.counts.logs},{id:"playground",label:"Playground",icon:u.playground}];e.innerHTML=s.map(i=>{const x=L===i.id?"bg-surface text-text":"text-muted hover:bg-surface hover:text-text";return`
+        <button data-nav="${i.id}" class="w-full flex items-center justify-between px-3 py-[7px] rounded-lg text-[13px] interactive ${x}">
+          <div class="flex items-center gap-2.5">
+            <span class="opacity-80">${i.icon}</span>
+            <span>${i.label}</span>
+          </div>
+          ${i.count!==void 0&&i.count!==null?`<span class="text-[11px] font-mono opacity-40">${i.count}</span>`:""}
+        </button>
+      `}).join("");const n=new URL(c.service.api_base_url,location.origin).toString(),r=c.setup.traffic_ready?"#7dbeb3":c.setup.provider_ready?"var(--color-accent)":"#ff8d78";t.innerHTML=`
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <button id="btn-copy" class="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-[transform,background-color,border-color] duration-150 hover:bg-[rgba(255,255,255,0.04)] active:scale-[0.97]" style="border-color:rgba(226,226,226,0.1);color:var(--color-muted)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            <span class="hidden sm:inline">Copy API</span>
-          </button>
-          <button id="btn-refresh" class="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-[transform,background-color,border-color] duration-150 hover:bg-[rgba(255,255,255,0.04)] active:scale-[0.97]" style="border-color:rgba(226,226,226,0.1);color:var(--color-muted)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span class="h-2 w-2 rounded-full" style="background:${r}"></span>
+          <span class="text-[11px] text-muted">${c.setup.traffic_ready?"Online":c.setup.provider_ready?"Setup":"Idle"}</span>
+        </div>
+        <button id="btn-refresh" class="text-muted hover:text-text interactive p-1 rounded" title="Refresh">
+          ${u.refresh}
+        </button>
+      </div>
+      <div class="text-[11px] font-mono text-muted truncate" title="${l(n)}">${l(n)}</div>
+      <button id="btn-copy-url" class="w-full mt-0.5 flex items-center justify-center gap-1.5 rounded-md border border-line px-3 py-[5px] text-[11px] interactive bg-surface text-text hover:border-line-hover">
+        ${u.copy}
+        Copy API URL
+      </button>
+      <div class="flex items-center justify-between text-[10px] text-faint mt-1">
+        <span>v${l(c.service.version)}</span>
+        <a href="${l(c.service.home)}" target="_blank" rel="noopener" class="hover:text-muted flex items-center gap-1">Docs ${u.external}</a>
+      </div>
+    </div>
+  `}function J(){const e=p("toast-container");if(!e)return;if(!S){e.innerHTML="";return}const t=S.ok?"#7dbeb3":"#ff8d78",s=S.ok?"rgba(125,211,200,0.06)":"rgba(255,141,120,0.06)",n=S.ok?"rgba(125,211,200,0.2)":"rgba(255,141,120,0.2)";e.innerHTML=`
+    <div class="flex items-center gap-2.5 rounded-xl border px-4 py-2.5 shadow-2xl" style="background:${s};border-color:${n};backdrop-filter:blur(12px);animation:toastIn 200ms var(--ease-out) both">
+      <span class="h-2 w-2 rounded-full shrink-0" style="background:${t}"></span>
+      <span class="text-[13px] text-text">${l(S.msg)}</span>
+    </div>
+  `}function A(){const e=p("modal-container");if(!e)return;if(!M){e.innerHTML="",e.classList.add("pointer-events-none");return}e.classList.remove("pointer-events-none");let t="";j==="confirm"||j==="delete-key"?t=`
+      <p class="text-[13px] text-muted leading-relaxed mt-1">${l(I)}</p>
+      <div class="flex gap-2 mt-5 justify-end">
+        <button id="modal-cancel" class="btn interactive rounded-lg border border-line px-4 py-2 text-[13px] font-medium text-text bg-bg hover:bg-surface">Cancel</button>
+        <button id="modal-confirm" class="btn interactive rounded-lg px-4 py-2 text-[13px] font-medium bg-[#ff8d78]/10 text-[#ff8d78] border border-[#ff8d78]/20 hover:bg-[#ff8d78]/20">Delete</button>
+      </div>
+    `:j==="auth"?t=`
+      <form id="modal-auth-form" class="mt-4 space-y-3">
+        <div>
+          <label class="block text-[10px] font-medium uppercase tracking-[0.12em] text-faint mb-1.5">API Key</label>
+          <input name="api_key" type="password" required placeholder="sk-..." class="h-9 w-full rounded-lg border border-line bg-bg px-3 font-mono text-[12px] outline-none placeholder:text-faint focus:border-accent text-text" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium uppercase tracking-[0.12em] text-faint mb-1.5">Profile Name <span class="text-faint normal-case">(Optional)</span></label>
+          <input name="name" placeholder="e.g. ${l(H)}-prod" class="h-9 w-full rounded-lg border border-line bg-bg px-3 text-[13px] outline-none placeholder:text-faint focus:border-accent text-text" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium uppercase tracking-[0.12em] text-faint mb-1.5">Base URL <span class="text-faint normal-case">(Optional)</span></label>
+          <input name="base_url" placeholder="https://..." class="h-9 w-full rounded-lg border border-line bg-bg px-3 font-mono text-[12px] outline-none placeholder:text-faint focus:border-accent text-text" />
+        </div>
+        <div class="flex gap-2 mt-5 justify-end">
+          <button type="button" id="modal-cancel" class="btn interactive rounded-lg border border-line px-4 py-2 text-[13px] font-medium text-text bg-bg hover:bg-surface">Cancel</button>
+          <button type="submit" class="btn interactive rounded-lg px-4 py-2 text-[13px] font-medium bg-accent text-bg btn-accent">Connect</button>
+        </div>
+      </form>
+    `:j==="create-key"&&(t=`
+      <form id="modal-key-form" class="mt-4 space-y-3">
+        <div>
+          <label class="block text-[10px] font-medium uppercase tracking-[0.12em] text-faint mb-1.5">Key Name</label>
+          <input name="name" required placeholder="e.g. production-key" class="h-9 w-full rounded-lg border border-line bg-bg px-3 text-[13px] outline-none placeholder:text-faint focus:border-accent text-text" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium uppercase tracking-[0.12em] text-faint mb-1.5">Provider</label>
+          <select name="profile_id" class="h-9 w-full rounded-lg border border-line bg-bg px-3 text-[13px] outline-none focus:border-accent text-text appearance-none cursor-pointer">
+            ${c?.profiles.length?c.profiles.map(n=>`<option value="${l(n.id)}">${l(n.name)}</option>`).join(""):'<option value="">No providers</option>'}
+          </select>
+        </div>
+        <div class="flex gap-2 mt-5 justify-end">
+          <button type="button" id="modal-cancel" class="btn interactive rounded-lg border border-line px-4 py-2 text-[13px] font-medium text-text bg-bg hover:bg-surface">Cancel</button>
+          <button type="submit" class="btn interactive rounded-lg px-4 py-2 text-[13px] font-medium bg-accent text-bg btn-accent">Create Key</button>
+        </div>
+      </form>
+    `),e.innerHTML=`
+    <div class="modal-backdrop">
+      <div class="modal-card">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-[15px] font-medium">${l(O)}</h3>
+          <button id="modal-cancel-x" class="text-faint hover:text-muted interactive p-1 rounded">${u.close}</button>
+        </div>
+        ${t}
+      </div>
+    </div>
+  `}function se(){const e=p("main-content"),t=p("main-scroll");if(!e||!t)return;if(!c){e.innerHTML=re();return}e.style.animation="none",e.offsetHeight,e.style.animation="viewEnter 280ms var(--ease-out) both";let s="";switch(L){case"overview":s=G();break;case"providers":s=ie();break;case"models":s=oe();break;case"keys":s=ae();break;case"activity":s=de();break;case"playground":s=le();break;default:s=G()}e.innerHTML=s,t.scrollTop=0}function re(){return`
+    <div class="flex flex-col items-center justify-center h-[50vh] gap-5">
+      <div class="h-14 w-14 text-faint" style="animation:logoPulse 2s ease-in-out infinite">${Q()}</div>
+      <p class="text-sm text-muted animate-pulse">Loading dashboard...</p>
+    </div>
+  `}function G(){const e=c,t=new URL(e.service.api_base_url,location.origin).toString(),s=e.setup.traffic_ready,n=e.logs.slice(0,20),r=n.length?Math.round(n.reduce((d,b)=>d+b.duration_ms,0)/n.length):0,i=n.filter(d=>(d.status_code??0)>=400||!!d.error_message).length,o=n.length?Math.round(i/n.length*100):0,x=new Date,m=Array.from({length:24},(d,b)=>({hour:new Date(x.getTime()-(23-b)*60*60*1e3).getHours(),count:0}));e.logs.forEach(d=>{const b=new Date(d.started_at),g=(x.getTime()-b.getTime())/(1e3*60*60);if(g>=0&&g<24){const y=23-Math.floor(g);y>=0&&y<24&&m[y].count++}});const h=Math.max(1,...m.map(d=>d.count)),$=[{label:"Connect provider",desc:"Add your first AI provider",done:e.setup.provider_ready},{label:"Sync models",desc:"Fetch available models",done:e.setup.models_ready},{label:"Create a key",desc:"Generate an API key",done:e.setup.key_ready},{label:"Send a request",desc:"Proxy your first call",done:e.setup.traffic_ready}],P=$.filter(d=>d.done).length;return`
+    <div>
+      \x3C!-- Status Hero -->
+      <div class="rounded-2xl border border-line p-6 mb-6 ${s?"bg-[rgba(125,211,200,0.03)]":"bg-surface"}" style="animation:fadeUp 300ms var(--ease-out) both">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div class="flex items-center gap-4">
+            <div class="h-10 w-10 rounded-full flex items-center justify-center ${s?"bg-[#7dbeb3]/10":"bg-surface border border-line"}">
+              <span class="status-dot ${s?"bg-[#7dbeb3] pulse":"bg-[#ff8d78]"}"></span>
+            </div>
+            <div>
+              <div class="text-[18px] font-medium tracking-tight">${s?"System Online":"Setup Required"}</div>
+              <div class="text-[12px] text-muted mt-0.5 font-mono">${l(t)}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="ov-copy-url" class="btn interactive flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-[12px] font-medium bg-bg text-text hover:bg-surface">
+              ${u.copy}
+              Copy URL
+            </button>
+            ${s?"":'<button data-nav="providers" class="btn-nav btn interactive rounded-lg px-3 py-2 text-[12px] font-medium bg-accent text-bg btn-accent">Setup Providers</button>'}
+          </div>
+        </div>
+      </div>
+
+      \x3C!-- Metrics -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        ${[{value:e.counts.logs,label:"Total Requests",color:"#7dbeb3",icon:u.activity},{value:e.counts.profiles,label:"Providers",color:"var(--color-accent)",icon:u.providers},{value:e.counts.models,label:"Models",color:"#8a9ec9",icon:u.models},{value:e.counts.keys,label:"API Keys",color:"#c98a9e",icon:u.keys}].map(d=>`
+          <div class="rounded-xl border border-line p-4 bg-surface" style="animation:fadeUp 280ms var(--ease-out) both">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="opacity-60">${d.icon}</span>
+              <span class="text-[10px] font-medium uppercase tracking-[0.12em] text-faint">${d.label}</span>
+            </div>
+            <div class="font-mono text-[26px] font-medium leading-none text-text">${d.value}</div>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        \x3C!-- Activity Sparkline -->
+        <div class="lg:col-span-2 rounded-xl border border-line p-5 bg-surface" style="animation:fadeUp 300ms var(--ease-out) both; animation-delay:50ms">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="text-[15px] font-medium tracking-tight">Activity</div>
+              <div class="text-[12px] text-muted mt-0.5">Last 24 hours</div>
+            </div>
+            <div class="flex items-center gap-4 text-[11px] text-muted">
+              <span class="flex items-center gap-1"><span class="status-dot bg-[#7dbeb3]"></span> Avg ${r}ms</span>
+              <span class="flex items-center gap-1"><span class="status-dot bg-[#ff8d78]"></span> ${o}% errors</span>
+            </div>
+          </div>
+          <div class="flex items-end gap-[3px] h-16">
+            ${m.map(d=>`
+              <div class="spark-bar flex-1" style="height:${Math.max(4,d.count/h*100)}%" title="${d.hour}:00 — ${d.count} requests"></div>
+            `).join("")}
+          </div>
+          <div class="flex justify-between mt-2 text-[10px] text-faint font-mono">
+            <span>24h ago</span>
+            <span>Now</span>
+          </div>
+        </div>
+
+        \x3C!-- Provider Quick Status -->
+        <div class="rounded-xl border border-line p-5 bg-surface" style="animation:fadeUp 300ms var(--ease-out) both; animation-delay:100ms">
+          <div class="text-[15px] font-medium tracking-tight mb-4">Providers</div>
+          <div class="space-y-2">
+            ${e.providers.map(d=>{const b=e.profiles.find(y=>y.provider===d.kind),g=!!b;return`
+              <div class="flex items-center justify-between py-1.5">
+                <div class="flex items-center gap-2.5">
+                  <span class="status-dot ${g?"bg-[#7dbeb3]":"bg-faint"}"></span>
+                  <span class="text-[13px] ${g?"text-text":"text-muted"}">${l(d.kind)}</span>
+                </div>
+                ${g?`<span class="text-[11px] font-mono text-faint">${b.model_count} models</span>`:'<span class="text-[11px] text-faint">Disconnected</span>'}
+              </div>
+            `}).join("")}
+          </div>
+          <button data-nav="providers" class="btn-nav mt-4 w-full text-center text-[12px] text-muted hover:text-text interactive py-1.5 rounded-lg border border-line hover:bg-surface">
+            Manage Providers
           </button>
         </div>
       </div>
-    </nav>
 
-    <main class="relative mx-auto flex min-h-dvh max-w-2xl flex-col items-center px-6 pt-32 pb-20">
-      ${e?M(e,o):K()}
-    </main>
-
-    ${w?`<div id="toast" class="fixed bottom-5 right-5 z-[100] rounded-xl border px-5 py-3 text-[13px] shadow-2xl" style="border-color:${w.ok?"rgba(125,211,200,0.2)":"rgba(255,141,120,0.2)"};background:${w.ok?"rgba(125,211,200,0.06)":"rgba(255,141,120,0.06)"};backdrop-filter:blur(12px);animation:toastIn 220ms cubic-bezier(0.23,1,0.32,1) both">${n(w.msg)}</div>`:""}
-  `,G(o)}function K(){return`
-    <div class="flex flex-col items-center gap-6">
-      <div class="h-24 w-24 text-[var(--color-faint)]" style="animation:logoPulse 2s ease-in-out infinite">${A}</div>
-      <p class="text-[15px]" style="color:var(--color-muted)">Loading local state...</p>
-    </div>
-  `}function M(t,e){const o=[{label:"Connect provider",done:t.setup.provider_ready,n:t.counts.profiles},{label:"Sync models",done:t.setup.models_ready,n:t.counts.models},{label:"Create key",done:t.setup.key_ready,n:t.counts.keys},{label:"Send request",done:t.setup.traffic_ready,n:t.counts.logs}],a=o.every(l=>l.done),r=t.profiles.filter(l=>t.models.some(c=>c.provider===l.provider)),i=t.models.filter(l=>l.provider===s.provider);return!s.provider&&r.length&&(s.provider=r[0].provider),!s.model&&i.length&&(s.model=i[0]?.id||t.models[0]?.id),`
-    <div class="logo-wrap relative h-20 w-20 text-[var(--text)] transition-transform duration-200" style="transition-timing-function:cubic-bezier(0.23,1,0.32,1)">
-      ${A}
-    </div>
-
-    <div class="mt-5 flex items-center gap-2">
-      <span class="h-1.5 w-1.5 rounded-full" style="background:${t.setup.traffic_ready?"#7dbeb3":t.setup.provider_ready?"var(--color-accent)":"#ff8d78"}"></span>
-      <span class="text-[15px]" style="color:var(--color-muted)">${n(t.setup.next_step)}</span>
-    </div>
-
-    <div class="mt-8 flex items-baseline gap-6">
-      ${[[t.counts.profiles,"Providers"],[t.counts.models,"Models"],[t.counts.keys,"Keys"],[t.counts.logs,"Requests"]].map(([l,c])=>`
-            <div class="flex flex-col items-center gap-1">
-              <span class="font-mono text-[28px] font-medium leading-none" style="color:var(--color-text)">${l}</span>
-              <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">${c}</span>
-            </div>
-          `).join("")}
-    </div>
-
-    ${a?"":`
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-2">
-        ${o.map((l,c)=>`
-              <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2 rounded-full border px-3 py-1.5 ${l.done?"border-[rgba(125,211,200,0.25)] bg-[rgba(125,211,200,0.06)]":"border-[rgba(226,226,226,0.08)] bg-[rgba(255,255,255,0.02)]"}">
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium ${l.done?"bg-[#7dbeb3] text-[#0e0e0d]":"border border-[rgba(226,226,226,0.12)] text-[var(--color-faint)]"}">${l.done?"✓":c+1}</span>
-                  <span class="text-[12px] ${l.done?"text-[var(--color-muted)]":"text-[var(--color-text)]"}">${l.label}</span>
+      \x3C!-- Recent Activity + Setup -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        \x3C!-- Recent Requests -->
+        <div class="rounded-xl border border-line p-5 bg-surface" style="animation:fadeUp 300ms var(--ease-out) both; animation-delay:150ms">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-[15px] font-medium tracking-tight">Recent Requests</div>
+            <button data-nav="activity" class="btn-nav text-[11px] text-muted hover:text-text interactive flex items-center gap-1">
+              View All ${u.chevronRight}
+            </button>
+          </div>
+          <div class="space-y-0">
+            ${e.logs.slice(0,6).length===0?'<div class="text-[13px] text-muted py-4 text-center">No requests yet</div>':e.logs.slice(0,6).map(d=>`
+                <div class="flex items-center justify-between py-2.5 border-b border-line last:border-0">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="status-dot shrink-0 ${(d.status_code??0)>=400||!!d.error_message?"bg-[#ff8d78]":"bg-[#7dbeb3]"}"></span>
+                    <div class="min-w-0">
+                      <div class="text-[12px] font-mono text-text truncate">${l(d.model)}</div>
+                      <div class="text-[10px] text-faint">${l(d.profile_name||d.provider)}</div>
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0 ml-3">
+                    <div class="text-[11px] text-muted">${Z(d.started_at)}</div>
+                    <div class="text-[10px] font-mono text-faint">${d.duration_ms}ms</div>
+                  </div>
                 </div>
-                ${c<3?'<span class="text-[var(--color-faint)]">→</span>':""}
+              `).join("")}
+          </div>
+        </div>
+
+        \x3C!-- Setup Progress -->
+        ${P<4?`
+        <div class="rounded-xl border border-line p-5 bg-surface" style="animation:fadeUp 300ms var(--ease-out) both; animation-delay:200ms">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-[15px] font-medium tracking-tight">Setup</div>
+            <div class="text-[11px] text-muted">${P} of 4</div>
+          </div>
+          <div class="space-y-0">
+            ${$.map(d=>`
+              <div class="flex items-center gap-3 py-2.5 border-b border-line last:border-0">
+                <div class="h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${d.done?"bg-[#7dbeb3]/10 text-[#7dbeb3]":"border border-line text-faint"}">
+                  ${d.done?u.check:`<span class="text-[10px] font-mono">${$.indexOf(d)+1}</span>`}
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] font-medium ${d.done?"text-text":"text-muted"}">${d.label}</div>
+                  <div class="text-[11px] text-faint">${d.desc}</div>
+                </div>
               </div>
             `).join("")}
+          </div>
+        </div>
+      `:""}
       </div>
-    `}
-
-    <div class="mt-10 flex flex-wrap items-center justify-center gap-2">
-      ${[["providers","Providers",t.counts.profiles],["activity","Activity",t.counts.logs],["playground","Playground",null],["keys","Keys",t.counts.keys],["models","Models",t.counts.models]].map(([l,c,b])=>`
-            <button data-toggle="${l}" class="toggle-btn rounded-full border px-4 py-1.5 text-[13px] transition-[transform,background-color,border-color] duration-150 active:scale-[0.97] ${v.has(l)?"border-[rgba(215,180,106,0.35)] bg-[rgba(215,180,106,0.08)] text-[var(--color-accent)]":"border-[rgba(226,226,226,0.08)] text-[var(--color-muted)]"}">
-              ${c}${b!==null?` <span class="font-mono text-[11px] opacity-60">${b}</span>`:""}
-            </button>
-          `).join("")}
     </div>
-
-    <div class="mt-6 w-full space-y-4">
-      ${v.has("providers")?U(t):""}
-      ${v.has("activity")?J(t):""}
-      ${v.has("playground")?B(t,r,i):""}
-      ${v.has("keys")?R(t):""}
-      ${v.has("models")?F(t):""}
-    </div>
-
-    ${L?`
-      <div class="mt-6 w-full rounded-xl border px-4 py-3" style="border-color:rgba(215,180,106,0.25);background:rgba(215,180,106,0.06);animation:fadeUp 250ms cubic-bezier(0.23,1,0.32,1) both">
-        <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-accent)">New key secret</span>
-        <code class="mt-1 block break-all font-mono text-[13px]" style="color:var(--color-text)">${n(L)}</code>
-        <p class="mt-1 text-[12px]" style="color:var(--color-muted)">Copy this now. It will not be shown again.</p>
+  `}function ie(){const e=c;return`
+    <div>
+      <div class="mb-6">
+        <h1 class="text-xl font-medium tracking-tight">Providers</h1>
+        <p class="text-sm text-muted mt-0.5">Enable and manage your AI provider connections</p>
       </div>
-    `:""}
 
-    <div class="mt-auto pt-16 flex flex-col items-center gap-1 text-[12px]" style="color:var(--color-faint)">
-      <span class="font-mono">${n(e)}</span>
-      <span>v${n(t.service.version)} · ${n(t.service.home)}</span>
-    </div>
-  `}function U(t){return`
-    <div class="w-full" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">Providers</span>
-        <button id="btn-add-provider" class="text-[13px] transition-colors duration-150 hover:text-[var(--color-text)]" style="color:var(--color-accent)">+ Add provider</button>
-      </div>
-      ${t.profiles.length===0?'<p class="text-[14px] text-center py-8" style="color:var(--color-muted)">No providers connected. Add one to start.</p>':`
-        <div class="space-y-2">
-          ${t.profiles.map((e,o)=>`
-                <div class="provider-row flex items-center justify-between rounded-xl border px-4 py-3 transition-[background-color] duration-150" style="border-color:rgba(226,226,226,0.06);animation:fadeUp 200ms cubic-bezier(0.23,1,0.32,1) both;animation-delay:${o*40}ms">
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-[14px]">${n(e.name)}</span>
-                      <span class="rounded-full border px-2 py-0.5 text-[10px]" style="border-color:rgba(226,226,226,0.08);color:var(--color-faint)">${n(e.provider)}</span>
-                    </div>
-                    <div class="mt-0.5 font-mono text-[12px]" style="color:var(--color-faint)">${n(e.selector)} · ${e.model_count} models</div>
-                  </div>
-                  <div class="flex gap-1">
-                    <button class="p-act rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)" data-id="${e.id}" data-a="auth">Auth</button>
-                    <button class="p-act rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)" data-id="${e.id}" data-a="sync">Sync</button>
-                    <button class="p-key rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)" data-id="${e.id}">Key</button>
-                    <button class="p-del rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(255,141,120,0.15);color:var(--color-muted)" data-id="${e.id}">×</button>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${e.providers.map((t,s)=>{const n=e.profiles.find(i=>i.provider===t.kind),r=!!n;return`
+          <div class="provider-card ${r?"":"opacity-75"}" style="animation:fadeUp 200ms var(--ease-out) both; animation-delay:${s*40}ms">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl flex items-center justify-center border border-line bg-bg shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${u.providers.replace(/width="15" height="15"/,"")}</svg>
+                </div>
+                <div>
+                  <div class="text-[15px] font-medium text-text">${l(t.kind)}</div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="status-dot ${r?"bg-[#7dbeb3]":"bg-faint"}"></span>
+                    <span class="text-[11px] ${r?"text-[#7dbeb3]":"text-faint"}">${r?"Connected":"Disconnected"}</span>
                   </div>
                 </div>
-              `).join("")}
-        </div>
-      `}
-      ${I(t)}
-    </div>
-  `}function I(t){return`
-    <form id="form-provider" class="mt-3 hidden" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <div class="rounded-xl border p-4 space-y-3" style="border-color:rgba(226,226,226,0.1);background:rgba(255,255,255,0.02)">
-        <select name="provider" id="sel-provider" class="h-9 w-full rounded-lg border bg-transparent px-3 text-[13px] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)">
-          ${t.providers.map(e=>`<option value="${n(e.kind)}">${n(e.kind)}</option>`).join("")}
-        </select>
-        <input name="name" required placeholder="Provider name" class="h-9 w-full rounded-lg border bg-transparent px-3 text-[13px] placeholder:text-[var(--color-faint)] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)" />
-        <input name="base_url" placeholder="Base URL (optional)" class="h-9 w-full rounded-lg border bg-transparent px-3 text-[13px] placeholder:text-[var(--color-faint)] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)" />
-        <input name="api_key" type="password" placeholder="API key" class="h-9 w-full rounded-lg border bg-transparent px-3 text-[13px] placeholder:text-[var(--color-faint)] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)" />
-        <div class="flex gap-2">
-          <button type="submit" class="rounded-lg border px-4 py-2 text-[13px] transition-[transform,background-color] duration-150 hover:bg-[rgba(215,180,106,0.12)] active:scale-[0.97]" style="border-color:rgba(215,180,106,0.3);color:var(--color-accent)">Save</button>
-          <button type="button" id="btn-cancel-provider" class="rounded-lg border px-4 py-2 text-[13px] transition-[transform,background-color] duration-150 hover:bg-[rgba(255,255,255,0.04)] active:scale-[0.97]" style="border-color:rgba(226,226,226,0.1);color:var(--color-muted)">Cancel</button>
-        </div>
-      </div>
-    </form>
-  `}function J(t){const e=k,o=t.logs.filter(r=>{const i=e.provider==="all"||`${r.provider}::${r.profile_name||""}`===e.provider,l=e.status==="all"||(e.status==="success"?(r.status_code??0)<400&&!r.error_message:(r.status_code??0)>=400||!!r.error_message),c=e.query.trim().toLowerCase(),b=!c||[r.provider,r.profile_name||"",r.model,r.endpoint,r.key_name||"",r.request_mode||"",r.error_message||""].join(" ").toLowerCase().includes(c);return i&&l&&b}),a=e.limit==="all"?o:o.slice(0,Number(e.limit)||8);return`
-    <div class="w-full" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <div class="flex flex-wrap items-center gap-2 mb-3">
-        <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">Activity</span>
-        <select id="filt-p" class="h-7 rounded-md border bg-transparent px-2 text-[12px]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)">
-          <option value="all">All providers</option>
-          ${t.provider_summaries.map(r=>`<option value="${n(`${r.provider}::${r.profile_name||""}`)}"${e.provider===`${r.provider}::${r.profile_name||""}`?" selected":""}>${n(r.label)}</option>`).join("")}
-        </select>
-        <select id="filt-s" class="h-7 rounded-md border bg-transparent px-2 text-[12px]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)">
-          ${["all","success","error"].map(r=>`<option value="${r}"${e.status===r?" selected":""}>${r}</option>`).join("")}
-        </select>
-        <input id="filt-q" value="${n(e.query)}" placeholder="Search..." class="h-7 rounded-md border bg-transparent px-2 text-[12px] placeholder:text-[var(--color-faint)]" style="border-color:rgba(226,226,226,0.08);color:var(--color-text)" />
-        <select id="filt-l" class="h-7 rounded-md border bg-transparent px-2 text-[12px]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)">
-          ${["8","24","all"].map(r=>`<option value="${r}"${e.limit===r?" selected":""}>${r==="all"?"All":`Latest ${r}`}</option>`).join("")}
-        </select>
-      </div>
-      ${a.length===0?'<p class="text-[14px] text-center py-8" style="color:var(--color-muted)">No activity to show.</p>':`
-        <div class="space-y-1">
-          ${a.map((r,i)=>`
-                <div class="log-row flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-[background-color] duration-150" style="border-color:rgba(226,226,226,0.04);animation:fadeUp 180ms cubic-bezier(0.23,1,0.32,1) both;animation-delay:${i*30}ms">
-                  <span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background:${(r.status_code??0)>=400||r.error_message?"#ff8d78":"#7dbeb3"}"></span>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate text-[13px]">${n(r.model)}</div>
-                    <div class="text-[11px]" style="color:var(--color-faint)">${n(r.profile_name||r.provider)} · ${n(r.request_mode||r.endpoint)} · ${T(r.started_at)}</div>
-                  </div>
-                  <div class="shrink-0 text-right">
-                    <div class="font-mono text-[12px]" style="color:var(--color-muted)">${r.duration_ms}ms</div>
-                    ${r.total_tokens?`<div class="text-[11px]" style="color:var(--color-faint)">${r.total_tokens} tok</div>`:""}
-                  </div>
-                </div>
-              `).join("")}
-        </div>
-        <p class="mt-2 text-[11px] text-center" style="color:var(--color-faint)">${a.length} of ${o.length} matching</p>
-      `}
-    </div>
-  `}function B(t,e,o){return`
-    <div class="w-full" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">Playground</span>
-      <div class="mt-3 grid gap-2 sm:grid-cols-4">
-        <input id="pg-key" value="${n(s.key)}" placeholder="gm_..." class="h-9 rounded-lg border bg-transparent px-3 font-mono text-[12px] placeholder:text-[var(--color-faint)] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)" />
-        <select id="pg-p" class="h-9 rounded-lg border bg-transparent px-3 text-[13px] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)">
-          ${e.length?e.map(a=>`<option value="${n(a.provider)}"${s.provider===a.provider?" selected":""}>${n(a.name)}</option>`).join(""):"<option>No providers</option>"}
-        </select>
-        <select id="pg-m" class="h-9 rounded-lg border bg-transparent px-3 font-mono text-[11px] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)">
-          ${o.length?o.map(a=>`<option value="${n(a.id)}"${s.model===a.id?" selected":""}>${n(a.id)}</option>`).join(""):"<option>No models</option>"}
-        </select>
-        <select id="pg-mode" class="h-9 rounded-lg border bg-transparent px-3 text-[13px] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)">
-          <option value="chat"${s.mode==="chat"?" selected":""}>chat/completions</option>
-          <option value="responses"${s.mode==="responses"?" selected":""}>responses</option>
-        </select>
-      </div>
-      <div class="mt-3 max-h-[320px] overflow-auto rounded-xl border p-3 space-y-3" style="border-color:rgba(226,226,226,0.06)">
-        ${s.messages.length?s.messages.map(a=>`
-                  <div>
-                    <span class="text-[10px] font-medium uppercase tracking-[0.12em] ${a.role==="user"?"text-[var(--color-accent)]":"text-[#7dbeb3]"}">${a.role}</span>
-                    <p class="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed">${n(a.content)}</p>
-                  </div>
-                `).join(""):'<p class="text-center py-8 text-[13px]" style="color:var(--color-muted)">Choose a model and send a message</p>'}
-      </div>
-      <form id="pg-form" class="mt-3 flex gap-2">
-        <textarea id="pg-in" placeholder="Ask something..." rows="2" class="min-h-[44px] flex-1 resize-y rounded-lg border bg-transparent px-3 py-2 text-[14px] placeholder:text-[var(--color-faint)] focus:border-[rgba(215,180,106,0.4)]" style="border-color:rgba(226,226,226,0.1);color:var(--color-text)" ${s.running?"disabled":""}></textarea>
-        <button type="submit" class="self-end rounded-lg border px-4 py-2 text-[13px] transition-[transform,background-color] duration-150 hover:bg-[rgba(215,180,106,0.1)] active:scale-[0.97]" style="border-color:rgba(215,180,106,0.25);color:var(--color-accent)" ${s.running?"disabled":""}>${s.running?"...":"Send"}</button>
-        <button type="button" id="pg-clr" class="self-end rounded-lg border px-3 py-2 text-[13px] transition-[transform,background-color] duration-150 hover:bg-[rgba(255,255,255,0.04)] active:scale-[0.97]" style="border-color:rgba(226,226,226,0.1);color:var(--color-muted)" ${s.running||!s.messages.length?"disabled":""}>Clear</button>
-      </form>
-    </div>
-  `}function R(t){return`
-    <div class="w-full" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">Keys</span>
-      ${t.keys.length===0?'<p class="text-[14px] text-center py-8" style="color:var(--color-muted)">No keys yet.</p>':`
-        <div class="mt-3 space-y-2">
-          ${t.keys.map((e,o)=>`
-                <div class="key-row flex items-center justify-between rounded-xl border px-4 py-2.5 transition-[background-color] duration-150" style="border-color:rgba(226,226,226,0.04);animation:fadeUp 180ms cubic-bezier(0.23,1,0.32,1) both;animation-delay:${o*40}ms">
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-[14px]">${n(e.name)}</span>
-                      <span class="rounded-full border px-2 py-0.5 text-[10px] ${e.state==="active"?"border-[rgba(125,211,200,0.2)] bg-[rgba(125,211,200,0.06)]":"border-[rgba(226,226,226,0.06)] bg-[rgba(255,255,255,0.02)]"}" style="color:var(--color-muted)">${e.state}</span>
-                    </div>
-                    <div class="font-mono text-[12px]" style="color:var(--color-faint)">${n(e.prefix)} · ${e.providers.length?n(e.providers.join(", ")):"all"}</div>
-                  </div>
-                  <div class="flex gap-1">
-                    <button class="k-act rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)" data-id="${e.id}" data-s="disabled">Disable</button>
-                    <button class="k-act rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(226,226,226,0.08);color:var(--color-muted)" data-id="${e.id}" data-s="revoked">Revoke</button>
-                    <button class="k-del rounded-md border px-2 py-1 text-[11px] transition-[transform,background-color,border-color] duration-120 active:scale-[0.97]" style="border-color:rgba(255,141,120,0.12);color:var(--color-muted)" data-id="${e.id}">×</button>
-                  </div>
-                </div>
-              `).join("")}
-        </div>
-      `}
-    </div>
-  `}function F(t){const e=P.trim().toLowerCase(),o=e?t.models.filter(a=>a.id.toLowerCase().includes(e)||a.provider.toLowerCase().includes(e)):t.models;return`
-    <div class="w-full" style="animation:fadeUp 220ms cubic-bezier(0.23,1,0.32,1) both">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-[11px] font-medium uppercase tracking-[0.12em]" style="color:var(--color-faint)">Models</span>
-        <input id="mod-q" value="${n(P)}" placeholder="Search..." class="h-7 w-40 rounded-md border bg-transparent px-2 text-[12px] placeholder:text-[var(--color-faint)]" style="border-color:rgba(226,226,226,0.08);color:var(--color-text)" />
-      </div>
-      ${o.length===0?'<p class="text-[14px] text-center py-8" style="color:var(--color-muted)">No models found.</p>':`
-        <div class="grid gap-1.5 sm:grid-cols-2">
-          ${o.slice(0,40).map((a,r)=>`
-            <div class="model-row flex items-center justify-between rounded-lg border px-3 py-2 transition-[background-color] duration-150" style="border-color:rgba(226,226,226,0.04);animation:fadeUp 160ms cubic-bezier(0.23,1,0.32,1) both;animation-delay:${r*25}ms">
-              <div class="min-w-0">
-                <div class="truncate font-mono text-[12px]">${n(a.id)}</div>
-                <div class="text-[10px]" style="color:var(--color-faint)">${n(a.provider)}</div>
               </div>
-              <div class="flex gap-1 shrink-0">
-                ${a.supports_reasoning?'<span class="rounded-full border px-1.5 py-0.5 text-[9px]" style="border-color:rgba(226,226,226,0.06);color:var(--color-faint)">reason</span>':""}
-                ${a.supports_tools?'<span class="rounded-full border px-1.5 py-0.5 text-[9px]" style="border-color:rgba(226,226,226,0.06);color:var(--color-faint)">tools</span>':""}
+              <div class="provider-toggle toggle-track ${r?"on":""}" data-provider="${l(t.kind)}" data-profile-id="${n?.id||""}" role="switch" aria-checked="${r}"></div>
+            </div>
+
+            ${r&&n?`
+            <div class="border-t border-line pt-3 mt-3">
+              <div class="flex items-center justify-between text-[12px]">
+                <div class="text-muted">
+                  <span class="font-mono text-text">${n.model_count}</span> models synced
+                </div>
+                <div class="font-mono text-faint text-[11px]">${l(n.selector)}</div>
+              </div>
+              <div class="flex items-center gap-2 mt-3">
+                <button class="p-act btn interactive rounded-lg border border-line px-3 py-1.5 text-[11px] font-medium bg-bg text-text hover:bg-surface" data-id="${n.id}" data-a="sync">Sync Models</button>
+                <button class="p-act btn interactive rounded-lg border border-line px-3 py-1.5 text-[11px] font-medium bg-bg text-text hover:bg-surface" data-id="${n.id}" data-a="auth">Re-Auth</button>
+                <button class="p-del btn interactive rounded-lg border border-line px-3 py-1.5 text-[11px] font-medium bg-bg text-[#ff8d78] hover:bg-[rgba(255,141,120,0.08)] ml-auto" data-id="${n.id}" data-name="${l(n.name)}">Disconnect</button>
+              </div>
+            </div>
+            `:`
+            <div class="border-t border-line pt-3 mt-3">
+              <p class="text-[12px] text-muted mb-3">Connect this provider to start using its models through Gunmetal.</p>
+              <button class="provider-connect btn interactive rounded-lg px-3 py-1.5 text-[12px] font-medium bg-accent text-bg btn-accent" data-provider="${l(t.kind)}">Connect Provider</button>
+            </div>
+            `}
+          </div>
+        `}).join("")}
+      </div>
+    </div>
+  `}function oe(){const e=c,t=K.trim().toLowerCase(),s=t?e.models.filter(n=>n.id.toLowerCase().includes(t)||n.provider.toLowerCase().includes(t)):e.models;return`
+    <div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 class="text-xl font-medium tracking-tight">Models</h1>
+          <p class="text-sm text-muted mt-0.5">${e.models.length} models available across ${e.profiles.length} providers</p>
+        </div>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-faint">${u.search}</span>
+          <input id="mod-q" value="${l(K)}" placeholder="Search models..." class="h-9 w-full sm:w-56 rounded-lg border border-line bg-bg pl-9 pr-3 text-[13px] outline-none placeholder:text-faint focus:border-accent text-text" />
+        </div>
+      </div>
+
+      ${s.length===0?`
+        <div class="rounded-xl border border-dashed border-line p-12 text-center">
+          <p class="text-sm text-muted font-medium">No models found</p>
+          <p class="text-[13px] text-faint mt-1">${t?"Try a different search term.":"Sync models from your providers first."}</p>
+        </div>
+      `:`
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          ${s.slice(0,60).map((n,r)=>`
+            <div class="flex items-center justify-between rounded-lg border border-line px-4 py-3 transition-colors hover:bg-surface group" style="animation:fadeUp 160ms var(--ease-out) both; animation-delay:${r*15}ms">
+              <div class="min-w-0">
+                <div class="truncate font-mono text-[12px] font-medium text-text">${l(n.id)}</div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-[10px] uppercase tracking-wide text-faint">${l(n.provider)}</span>
+                  ${n.supports_reasoning?'<span class="rounded bg-surface border border-line px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.05em] text-muted">reason</span>':""}
+                  ${n.supports_tools?'<span class="rounded bg-surface border border-line px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.05em] text-muted">tools</span>':""}
+                </div>
+              </div>
+              <button class="opacity-0 group-hover:opacity-100 interactive text-faint hover:text-text p-1.5 rounded transition-opacity" title="Copy model ID" onclick="navigator.clipboard.writeText('${l(n.id)}').then(()=>{showToast('Copied model ID')}).catch(()=>{})">
+                ${u.copy}
+              </button>
+            </div>
+          `).join("")}
+        </div>
+        ${s.length>60?`<p class="mt-4 text-[11px] text-center text-faint font-mono">Showing 60 of ${s.length} models</p>`:""}
+      `}
+    </div>
+  `}function ae(){const e=c;return`
+    <div>
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-medium tracking-tight">API Keys</h1>
+          <p class="text-sm text-muted mt-0.5">Manage access keys for your applications</p>
+        </div>
+        <button id="btn-create-key" class="btn interactive flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-medium bg-accent text-bg btn-accent">
+          ${u.plus}
+          Create API Key
+        </button>
+      </div>
+
+      ${e.keys.length===0?`
+        <div class="rounded-xl border border-dashed border-line p-12 text-center">
+          <div class="h-10 w-10 text-faint mx-auto mb-3">${u.keys}</div>
+          <p class="text-sm text-muted font-medium">No API keys</p>
+          <p class="text-[13px] text-faint mt-1">Create a key to start using Gunmetal.</p>
+        </div>
+      `:`
+        <div class="rounded-xl border border-line overflow-hidden">
+          <div class="key-row bg-surface text-[10px] font-medium uppercase tracking-[0.12em] text-faint">
+            <div>Name</div>
+            <div>Key</div>
+            <div>Providers</div>
+            <div></div>
+          </div>
+          ${e.keys.map(t=>`
+            <div class="key-row">
+              <div class="text-[13px] font-medium text-text">${l(t.name)}</div>
+              <div class="flex items-center gap-2">
+                <code class="font-mono text-[12px] text-muted">${l(t.prefix)}...</code>
+                <button class="key-copy btn interactive text-faint hover:text-text p-1 rounded" title="Copy key" data-prefix="${l(t.prefix)}">
+                  ${u.copy}
+                </button>
+              </div>
+              <div class="text-[12px] text-muted truncate">${t.providers.length?l(t.providers.join(", ")):'<span class="text-faint italic">All</span>'}</div>
+              <div class="flex items-center justify-end">
+                <button class="key-del btn interactive text-faint hover:text-[#ff8d78] p-1.5 rounded hover:bg-[rgba(255,141,120,0.08)]" title="Delete" data-id="${t.id}" data-name="${l(t.name)}">
+                  ${u.trash}
+                </button>
               </div>
             </div>
           `).join("")}
         </div>
       `}
     </div>
-  `}function G(t){d("btn-copy")?.addEventListener("click",async()=>{const e=await z(t);p(e?"Copied API URL":"Copy failed",e)}),d("btn-refresh")?.addEventListener("click",()=>{g()}),document.querySelectorAll("[data-toggle]").forEach(e=>{e.addEventListener("click",()=>D(e.getAttribute("data-toggle")))}),document.querySelectorAll(".p-act").forEach(e=>{e.addEventListener("click",async()=>{const o=e.dataset.id,a=e.dataset.a;try{const r=await x.action(o,a);r.auth_url&&window.open(r.auth_url,"_blank","noopener,noreferrer"),p(r.message),g()}catch(r){p(r.message,!1)}})}),document.querySelectorAll(".p-key").forEach(e=>{e.addEventListener("click",async()=>{const o=e.dataset.id,a=window.prompt("Key name","gunmetal-key");if(a!=null)try{const r=await x.createKey(o,a);p(r.message),L=r.secret||null,L&&(s.key=L),g()}catch(r){p(r.message,!1)}})}),document.querySelectorAll(".p-del").forEach(e=>{e.addEventListener("click",async()=>{const o=e.dataset.id;if(window.confirm("Delete provider and its models?"))try{const a=await x.deleteProfile(o);p(a.message),g()}catch(a){p(a.message,!1)}})}),d("btn-add-provider")?.addEventListener("click",()=>{const e=d("form-provider");e&&e.classList.toggle("hidden")}),d("btn-cancel-provider")?.addEventListener("click",()=>{const e=d("form-provider");e&&(e.classList.add("hidden"),e.reset())}),d("form-provider")?.addEventListener("submit",async e=>{e.preventDefault();const o=new FormData(e.target);try{const a=await x.createProfile({provider:String(o.get("provider")),name:String(o.get("name")),base_url:String(o.get("base_url")),api_key:String(o.get("api_key"))});p(a.message),d("form-provider")?.classList.add("hidden"),e.target.reset(),g()}catch(a){p(a.message,!1)}}),document.querySelectorAll(".k-act").forEach(e=>{e.addEventListener("click",async()=>{try{const o=await x.setKeyState(e.dataset.id,e.dataset.s);p(o.message),g()}catch(o){p(o.message,!1)}})}),document.querySelectorAll(".k-del").forEach(e=>{e.addEventListener("click",async()=>{if(window.confirm("Delete key?"))try{const o=await x.deleteKey(e.dataset.id);p(o.message),g()}catch(o){p(o.message,!1)}})}),d("filt-p")?.addEventListener("change",e=>{k.provider=e.target.value,u()}),d("filt-s")?.addEventListener("change",e=>{k.status=e.target.value,u()}),d("filt-q")?.addEventListener("input",e=>{k.query=e.target.value,u()}),d("filt-l")?.addEventListener("change",e=>{k.limit=e.target.value,u()}),d("mod-q")?.addEventListener("input",e=>{P=e.target.value,u()}),d("pg-key")?.addEventListener("input",e=>{s.key=e.target.value}),d("pg-p")?.addEventListener("change",e=>{if(s.provider=e.target.value,m){const o=m.models.filter(a=>a.provider===s.provider);s.model=o[0]?.id||m.models[0]?.id}u()}),d("pg-m")?.addEventListener("change",e=>{s.model=e.target.value}),d("pg-mode")?.addEventListener("change",e=>{s.mode=e.target.value}),d("pg-clr")?.addEventListener("click",()=>{s.messages=[],s.usage=null,u()}),d("pg-form")?.addEventListener("submit",async e=>{e.preventDefault();const o=d("pg-in"),a=o?.value.trim()||"";if(!s.key){p("Paste a Gunmetal key",!1);return}if(!s.model){p("Sync a model first",!1);return}if(!a){p("Enter a message",!1);return}s.messages.push({role:"user",content:a}),s.running=!0,s.usage=null,o&&(o.value=""),u();try{const r=await x.chat(s.mode,s.key,s.model,s.messages);if(!r.ok){const _=await r.text();let $="request failed";try{$=JSON.parse(_)?.error?.message||$}catch{}throw new Error($)}s.messages.push({role:"assistant",content:""}),u();const i=r.body?.getReader(),l=new TextDecoder;if(!i)throw new Error("No stream");let c="",b="";for(;;){const{value:_,done:$}=await i.read();c+=l.decode(_||new Uint8Array,{stream:!$});let C=c.indexOf(`
+  `}function de(){const e=c,t=D,s=e.logs.filter(o=>{const x=t.provider==="all"||`${o.provider}::${o.profile_name||""}`===t.provider,m=(o.status_code??0)>=400||!!o.error_message,h=t.status==="all"||(t.status==="success"?!m:m),$=t.query.trim().toLowerCase(),P=!$||[o.provider,o.profile_name||"",o.model,o.endpoint,o.key_name||"",o.request_mode||"",o.error_message||""].join(" ").toLowerCase().includes($);return x&&h&&P}),n=t.limit==="all"?s.length:Number(t.limit)||8,r=s.slice(0,n),i='<option value="all">All providers</option>'+e.provider_summaries.map(o=>`<option value="${l(`${o.provider}::${o.profile_name||""}`)}"${t.provider===`${o.provider}::${o.profile_name||""}`?" selected":""}>${l(o.label)}</option>`).join("");return`
+    <div>
+      <div class="mb-6">
+        <h1 class="text-xl font-medium tracking-tight">Activity</h1>
+        <p class="text-sm text-muted mt-0.5">Request logs and metrics</p>
+      </div>
 
-`);for(;C!==-1;){const O=c.slice(0,C);c=c.slice(C+2);const N=O.split(/\r?\n/);let S="message";const E=[];for(const f of N)f.startsWith("event:")?S=f.slice(6).trim():f.startsWith("data:")&&E.push(f.slice(5).trimStart());if(E.length&&E.join("")!=="[DONE]"){const f=JSON.parse(E.join(`
-`));if(s.mode==="chat"){const q=f?.choices?.[0]?.delta?.content||"";q&&(b+=q)}else S==="response.output_text.delta"?b+=f.delta||"":S==="response.completed"&&(b=f?.response?.output_text||b,s.usage=f?.response?.usage||null);const j=s.messages[s.messages.length-1];j&&j.role==="assistant"&&(j.content=b),u()}C=c.indexOf(`
+      <div class="flex flex-wrap items-center gap-2 mb-5 p-2 rounded-xl border border-line bg-surface">
+        <div class="relative flex-1 min-w-[180px]">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-faint">${u.search}</span>
+          <input id="filt-q" value="${l(t.query)}" placeholder="Search requests..." class="h-8 w-full rounded-lg bg-transparent pl-9 pr-3 text-[13px] outline-none placeholder:text-faint focus:bg-surface text-text" />
+        </div>
+        <div class="h-4 w-px bg-line hidden sm:block"></div>
+        <select id="filt-p" class="h-8 rounded-lg bg-transparent px-2.5 text-[13px] outline-none cursor-pointer hover:bg-bg text-muted border border-transparent hover:border-line">
+          ${i}
+        </select>
+        <select id="filt-s" class="h-8 rounded-lg bg-transparent px-2.5 text-[13px] outline-none cursor-pointer hover:bg-bg text-muted border border-transparent hover:border-line">
+          <option value="all"${t.status==="all"?" selected":""}>All</option>
+          <option value="success"${t.status==="success"?" selected":""}>Success</option>
+          <option value="error"${t.status==="error"?" selected":""}>Error</option>
+        </select>
+        <select id="filt-l" class="h-8 rounded-lg bg-transparent px-2.5 text-[13px] outline-none cursor-pointer hover:bg-bg text-muted border border-transparent hover:border-line">
+          <option value="8"${t.limit==="8"?" selected":""}>Last 8</option>
+          <option value="24"${t.limit==="24"?" selected":""}>Last 24</option>
+          <option value="all"${t.limit==="all"?" selected":""}>All</option>
+        </select>
+      </div>
 
-`)}if($)break}p("Done")}catch(r){s.messages=s.messages.slice(0,Math.max(0,s.messages.length-2)),p(r.message,!1)}finally{s.running=!1,u()}}),document.addEventListener("keydown",e=>{e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||(e.key==="r"&&!e.metaKey&&!e.ctrlKey&&(e.preventDefault(),g()),e.key==="c"&&!e.metaKey&&!e.ctrlKey&&(e.preventDefault(),d("pg-in")?.focus()),e.key==="Escape"&&(v.clear(),u()))})}async function g(){try{if(m=await x.state(),!s.provider&&m.profiles.length&&(s.provider=m.profiles[0].provider),!s.model&&m.models.length){const t=m.models.filter(e=>e.provider===s.provider);s.model=t[0]?.id||m.models[0].id}}catch{m=null}u()}g();</script>
-    <style rel="stylesheet" crossorigin>/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-border-style:solid;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-duration:initial;--tw-ease:initial}}}@layer theme{:root,:host{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:"JetBrains Mono", ui-monospace, monospace;--spacing:.25rem;--container-2xl:42rem;--font-weight-medium:500;--tracking-tight:-.025em;--leading-relaxed:1.625;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--ease-in-out:cubic-bezier(.4, 0, .2, 1);--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-bg:#0e0e0d;--color-text:#faf9f6;--color-muted:#868584;--color-faint:#4a4a48;--color-accent:#d7b46a;--font-matter:"DM Sans", system-ui, sans-serif}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab,red,red)){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}*,:before,:after{box-sizing:border-box;margin:0;padding:0}html{-webkit-font-smoothing:antialiased}body{font-family:var(--font-matter);background:var(--color-bg);color:var(--color-text);letter-spacing:-.01em;min-height:100dvh;font-size:15px;font-weight:400;line-height:1.45}::selection{background:#faf9f61f}:focus-visible{outline-offset:2px;outline:1px solid #d7b46a80}}@layer components;@layer utilities{.pointer-events-none{pointer-events:none}.visible{visibility:visible}.fixed{position:fixed}.relative{position:relative}.inset-0{inset:calc(var(--spacing) * 0)}.top-0{top:calc(var(--spacing) * 0)}.right-0{right:calc(var(--spacing) * 0)}.right-5{right:calc(var(--spacing) * 5)}.bottom-5{bottom:calc(var(--spacing) * 5)}.left-0{left:calc(var(--spacing) * 0)}.z-50{z-index:50}.z-\[100\]{z-index:100}.mx-auto{margin-inline:auto}.mt-0\.5{margin-top:calc(var(--spacing) * .5)}.mt-1{margin-top:calc(var(--spacing) * 1)}.mt-2{margin-top:calc(var(--spacing) * 2)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-5{margin-top:calc(var(--spacing) * 5)}.mt-6{margin-top:calc(var(--spacing) * 6)}.mt-8{margin-top:calc(var(--spacing) * 8)}.mt-10{margin-top:calc(var(--spacing) * 10)}.mt-auto{margin-top:auto}.mb-3{margin-bottom:calc(var(--spacing) * 3)}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:calc(var(--spacing) * 1.5)}.h-4{height:calc(var(--spacing) * 4)}.h-5{height:calc(var(--spacing) * 5)}.h-7{height:calc(var(--spacing) * 7)}.h-9{height:calc(var(--spacing) * 9)}.h-14{height:calc(var(--spacing) * 14)}.h-20{height:calc(var(--spacing) * 20)}.h-24{height:calc(var(--spacing) * 24)}.h-full{height:100%}.max-h-\[320px\]{max-height:320px}.min-h-\[44px\]{min-height:44px}.min-h-dvh{min-height:100dvh}.w-1\.5{width:calc(var(--spacing) * 1.5)}.w-4{width:calc(var(--spacing) * 4)}.w-5{width:calc(var(--spacing) * 5)}.w-20{width:calc(var(--spacing) * 20)}.w-24{width:calc(var(--spacing) * 24)}.w-40{width:calc(var(--spacing) * 40)}.w-full{width:100%}.max-w-2xl{max-width:var(--container-2xl)}.min-w-0{min-width:calc(var(--spacing) * 0)}.flex-1{flex:1}.shrink-0{flex-shrink:0}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.resize-y{resize:vertical}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-baseline{align-items:baseline}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.gap-1{gap:calc(var(--spacing) * 1)}.gap-1\.5{gap:calc(var(--spacing) * 1.5)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-2\.5{gap:calc(var(--spacing) * 2.5)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-6{gap:calc(var(--spacing) * 6)}:where(.space-y-1>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 1) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-3>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-4>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-y-reverse)))}.self-end{align-self:flex-end}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-auto{overflow:auto}.rounded-full{border-radius:3.40282e38px}.rounded-lg{border-radius:var(--radius-lg)}.rounded-md{border-radius:var(--radius-md)}.rounded-xl{border-radius:var(--radius-xl)}.border{border-style:var(--tw-border-style);border-width:1px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-\[rgba\(125\,211\,200\,0\.2\)\]{border-color:#7dd3c833}.border-\[rgba\(125\,211\,200\,0\.25\)\]{border-color:#7dd3c840}.border-\[rgba\(215\,180\,106\,0\.35\)\]{border-color:#d7b46a59}.border-\[rgba\(226\,226\,226\,0\.06\)\]{border-color:#e2e2e20f}.border-\[rgba\(226\,226\,226\,0\.08\)\]{border-color:#e2e2e214}.border-\[rgba\(226\,226\,226\,0\.12\)\]{border-color:#e2e2e21f}.bg-\[\#7dbeb3\]{background-color:#7dbeb3}.bg-\[rgba\(125\,211\,200\,0\.06\)\]{background-color:#7dd3c80f}.bg-\[rgba\(215\,180\,106\,0\.08\)\]{background-color:#d7b46a14}.bg-\[rgba\(255\,255\,255\,0\.02\)\]{background-color:#ffffff05}.bg-transparent{background-color:#0000}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.px-1\.5{padding-inline:calc(var(--spacing) * 1.5)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.px-5{padding-inline:calc(var(--spacing) * 5)}.px-6{padding-inline:calc(var(--spacing) * 6)}.py-0\.5{padding-block:calc(var(--spacing) * .5)}.py-1{padding-block:calc(var(--spacing) * 1)}.py-1\.5{padding-block:calc(var(--spacing) * 1.5)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-8{padding-block:calc(var(--spacing) * 8)}.pt-16{padding-top:calc(var(--spacing) * 16)}.pt-32{padding-top:calc(var(--spacing) * 32)}.pb-20{padding-bottom:calc(var(--spacing) * 20)}.text-center{text-align:center}.text-right{text-align:right}.text-\[9px\]{font-size:9px}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[12px\]{font-size:12px}.text-\[13px\]{font-size:13px}.text-\[14px\]{font-size:14px}.text-\[15px\]{font-size:15px}.text-\[28px\]{font-size:28px}.leading-none{--tw-leading:1;line-height:1}.leading-relaxed{--tw-leading:var(--leading-relaxed);line-height:var(--leading-relaxed)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.tracking-\[0\.12em\]{--tw-tracking:.12em;letter-spacing:.12em}.tracking-tight{--tw-tracking:var(--tracking-tight);letter-spacing:var(--tracking-tight)}.break-all{word-break:break-all}.whitespace-pre-wrap{white-space:pre-wrap}.text-\[\#0e0e0d\]{color:#0e0e0d}.text-\[\#7dbeb3\]{color:#7dbeb3}.text-\[var\(--color-accent\)\]{color:var(--color-accent)}.text-\[var\(--color-faint\)\]{color:var(--color-faint)}.text-\[var\(--color-muted\)\]{color:var(--color-muted)}.text-\[var\(--color-text\)\]{color:var(--color-text)}.text-\[var\(--text\)\]{color:var(--text)}.uppercase{text-transform:uppercase}.opacity-60{opacity:.6}.shadow-2xl{--tw-shadow:0 25px 50px -12px var(--tw-shadow-color,#00000040);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}.transition-\[background-color\]{transition-property:background-color;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-\[transform\,background-color\,border-color\]{transition-property:transform,background-color,border-color;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-\[transform\,background-color\]{transition-property:transform,background-color;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-transform{transition-property:transform,translate,scale,rotate;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.duration-120{--tw-duration:.12s;transition-duration:.12s}.duration-150{--tw-duration:.15s;transition-duration:.15s}.duration-200{--tw-duration:.2s;transition-duration:.2s}.ease-in-out{--tw-ease:var(--ease-in-out);transition-timing-function:var(--ease-in-out)}.placeholder\:text-\[var\(--color-faint\)\]::placeholder{color:var(--color-faint)}@media(hover:hover){.hover\:bg-\[rgba\(215\,180\,106\,0\.1\)\]:hover{background-color:#d7b46a1a}.hover\:bg-\[rgba\(215\,180\,106\,0\.12\)\]:hover{background-color:#d7b46a1f}.hover\:bg-\[rgba\(255\,255\,255\,0\.04\)\]:hover{background-color:#ffffff0a}.hover\:text-\[var\(--color-text\)\]:hover{color:var(--color-text)}}.focus\:border-\[rgba\(215\,180\,106\,0\.4\)\]:focus{border-color:#d7b46a66}.active\:scale-\[0\.97\]:active{scale:.97}@media(min-width:40rem){.sm\:inline{display:inline}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}.font-matter{font-family:var(--font-matter)}.font-mono{font-family:var(--font-mono)}}@keyframes fadeUp{0%{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes toastIn{0%{opacity:0;transform:translateY(12px)scale(.98)}to{opacity:1;transform:translateY(0)scale(1)}}@keyframes logoPulse{0%,to{opacity:.4}50%{opacity:.8}}@media(hover:hover)and (pointer:fine){.provider-row:hover,.log-row:hover,.key-row:hover,.model-row:hover{background-color:#ffffff05}.logo-wrap:hover{transform:scale(1.05)}.toggle-btn:hover{background-color:#ffffff08;border-color:#e2e2e21f}}@media(prefers-reduced-motion:reduce){*,:before,:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}@property --tw-rotate-x{syntax:"*";inherits:false}@property --tw-rotate-y{syntax:"*";inherits:false}@property --tw-rotate-z{syntax:"*";inherits:false}@property --tw-skew-x{syntax:"*";inherits:false}@property --tw-skew-y{syntax:"*";inherits:false}@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-tracking{syntax:"*";inherits:false}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:"*";inherits:false}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:"*";inherits:false}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:"*";inherits:false}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:"*";inherits:false}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:"*";inherits:false}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-duration{syntax:"*";inherits:false}@property --tw-ease{syntax:"*";inherits:false}</style>
+      ${r.length===0?`
+        <div class="rounded-xl border border-dashed border-line p-12 text-center">
+          <p class="text-sm text-muted font-medium">No activity to show</p>
+        </div>
+      `:`
+        <div class="rounded-xl border border-line overflow-hidden">
+          <div class="activity-row bg-surface text-[10px] font-medium uppercase tracking-[0.12em] text-faint border-b border-line">
+            <div></div>
+            <div>Model & Route</div>
+            <div>Provider</div>
+            <div>Time</div>
+            <div class="text-right">Metrics</div>
+          </div>
+          ${r.map(o=>{const x=(o.status_code??0)>=400||!!o.error_message;return`
+            <div class="activity-row">
+              <div><span class="status-dot ${x?"bg-[#ff8d78]":"bg-[#7dbeb3]"}"></span></div>
+              <div class="min-w-0">
+                <div class="font-mono text-[11px] font-medium text-text truncate">${l(o.model)}</div>
+                <div class="text-[10px] text-faint">${l(o.request_mode||o.endpoint)}</div>
+              </div>
+              <div class="text-[12px] text-muted truncate">${l(o.profile_name||o.provider)}</div>
+              <div class="text-[12px] text-muted" title="${Y(o.started_at)}">${Z(o.started_at)}</div>
+              <div class="text-right">
+                <div class="font-mono text-[11px] text-text">${o.duration_ms}ms</div>
+                ${o.total_tokens?`<div class="text-[10px] font-mono text-faint">${o.total_tokens} tok</div>`:""}
+              </div>
+            </div>
+            ${x?`
+            <div class="px-4 pb-3 bg-[rgba(255,141,120,0.02)] border-b border-line">
+              <div class="font-mono text-[11px] text-[#ff8d78]/80 whitespace-pre-wrap pl-6 border-l-2 border-[#ff8d78]/20 py-1">${l(o.error_message||`HTTP ${o.status_code}`)}</div>
+            </div>
+            `:""}
+          `}).join("")}
+        </div>
+        <p class="mt-3 text-[11px] text-center text-faint font-mono">Showing ${r.length} of ${s.length} logs</p>
+      `}
+    </div>
+  `}function le(){const e=c,t=e.profiles.filter(n=>e.models.some(r=>r.provider===n.provider)),s=e.models.filter(n=>n.provider===a.provider);return`
+    <div class="flex flex-col" style="min-height:600px; height:calc(100dvh - 40px)">
+      \x3C!-- Header -->
+      <div class="flex items-center justify-between mb-4 shrink-0">
+        <div>
+          <h1 class="text-xl font-medium tracking-tight">Playground</h1>
+          <p class="text-sm text-muted mt-0.5">Test your providers interactively</p>
+        </div>
+        ${a.messages.length>0&&!a.running?'<button id="pg-clr" class="btn interactive text-[12px] text-muted hover:text-text px-3 py-1.5 rounded-lg border border-line bg-bg hover:bg-surface">Clear Chat</button>':""}
+      </div>
+
+      \x3C!-- Config Bar -->
+      <div class="flex flex-wrap items-center gap-2 mb-4 shrink-0 p-2 rounded-xl border border-line bg-surface">
+        <div class="relative flex-1 min-w-[140px]">
+          <input id="pg-key" value="${l(a.key)}" type="password" placeholder="API Key (gm_...)" class="h-8 w-full rounded-lg bg-transparent px-3 font-mono text-[11px] outline-none placeholder:text-faint focus:bg-bg text-text border border-transparent focus:border-line" />
+        </div>
+        <div class="h-4 w-px bg-line hidden sm:block"></div>
+        <select id="pg-p" class="h-8 rounded-lg bg-transparent px-2 text-[12px] outline-none cursor-pointer hover:bg-bg text-text border border-transparent hover:border-line">
+          ${t.length?t.map(n=>`<option value="${l(n.provider)}"${a.provider===n.provider?" selected":""}>${l(n.name)}</option>`).join(""):"<option>No providers</option>"}
+        </select>
+        <select id="pg-m" class="h-8 rounded-lg bg-transparent px-2 font-mono text-[11px] outline-none cursor-pointer hover:bg-bg text-text border border-transparent hover:border-line max-w-[200px]">
+          ${s.length?s.map(n=>`<option value="${l(n.id)}"${a.model===n.id?" selected":""}>${l(n.id)}</option>`).join(""):"<option>No models</option>"}
+        </select>
+        <select id="pg-mode" class="h-8 rounded-lg bg-transparent px-2 text-[12px] outline-none cursor-pointer hover:bg-bg text-muted border border-transparent hover:border-line">
+          <option value="chat"${a.mode==="chat"?" selected":""}>Chat</option>
+          <option value="responses"${a.mode==="responses"?" selected":""}>Responses</option>
+        </select>
+      </div>
+
+      \x3C!-- Messages -->
+      <div class="flex-1 overflow-y-auto rounded-xl border border-line bg-sidebar p-5 space-y-5 mb-4 min-h-[300px]">
+        ${a.messages.length?a.messages.map(n=>`
+              <div class="flex ${n.role==="user"?"justify-end":"justify-start"}" style="animation:fadeUp 200ms var(--ease-out) both">
+                <div class="max-w-[85%]">
+                  <div class="flex items-center gap-2 mb-1.5 ${n.role==="user"?"justify-end":""}">
+                    <span class="h-5 w-5 rounded flex items-center justify-center text-[10px] font-bold text-bg ${n.role==="user"?"bg-accent":"bg-[#7dbeb3]"}">${n.role.charAt(0).toUpperCase()}</span>
+                    <span class="text-[10px] font-medium uppercase tracking-[0.1em] text-faint">${n.role}</span>
+                  </div>
+                  <div class="chat-${n.role} rounded-2xl px-4 py-3 text-[14px] leading-relaxed whitespace-pre-wrap">${l(n.content)}</div>
+                </div>
+              </div>
+            `).join(""):'<div class="h-full flex items-center justify-center text-[13px] text-muted">Select a model and send a message to test.</div>'}
+        ${a.running?`
+          <div class="flex justify-start">
+            <div class="max-w-[85%]">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="h-5 w-5 rounded flex items-center justify-center text-[10px] font-bold text-bg bg-[#7dbeb3]">A</span>
+                <span class="text-[10px] font-medium uppercase tracking-[0.1em] text-faint">assistant</span>
+              </div>
+              <div class="chat-assistant rounded-2xl px-4 py-3">
+                <div class="flex gap-1">
+                  <span class="w-2 h-2 rounded-full bg-faint animate-bounce" style="animation-delay:0ms"></span>
+                  <span class="w-2 h-2 rounded-full bg-faint animate-bounce" style="animation-delay:150ms"></span>
+                  <span class="w-2 h-2 rounded-full bg-faint animate-bounce" style="animation-delay:300ms"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `:""}
+      </div>
+
+      \x3C!-- Input -->
+      <form id="pg-form" class="shrink-0 flex gap-2 relative">
+        <textarea id="pg-in" placeholder="Message..." rows="1" class="min-h-[48px] flex-1 resize-y rounded-xl border border-line bg-sidebar px-4 py-3 text-[14px] outline-none placeholder:text-faint focus:border-accent text-text shadow-sm" ${a.running?"disabled":""}></textarea>
+        <button type="submit" class="btn interactive h-[48px] w-[48px] rounded-xl flex items-center justify-center bg-accent text-bg shadow-sm btn-accent shrink-0" ${a.running?"disabled":""}>
+          ${a.running?'<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>':u.send}
+        </button>
+      </form>
+    </div>
+  `}function ce(){if(document.querySelectorAll("[data-nav]").forEach(e=>{e.addEventListener("click",()=>{const t=e.getAttribute("data-nav");t&&W(t)})}),document.querySelectorAll(".btn-nav").forEach(e=>{e.addEventListener("click",()=>{const t=e.getAttribute("data-nav");t&&W(t)})}),p("btn-refresh")?.addEventListener("click",()=>k()),p("btn-copy-url")?.addEventListener("click",async()=>{if(!c)return;const e=new URL(c.service.api_base_url,location.origin).toString(),t=await z(e);v(t?"Copied API URL":"Copy failed",t)}),p("ov-copy-url")?.addEventListener("click",async()=>{if(!c)return;const e=new URL(c.service.api_base_url,location.origin).toString(),t=await z(e);v(t?"Copied API URL":"Copy failed",t)}),p("modal-cancel")?.addEventListener("click",T),p("modal-cancel-x")?.addEventListener("click",T),p("modal-confirm")?.addEventListener("click",()=>{q&&q(),T()}),p("modal-auth-form")?.addEventListener("submit",async e=>{e.preventDefault();const t=e.target,s=new FormData(t);try{const n=await C.createProfile({provider:H,name:String(s.get("name")||H),api_key:String(s.get("api_key")),base_url:String(s.get("base_url"))});v(n.message||"Provider connected"),T(),k()}catch(n){v(n.message,!1)}}),p("modal-key-form")?.addEventListener("submit",async e=>{e.preventDefault();const t=e.target,s=new FormData(t),n=String(s.get("profile_id")),r=String(s.get("name"));if(!(!n||!r))try{const i=await C.createKey(n,r);v(i.message),i.secret&&(a.key=i.secret,v("Key created — copied to playground",!0)),T(),k()}catch(i){v(i.message,!1)}}),L==="providers"&&(document.querySelectorAll(".provider-toggle").forEach(e=>{e.addEventListener("click",()=>{const t=e.dataset.provider,s=e.dataset.profileId;if(s){const n=c?.profiles.find(r=>r.id===s);V("Disconnect Provider",`Disconnect ${n?.name||t}?`,()=>{C.deleteProfile(s).then(r=>{v(r.message),k()}).catch(r=>v(r.message,!1))})}else F(t)})}),document.querySelectorAll(".provider-connect").forEach(e=>{e.addEventListener("click",()=>{F(e.dataset.provider)})}),document.querySelectorAll(".p-act").forEach(e=>{e.addEventListener("click",async()=>{const t=e.dataset.id,s=e.dataset.a;try{const n=await C.action(t,s);n.auth_url&&window.open(n.auth_url,"_blank","noopener,noreferrer"),v(n.message||"Done"),k()}catch(n){v(n.message,!1)}})}),document.querySelectorAll(".p-del").forEach(e=>{e.addEventListener("click",()=>{const t=e.dataset.id,s=e.dataset.name;V("Disconnect Provider",`Disconnect "${s}"? This will remove all synced models.`,()=>{C.deleteProfile(t).then(n=>{v(n.message),k()}).catch(n=>v(n.message,!1))})})})),L==="models"&&p("mod-q")?.addEventListener("input",e=>{K=e.target.value,f()}),L==="keys"&&(p("btn-create-key")?.addEventListener("click",()=>{ee()}),document.querySelectorAll(".key-copy").forEach(e=>{e.addEventListener("click",async()=>{e.dataset.prefix,v("Key prefix copied")})}),document.querySelectorAll(".key-del").forEach(e=>{e.addEventListener("click",()=>{const t=e.dataset.id,s=e.dataset.name;te(t,s)})})),L==="activity"&&(p("filt-p")?.addEventListener("change",e=>{D.provider=e.target.value,f()}),p("filt-s")?.addEventListener("change",e=>{D.status=e.target.value,f()}),p("filt-l")?.addEventListener("change",e=>{D.limit=e.target.value,f()}),p("filt-q")?.addEventListener("input",e=>{D.query=e.target.value,f()})),L==="playground"){p("pg-p")?.addEventListener("change",t=>{a.provider=t.target.value;const s=c.models.filter(n=>n.provider===a.provider);a.model=s[0]?.id||"",f()}),p("pg-key")?.addEventListener("change",t=>{a.key=t.target.value}),p("pg-m")?.addEventListener("change",t=>{a.model=t.target.value}),p("pg-mode")?.addEventListener("change",t=>{a.mode=t.target.value}),p("pg-clr")?.addEventListener("click",()=>{a.messages=[],a.usage=null,f()}),p("pg-form")?.addEventListener("submit",async t=>{t.preventDefault();const s=p("pg-in"),n=s.value.trim();if(!n||a.running||!a.model)return;a.messages.push({role:"user",content:n}),a.messages.push({role:"assistant",content:""}),a.running=!0,s.value="",s.style.height="auto",f();const r=a.messages.filter(i=>i.role!=="assistant"||i.content).map(i=>({role:i.role,content:i.content}));try{const i=await C.chat(a.mode,a.key,a.model,r);if(!i.ok)throw new Error(`HTTP ${i.status}`);const o=i.body?.getReader();if(!o)throw new Error("No response body");const x=new TextDecoder;let m="",h="";for(;;){const{done:$,value:P}=await o.read();if($)break;m+=x.decode(P,{stream:!0});let d;for(;(d=m.indexOf(`
+
+`))!==-1;){const b=m.slice(0,d);m=m.slice(d+2);const g=b.split(/\r?\n/);let y="message";const N=[];for(const w of g)w.startsWith("event:")?y=w.slice(6).trim():w.startsWith("data:")&&N.push(w.slice(5).trimStart());if(N.length&&N.join("")!=="[DONE]"){const w=JSON.parse(N.join(`
+`));if(a.mode==="chat"){const U=w?.choices?.[0]?.delta?.content||"";U&&(h+=U)}else y==="response.output_text.delta"?h+=w.delta||"":y==="response.completed"&&(h=w?.response?.output_text||h,a.usage=w?.response?.usage||null);const R=a.messages[a.messages.length-1];R&&R.role==="assistant"&&(R.content=h),f()}}}v("Done")}catch(i){a.messages=a.messages.slice(0,Math.max(0,a.messages.length-2)),v(i.message,!1)}finally{a.running=!1,f()}});const e=p("pg-in");e&&(e.addEventListener("input",()=>{e.style.height="auto",e.style.height=e.scrollHeight+"px"}),e.addEventListener("keydown",t=>{t.key==="Enter"&&!t.shiftKey&&(t.preventDefault(),p("pg-form")?.dispatchEvent(new Event("submit")))}))}}function W(e){L=e,f()}function f(){ne(),se(),A(),ce()}async function k(){try{if(c=await C.state(),!a.provider&&c.profiles.length&&(a.provider=c.profiles[0].provider),!a.model&&c.models.length){const e=c.models.filter(t=>t.provider===a.provider);a.model=e[0]?.id||c.models[0].id}}catch{c=null}p("sidebar-nav")||X(),f()}X();k();setInterval(()=>{a.running||k()},3e4);</script>
+    <style rel="stylesheet" crossorigin>/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-border-style:solid;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-ease:initial}}}@layer theme{:root,:host{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:"JetBrains Mono", ui-monospace, monospace;--spacing:.25rem;--container-5xl:64rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--text-xl:1.25rem;--text-xl--line-height:calc(1.75 / 1.25);--font-weight-medium:500;--font-weight-bold:700;--tracking-tight:-.025em;--tracking-wide:.025em;--leading-relaxed:1.625;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--radius-2xl:1rem;--ease-out:cubic-bezier(.23, 1, .32, 1);--ease-in-out:cubic-bezier(.77, 0, .175, 1);--animate-spin:spin 1s linear infinite;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--animate-bounce:bounce 1s infinite;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-bg:#0e0e0d;--color-sidebar:#111110;--color-text:#faf9f6;--color-muted:#868584;--color-faint:#4a4a48;--color-accent:#d7b46a;--color-line:#e2e2e214;--color-line-hover:#e2e2e224;--color-surface:#ffffff06;--font-matter:"DM Sans", system-ui, sans-serif}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab,red,red)){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}*,:before,:after{box-sizing:border-box;margin:0;padding:0}html{-webkit-font-smoothing:antialiased}body{font-family:var(--font-matter);background:var(--color-bg);color:var(--color-text);letter-spacing:-.01em;min-height:100dvh;font-size:14px;font-weight:400;line-height:1.45}::selection{background:#faf9f61f}:focus-visible{outline-offset:2px;outline:1px solid #d7b46a80}::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{border:2px solid var(--color-bg);background:#ffffff1a;border-radius:6px}::-webkit-scrollbar-thumb:hover{background:#ffffff26}}@layer components;@layer utilities{.pointer-events-none{pointer-events:none}.absolute{position:absolute}.fixed{position:fixed}.relative{position:relative}.inset-0{inset:calc(var(--spacing) * 0)}.start{inset-inline-start:var(--spacing)}.top-1\/2{top:50%}.right-5{right:calc(var(--spacing) * 5)}.bottom-5{bottom:calc(var(--spacing) * 5)}.left-3{left:calc(var(--spacing) * 3)}.z-20{z-index:20}.z-\[60\]{z-index:60}.z-\[100\]{z-index:100}.container{width:100%}@media(min-width:40rem){.container{max-width:40rem}}@media(min-width:48rem){.container{max-width:48rem}}@media(min-width:64rem){.container{max-width:64rem}}@media(min-width:80rem){.container{max-width:80rem}}@media(min-width:96rem){.container{max-width:96rem}}.mx-auto{margin-inline:auto}.mt-0\.5{margin-top:calc(var(--spacing) * .5)}.mt-1{margin-top:calc(var(--spacing) * 1)}.mt-2{margin-top:calc(var(--spacing) * 2)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-4{margin-top:calc(var(--spacing) * 4)}.mt-5{margin-top:calc(var(--spacing) * 5)}.mb-1{margin-bottom:calc(var(--spacing) * 1)}.mb-1\.5{margin-bottom:calc(var(--spacing) * 1.5)}.mb-3{margin-bottom:calc(var(--spacing) * 3)}.mb-4{margin-bottom:calc(var(--spacing) * 4)}.mb-5{margin-bottom:calc(var(--spacing) * 5)}.mb-6{margin-bottom:calc(var(--spacing) * 6)}.ml-3{margin-left:calc(var(--spacing) * 3)}.ml-auto{margin-left:auto}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-2{height:calc(var(--spacing) * 2)}.h-4{height:calc(var(--spacing) * 4)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-8{height:calc(var(--spacing) * 8)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-14{height:calc(var(--spacing) * 14)}.h-16{height:calc(var(--spacing) * 16)}.h-\[18px\]{height:18px}.h-\[48px\]{height:48px}.h-\[50vh\]{height:50vh}.h-dvh{height:100dvh}.h-full{height:100%}.min-h-\[48px\]{min-height:48px}.min-h-\[300px\]{min-height:300px}.w-2{width:calc(var(--spacing) * 2)}.w-4{width:calc(var(--spacing) * 4)}.w-5{width:calc(var(--spacing) * 5)}.w-6{width:calc(var(--spacing) * 6)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-\[18px\]{width:18px}.w-\[48px\]{width:48px}.w-\[240px\]{width:240px}.w-full{width:100%}.w-px{width:1px}.max-w-5xl{max-width:var(--container-5xl)}.max-w-\[85\%\]{max-width:85%}.max-w-\[200px\]{max-width:200px}.min-w-0{min-width:calc(var(--spacing) * 0)}.min-w-\[140px\]{min-width:140px}.min-w-\[180px\]{min-width:180px}.flex-1{flex:1}.shrink-0{flex-shrink:0}.-translate-y-1\/2{--tw-translate-y: -50% ;translate:var(--tw-translate-x) var(--tw-translate-y)}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-bounce{animation:var(--animate-bounce)}.animate-pulse{animation:var(--animate-pulse)}.animate-spin{animation:var(--animate-spin)}.cursor-pointer{cursor:pointer}.resize-y{resize:vertical}.appearance-none{appearance:none}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.items-end{align-items:flex-end}.items-start{align-items:flex-start}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.justify-start{justify-content:flex-start}.gap-1{gap:calc(var(--spacing) * 1)}.gap-1\.5{gap:calc(var(--spacing) * 1.5)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-2\.5{gap:calc(var(--spacing) * 2.5)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-4{gap:calc(var(--spacing) * 4)}.gap-5{gap:calc(var(--spacing) * 5)}.gap-6{gap:calc(var(--spacing) * 6)}.gap-\[3px\]{gap:3px}:where(.space-y-0>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 0) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 0) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-0\.5>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * .5) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * .5) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-3>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-5>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)))}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:var(--radius-2xl)}.rounded-full{border-radius:3.40282e38px}.rounded-lg{border-radius:var(--radius-lg)}.rounded-md{border-radius:var(--radius-md)}.rounded-xl{border-radius:var(--radius-xl)}.border{border-style:var(--tw-border-style);border-width:1px}.border-t{border-top-style:var(--tw-border-style);border-top-width:1px}.border-r{border-right-style:var(--tw-border-style);border-right-width:1px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-l-2{border-left-style:var(--tw-border-style);border-left-width:2px}.border-dashed{--tw-border-style:dashed;border-style:dashed}.border-\[\#ff8d78\]\/20{border-color:#ff8d7833}.border-line{border-color:var(--color-line)}.border-transparent{border-color:#0000}.bg-\[\#7dbeb3\]{background-color:#7dbeb3}.bg-\[\#7dbeb3\]\/10{background-color:#7dbeb31a}.bg-\[\#ff8d78\]{background-color:#ff8d78}.bg-\[\#ff8d78\]\/10{background-color:#ff8d781a}.bg-\[rgba\(125\,211\,200\,0\.03\)\]{background-color:#7dd3c808}.bg-\[rgba\(255\,141\,120\,0\.02\)\]{background-color:#ff8d7805}.bg-accent{background-color:var(--color-accent)}.bg-bg{background-color:var(--color-bg)}.bg-faint{background-color:var(--color-faint)}.bg-line{background-color:var(--color-line)}.bg-sidebar{background-color:var(--color-sidebar)}.bg-surface{background-color:var(--color-surface)}.bg-transparent{background-color:#0000}.p-1{padding:calc(var(--spacing) * 1)}.p-1\.5{padding:calc(var(--spacing) * 1.5)}.p-2{padding:calc(var(--spacing) * 2)}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.p-5{padding:calc(var(--spacing) * 5)}.p-6{padding:calc(var(--spacing) * 6)}.p-8{padding:calc(var(--spacing) * 8)}.p-12{padding:calc(var(--spacing) * 12)}.px-1\.5{padding-inline:calc(var(--spacing) * 1.5)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-2\.5{padding-inline:calc(var(--spacing) * 2.5)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-1{padding-block:calc(var(--spacing) * 1)}.py-1\.5{padding-block:calc(var(--spacing) * 1.5)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-4{padding-block:calc(var(--spacing) * 4)}.py-\[1px\]{padding-block:1px}.py-\[5px\]{padding-block:5px}.py-\[7px\]{padding-block:7px}.pt-3{padding-top:calc(var(--spacing) * 3)}.pr-3{padding-right:calc(var(--spacing) * 3)}.pb-3{padding-bottom:calc(var(--spacing) * 3)}.pl-6{padding-left:calc(var(--spacing) * 6)}.pl-9{padding-left:calc(var(--spacing) * 9)}.text-center{text-align:center}.text-right{text-align:right}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xl{font-size:var(--text-xl);line-height:var(--tw-leading,var(--text-xl--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\[9px\]{font-size:9px}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[12px\]{font-size:12px}.text-\[13px\]{font-size:13px}.text-\[14px\]{font-size:14px}.text-\[15px\]{font-size:15px}.text-\[18px\]{font-size:18px}.text-\[26px\]{font-size:26px}.leading-none{--tw-leading:1;line-height:1}.leading-relaxed{--tw-leading:var(--leading-relaxed);line-height:var(--leading-relaxed)}.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.tracking-\[0\.1em\]{--tw-tracking:.1em;letter-spacing:.1em}.tracking-\[0\.05em\]{--tw-tracking:.05em;letter-spacing:.05em}.tracking-\[0\.12em\]{--tw-tracking:.12em;letter-spacing:.12em}.tracking-tight{--tw-tracking:var(--tracking-tight);letter-spacing:var(--tracking-tight)}.tracking-wide{--tw-tracking:var(--tracking-wide);letter-spacing:var(--tracking-wide)}.whitespace-pre-wrap{white-space:pre-wrap}.text-\[\#7dbeb3\]{color:#7dbeb3}.text-\[\#ff8d78\]{color:#ff8d78}.text-\[\#ff8d78\]\/80{color:#ff8d78cc}.text-bg{color:var(--color-bg)}.text-faint{color:var(--color-faint)}.text-muted{color:var(--color-muted)}.text-text{color:var(--color-text)}.normal-case{text-transform:none}.uppercase{text-transform:uppercase}.italic{font-style:italic}.opacity-0{opacity:0}.opacity-25{opacity:.25}.opacity-40{opacity:.4}.opacity-60{opacity:.6}.opacity-75{opacity:.75}.opacity-80{opacity:.8}.shadow-2xl{--tw-shadow:0 25px 50px -12px var(--tw-shadow-color,#00000040);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-opacity{transition-property:opacity;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.ease-in-out{--tw-ease:var(--ease-in-out);transition-timing-function:var(--ease-in-out)}.outline-none{--tw-outline-style:none;outline-style:none}@media(hover:hover){.group-hover\:opacity-100:is(:where(.group):hover *){opacity:1}}.placeholder\:text-faint::placeholder{color:var(--color-faint)}.last\:border-0:last-child{border-style:var(--tw-border-style);border-width:0}@media(hover:hover){.hover\:border-line:hover{border-color:var(--color-line)}.hover\:border-line-hover:hover{border-color:var(--color-line-hover)}.hover\:bg-\[\#ff8d78\]\/20:hover{background-color:#ff8d7833}.hover\:bg-\[rgba\(255\,141\,120\,0\.08\)\]:hover{background-color:#ff8d7814}.hover\:bg-bg:hover{background-color:var(--color-bg)}.hover\:bg-surface:hover{background-color:var(--color-surface)}.hover\:text-\[\#ff8d78\]:hover{color:#ff8d78}.hover\:text-muted:hover{color:var(--color-muted)}.hover\:text-text:hover{color:var(--color-text)}}.focus\:border-accent:focus{border-color:var(--color-accent)}.focus\:border-line:focus{border-color:var(--color-line)}.focus\:bg-bg:focus{background-color:var(--color-bg)}.focus\:bg-surface:focus{background-color:var(--color-surface)}@media(min-width:40rem){.sm\:block{display:block}.sm\:w-56{width:calc(var(--spacing) * 56)}.sm\:flex-row{flex-direction:row}.sm\:items-center{align-items:center}}@media(min-width:48rem){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:64rem){.lg\:col-span-2{grid-column:span 2/span 2}.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\:p-10{padding:calc(var(--spacing) * 10)}}.font-matter{font-family:var(--font-matter)}.font-mono{font-family:var(--font-mono)}}@keyframes fadeUp{0%{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes toastIn{0%{opacity:0;transform:translateY(12px)scale(.98)}to{opacity:1;transform:translateY(0)scale(1)}}@keyframes viewEnter{0%{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}@keyframes logoPulse{0%,to{opacity:.4}50%{opacity:.8}}@keyframes fadeIn{0%{opacity:0}to{opacity:1}}@keyframes scaleIn{0%{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}@keyframes slideUp{0%{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes dotPulse{0%,to{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.4)}}@keyframes shimmer{0%{background-position:-200% 0}to{background-position:200% 0}}.interactive{transition:transform .16s var(--ease-out),background-color .16s var(--ease-out),border-color .16s var(--ease-out),color .16s var(--ease-out),box-shadow .16s var(--ease-out)}.interactive:active{transform:scale(.97)}.chat-user{background:#d7b46a14;border:1px solid #d7b46a1f;border-bottom-right-radius:4px}.chat-assistant{background:var(--color-surface);border:1px solid var(--color-line);border-bottom-left-radius:4px}.code-block{border:1px solid var(--color-line);font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;background:#00000059;border-radius:8px;padding:12px 16px;font-size:12px;line-height:1.6;overflow-x:auto}.modal-backdrop{z-index:50;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:fadeIn .18s var(--ease-out);background:#0000008c;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}.modal-card{background:var(--color-sidebar);border:1px solid var(--color-line);width:100%;max-width:440px;animation:scaleIn .22s var(--ease-out);border-radius:16px;margin:16px;padding:24px;box-shadow:0 24px 48px #0006}.toggle-track{background:var(--color-faint);cursor:pointer;width:38px;height:20px;transition:background .2s var(--ease-out);border-radius:10px;flex-shrink:0;position:relative}.toggle-track.on{background:var(--color-accent)}.toggle-track:after{content:"";background:var(--color-text);width:16px;height:16px;transition:transform .2s var(--ease-out);border-radius:50%;position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0003}.toggle-track.on:after{transform:translate(18px)}.status-dot{border-radius:50%;width:8px;height:8px}.status-dot.pulse{animation:2s ease-in-out infinite dotPulse}.spark-bar{background:var(--color-accent);opacity:.6;border-radius:1px;width:100%;min-width:3px;transition:opacity .2s}.spark-bar:hover{opacity:1}.provider-card{border:1px solid var(--color-line);transition:all .2s var(--ease-out);border-radius:14px;padding:18px}.provider-card:hover{border-color:var(--color-line-hover);background:var(--color-surface)}.activity-row{border-bottom:1px solid var(--color-line);grid-template-columns:24px 1fr 140px 90px 80px;align-items:center;gap:8px;padding:10px 16px;transition:background .12s;display:grid}.activity-row:hover{background:var(--color-surface)}.activity-row:last-child{border-bottom:none}.key-row{border-bottom:1px solid var(--color-line);grid-template-columns:1fr 200px 120px 48px;align-items:center;gap:16px;padding:14px 16px;transition:background .12s;display:grid}.key-row:hover{background:var(--color-surface)}.key-row:last-child{border-bottom:none}@media(max-width:768px){.activity-row{grid-template-columns:24px 1fr 80px}.key-row{grid-template-columns:1fr 120px 48px}}@media(hover:hover)and (pointer:fine){.list-row:hover{background-color:var(--color-surface)}.nav-item:hover{background-color:var(--color-surface);color:var(--color-text)}.btn:hover{background-color:var(--color-surface);border-color:var(--color-line-hover)}.btn-accent:hover{filter:brightness(1.1)}}@media(prefers-reduced-motion:reduce){*,:before,:after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}@property --tw-translate-x{syntax:"*";inherits:false;initial-value:0}@property --tw-translate-y{syntax:"*";inherits:false;initial-value:0}@property --tw-translate-z{syntax:"*";inherits:false;initial-value:0}@property --tw-rotate-x{syntax:"*";inherits:false}@property --tw-rotate-y{syntax:"*";inherits:false}@property --tw-rotate-z{syntax:"*";inherits:false}@property --tw-skew-x{syntax:"*";inherits:false}@property --tw-skew-y{syntax:"*";inherits:false}@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-tracking{syntax:"*";inherits:false}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:"*";inherits:false}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:"*";inherits:false}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:"*";inherits:false}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:"*";inherits:false}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:"*";inherits:false}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ease{syntax:"*";inherits:false}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{opacity:.5}}@keyframes bounce{0%,to{animation-timing-function:cubic-bezier(.8,0,1,1);transform:translateY(-25%)}50%{animation-timing-function:cubic-bezier(0,0,.2,1);transform:none}}</style>
   </head>
   <body>
     <div id="app"></div>
