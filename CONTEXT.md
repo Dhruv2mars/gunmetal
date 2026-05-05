@@ -2,6 +2,8 @@
 
 Gunmetal turns your AI subscriptions and upstream provider access into a local API. The product language stays small so the installed app, local API, and developer SDK do not blur together.
 
+Public status: Gunmetal is an alpha product. Public docs, repository copy, package metadata, and releases should say alpha until the project reaches a stable release line.
+
 ## Language
 
 **Gunmetal**:
@@ -97,7 +99,7 @@ The upstream provider connection for direct OpenAI API-key access.
 _Avoid_: ChatGPT subscription
 
 **Onboarding path**:
-Install the CLI, run `gunmetal setup`, then use `gunmetal web` to manage Gunmetal in the local dashboard.
+Install the CLI, run `gunmetal setup`, then use `gunmetal start` to manage Gunmetal in the local dashboard.
 _Avoid_: Web-only setup, hosted signup
 
 ## Relationships
@@ -242,7 +244,7 @@ _Avoid_: Web-only setup, hosted signup
 > **Domain expert:** "No. **Gunmetal** uses **Explicit routing** for now."
 >
 > **Dev:** "Should first-run setup be CLI-first or Web UI-first?"
-> **Domain expert:** "The CLI starts setup, then `gunmetal web` opens the local dashboard for ongoing management."
+> **Domain expert:** "The CLI starts setup, then `gunmetal start` opens the local dashboard for ongoing management."
 
 ## Flagged ambiguities
 

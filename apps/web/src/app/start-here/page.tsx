@@ -22,7 +22,7 @@ export default function StartHerePage() {
         </div>
         <div className="gunmetal-panel rounded-[22px] p-5">
           <pre className="overflow-x-auto whitespace-pre-wrap rounded-[16px] bg-[rgba(6,7,8,0.32)] p-5 font-mono text-[13px] leading-6 text-[var(--text-secondary)]">{`# 1. keep the local API running
-gunmetal web
+gunmetal start
 
 # 2. verify models with a Gunmetal key
 curl http://127.0.0.1:4684/v1/models \\

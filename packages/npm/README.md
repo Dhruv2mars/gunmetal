@@ -1,6 +1,10 @@
 # @dhruv2mars/gunmetal
 
-Install Gunmetal and turn your AI subscriptions and upstream provider access into a local API.
+Alpha local-first AI access as one OpenAI-compatible local API.
+
+Gunmetal installs a native CLI that runs a local Dashboard and API at `http://127.0.0.1:4684/` and `http://127.0.0.1:4684/v1`.
+
+> Alpha software: commands, provider behavior, SDK contracts, and dashboard flows can change while Gunmetal stabilizes.
 
 ## Install
 
@@ -8,7 +12,7 @@ Install Gunmetal and turn your AI subscriptions and upstream provider access int
 npm i -g @dhruv2mars/gunmetal
 ```
 
-Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
+The package downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
 
 ## Quickstart
 
@@ -18,38 +22,32 @@ gunmetal start
 gunmetal status
 ```
 
-`gunmetal setup` is the default path. It saves one provider connection, checks auth, syncs models, creates one Gunmetal key, and prints the next Local API request.
+`gunmetal setup` connects one provider, checks auth, syncs models, creates one local Gunmetal key, and prints a test request.
 
-## Start Here
+`gunmetal start` opens the Dashboard and keeps the local API running. Use `gunmetal start --no-open` when you only want the daemon.
+
+## Use With Apps
 
 ```bash
 export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
 export OPENAI_API_KEY=gm_your_local_key
+```
 
-curl $OPENAI_BASE_URL/models \
-  -H "Authorization: Bearer $OPENAI_API_KEY"
-
-curl $OPENAI_BASE_URL/chat/completions \
+```bash
+curl "$OPENAI_BASE_URL/chat/completions" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-5.1",
+    "model": "provider/model",
     "messages": [{"role":"user","content":"say ok"}]
   }'
 ```
 
-Then point your app at:
+Gunmetal works when the app accepts:
 
-- base URL: `http://127.0.0.1:4684/v1`
-- API key: the Gunmetal key created during setup
-- model: a provider-qualified model ID like `codex/gpt-5.4`
-
-Gunmetal works when the app talks to Gunmetal:
-
-- custom base URL
-- custom Gunmetal key
+- custom OpenAI-compatible base URL
+- custom Gunmetal API key
 - provider-qualified model IDs
-- if the app hardcodes the upstream endpoint, Gunmetal cannot help there
 
 ## Commands
 
@@ -57,7 +55,10 @@ Gunmetal works when the app talks to Gunmetal:
 gunmetal
 gunmetal setup
 gunmetal start
+gunmetal start --no-open
 gunmetal status
+gunmetal doctor
+gunmetal chat
 gunmetal profiles list
 gunmetal keys list
 gunmetal logs list

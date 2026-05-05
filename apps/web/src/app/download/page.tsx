@@ -29,8 +29,8 @@ export default function DownloadPage() {
           <PackageManagerCommandBox packageName="@dhruv2mars/gunmetal" className="px-0" />
           <div className="mt-6">
             <CodeBlock>{`gunmetal setup
-gunmetal web
 gunmetal start
+gunmetal start --no-open
 gunmetal status`}</CodeBlock>
           </div>
           <div className="mt-6">
@@ -52,8 +52,8 @@ gunmetal status`}</CodeBlock>
         />
         <NumberedRow
           number="03"
-          title="Open Web UI"
-          body="Use `gunmetal web` for the local browser UI, or `gunmetal start` for API-only mode."
+          title="Start Gunmetal"
+          body="Use `gunmetal start` to open the local Dashboard and API. Use `gunmetal start --no-open` when you only want the daemon."
         />
       </section>
     </PageFrame>

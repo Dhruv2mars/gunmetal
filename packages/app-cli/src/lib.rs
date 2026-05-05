@@ -879,7 +879,7 @@ fn doctor_next_step(
     if !service_running {
         return DoctorNextStep {
             reason: "start the local API",
-            command: "gunmetal web",
+            command: "gunmetal start",
         };
     }
     if logs == 0 {
@@ -1233,10 +1233,7 @@ async fn setup(
         }
         writeln!(output)?;
         writeln!(output, "What to do next")?;
-        writeln!(
-            output,
-            "1. Start Gunmetal: gunmetal web  (or gunmetal start)"
-        )?;
+        writeln!(output, "1. Start Gunmetal: gunmetal start")?;
         writeln!(output, "2. Base URL: {BASE_URL}")?;
         writeln!(output, "3. Model format: provider/model")?;
         if let (Some(secret), Some(model)) = (created_secret, models.first()) {
@@ -2263,7 +2260,7 @@ mod tests {
         assert_eq!(next.command, "gunmetal keys create --name default");
 
         let next = super::doctor_next_step(false, 1, 1, 1, 0);
-        assert_eq!(next.command, "gunmetal web");
+        assert_eq!(next.command, "gunmetal start");
 
         let next = super::doctor_next_step(true, 1, 1, 1, 0);
         assert_eq!(next.command, "gunmetal chat");

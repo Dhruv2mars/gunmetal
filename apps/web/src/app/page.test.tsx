@@ -14,7 +14,7 @@ describe("marketing routes", () => {
 
     expect(html).toContain("The middleman layer");
     expect(html).toContain("for AI inference.");
-    expect(html).toContain("upstream providers");
+    expect(html).toContain("Alpha local-first access");
     expect(html).toContain("i -g @dhruv2mars/gunmetal");
     expect(html).toContain("@dhruv2mars/gunmetal");
     expect(html).toContain("npm");

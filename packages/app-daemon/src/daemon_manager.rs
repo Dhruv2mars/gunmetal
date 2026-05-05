@@ -79,7 +79,9 @@ impl DaemonManager {
             }
             Err(_) => {
                 if let Some(pid) = pid {
-                    if self.process_exists(pid) {
+                    if self.process_exists(pid)
+                        && self.pid_from_port(port).ok().flatten() == Some(pid)
+                    {
                         return Ok(ServiceStatus {
                             state: "starting".to_owned(),
                             running: false,

@@ -33,13 +33,14 @@ export const metadata: Metadata = {
     template: "%s | Gunmetal",
   },
   description:
-    "One local API. Every AI provider. Gunmetal turns your AI subscriptions into a unified endpoint.",
+    "Alpha local-first AI access as one OpenAI-compatible local API for your provider access.",
   keywords: [
     "AI",
     "inference",
     "local API",
     "OpenAI compatible",
     "AI gateway",
+    "alpha",
     "model routing",
   ],
   openGraph: {
@@ -47,15 +48,15 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://gunmetalapp.vercel.app",
     siteName: "Gunmetal",
-    title: "Gunmetal — One Local API. Every AI Provider.",
+    title: "Gunmetal — Alpha Local AI API",
     description:
-      "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
+      "Gunmetal turns provider access into a local OpenAI-compatible API with a Dashboard, local keys, and request history.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gunmetal — One Local API. Every AI Provider.",
+    title: "Gunmetal — Alpha Local AI API",
     description:
-      "Gunmetal turns your AI subscriptions into a unified endpoint. Route, control, and observe every request.",
+      "Gunmetal turns provider access into a local OpenAI-compatible API with a Dashboard, local keys, and request history.",
   },
   icons: {
     icon: "/icon.svg",

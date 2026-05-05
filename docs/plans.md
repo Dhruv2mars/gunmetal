@@ -13,9 +13,9 @@ Keep this current while the UX pass moves.
 - `cargo test -p gunmetal-daemon`
 - `cargo run -p gunmetal -- --help`
 - `cargo run -p gunmetal -- doctor`
-- live browser check for hosted pages or local `/webui` when server checks are available
+- live browser check for hosted pages or local `/` when server checks are available
 - `git status --short --branch`
-- Last verified: 2026-05-01
+- Last verified: 2026-05-05
 
 ## Milestones
 - `[done]` Milestone 1: reset durable memory and UX direction
@@ -23,7 +23,7 @@ Keep this current while the UX pass moves.
   - Key areas: `docs/prompt.md`, `docs/plans.md`, `docs/documentation.md`
   - Acceptance: docs match the refactored product surface.
 - `[done]` Milestone 2: hosted site UX foundation
-  - Scope: rebuild marketing/docs/install/start/webui routes around the golden path.
+  - Scope: rebuild marketing/docs/install/start routes around the golden path.
   - Key areas: `apps/web/src/app`, shared layout/components/styles
   - Acceptance: pages explain the product, setup path, and local URLs without generic SaaS copy.
 - `[done]` Milestone 3: local browser Web UI polish
@@ -56,16 +56,16 @@ Keep this current while the UX pass moves.
   - Mitigation: keep primary action and current setup state above dense tables.
 
 ## Active Notes
-- Current branch: `ux-web-cli-first-principles`.
+- Current branch: `fix-dashboard-core-workflow`.
 - Current source-of-truth: Web UI + CLI UX, no TUI.
 - Hosted site live-checked at `http://localhost:3000`.
-- Local browser UI live-checked at `http://127.0.0.1:4684/webui`.
+- Local browser UI live-checked at `http://127.0.0.1:4684/`.
 - Screenshot evidence saved under `.codex/screenshots/`.
 - Landing design source-of-truth is now `DESIGN.md`.
 - Added hosted subpages for `/products/suite`, `/developer/sdk`, `/download`, `/docs`, `/changelogs`, and `/changelog`.
 - Changelog implementation follows Offdex's GitHub Releases fetch/normalize/fallback model, restyled for Gunmetal.
-- Release readiness branch: `release-public-ready`.
-- Version target: `0.1.11`.
+- Release readiness branch: `fix-dashboard-core-workflow`.
+- Version target: `0.1.15`.
 - Provider SDK scope is now public crate readiness for `gunmetal-core`, `gunmetal-storage`, `gunmetal-sdk`, and `gunmetal-providers`.
 - Zen real E2E uses `zen/hy3-preview-free`; upstream may return SSE from the chat completion path, so the Zen adapter accepts and aggregates that payload.
 - Registry publish uses GitHub Actions OIDC trusted publishing for crates.io and npm; `NPM_TOKEN` remains only a fallback for npm.
