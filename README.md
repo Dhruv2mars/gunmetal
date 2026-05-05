@@ -6,7 +6,7 @@ Gunmetal lets you connect provider access you already have, create local Gunmeta
 
 > Alpha software: Gunmetal is public and usable, but the product is still early. Commands, provider behavior, SDK contracts, and dashboard flows can change while the project stabilizes. Do not treat it as a production security boundary yet.
 
-- Website: https://web-nine-sigma-59.vercel.app
+- Website: https://gunmetalapp.vercel.app
 - npm package: https://www.npmjs.com/package/@dhruv2mars/gunmetal
 - Latest alpha release: https://github.com/Dhruv2mars/gunmetal/releases/tag/v0.1.15
 
