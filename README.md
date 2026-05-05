@@ -1,6 +1,6 @@
 # Gunmetal
 
-Alpha local-first AI access as one OpenAI-compatible local API.
+
 
 Gunmetal lets you connect provider access you already have, create local Gunmetal API keys, and point OpenAI-compatible apps at `http://127.0.0.1:4684/v1`. It is built for local development and personal workflows: provider auth, model sync, key management, playground testing, and request history all stay on your machine.
 
