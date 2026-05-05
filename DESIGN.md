@@ -28,7 +28,7 @@ Current composition:
 - Fixed top navbar.
 - Centered hero section.
 - H1: `The middleman layer for AI inference.`
-- Subcopy: `Use AI subscriptions as upstream providers for inference.`
+- Subcopy: `Alpha local-first access for provider-backed inference.`
 - Animated install command box.
 - Minimal footer.
 
@@ -39,6 +39,7 @@ The page is allowed to be sparse. Empty space is part of the design. Do not add 
 Keep:
 
 - Current headline and subcopy.
+- Alpha state in public site chrome and metadata.
 - Current navbar structure and labels.
 - Current footer simplicity.
 - Current dark minimal atmosphere.
@@ -279,7 +280,7 @@ Changelog direction:
 
 Download direction:
 
-- Treat install as a short settings-pane flow: install CLI, run setup, open Web UI.
+- Treat install as a short settings-pane flow: install CLI, run setup, start Gunmetal.
 - Keep package-manager command animation consistent with landing.
 
 ## Motion
@@ -346,7 +347,7 @@ Do:
 
 ## Local WebUI
 
-Route: `http://127.0.0.1:4684/webui`.
+Route: `http://127.0.0.1:4684/`.
 
 The local WebUI is an operator surface, not a marketing page. It should follow
 the landing identity while being denser and more functional:
@@ -361,7 +362,7 @@ the landing identity while being denser and more functional:
 - Tables and forms use stable dimensions, subtle borders, and mono values.
 - Empty, loading, success, and error states are first-class UI.
 - Copy behavior must catch clipboard errors and provide fallback copy.
-- `/webui` is the only browser UI route.
+- `/` is the local Dashboard route served by the daemon.
 
 Do not make the WebUI feel like a SaaS analytics dashboard. Avoid colorful
 charts, large feature cards, decorative gradients, and unrelated navigation.

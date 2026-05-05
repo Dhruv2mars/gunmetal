@@ -63,8 +63,13 @@ jobs:
           set -euo pipefail
           [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           version="$(node -p "require('./packages/npm/package.json').version")"
+          cargo_version="$(node -e "const fs=require('node:fs');const toml=fs.readFileSync('Cargo.toml','utf8');const m=toml.match(/\\[workspace\\.package\\][\\s\\S]*?\\nversion = \\\"([^\\\"]+)\\\"/);if(!m)process.exit(1);process.stdout.write(m[1]);")"
           if [ "v${version}" != "${RELEASE_TAG}" ]; then
-            echo "tag/version mismatch"
+            echo "tag/npm version mismatch"
+            exit 1
+          fi
+          if [ "${cargo_version}" != "${version}" ]; then
+            echo "cargo/npm version mismatch"
             exit 1
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
@@ -81,7 +86,17 @@ jobs:
       - env:
           RELEASE_TAG: ${{ needs.resolve_tag.outputs.release_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release view "${RELEASE_TAG}" >/dev/null 2>&1 || gh release create "${RELEASE_TAG}" --title "${RELEASE_TAG}" --generate-notes
+        run: |
+          set -euo pipefail
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            exit 0
+          fi
+          notes_file="docs/releases/${RELEASE_TAG}.md"
+          if [ -f "${notes_file}" ]; then
+            gh release create "${RELEASE_TAG}" --title "Gunmetal ${RELEASE_TAG} alpha" --notes-file "${notes_file}" --prerelease
+          else
+            gh release create "${RELEASE_TAG}" --title "Gunmetal ${RELEASE_TAG} alpha" --generate-notes --prerelease
+          fi
 
   build_upload:
     needs: [resolve_tag, create_release]
@@ -193,7 +208,7 @@ jobs:
         id: auth
       - run: |
           set -euo pipefail
-          version="$(node -p "require('./packages/npm/package.json').version")"
+          version="${{ needs.validate.outputs.version }}"
           publish_crate() {
             crate="$1"
             if cargo search "$crate" --limit 1 | grep -Eq "^${crate} = \"${version}\""; then

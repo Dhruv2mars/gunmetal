@@ -1,7 +1,7 @@
 {
   "name": "@dhruv2mars/gunmetal",
-  "version": "0.1.14",
-  "description": "Local-first AI switchboard",
+  "version": "0.1.15",
+  "description": "Alpha local-first AI access as one OpenAI-compatible local API",
   "type": "module",
   "bin": {
     "gunmetal": "bin/gunmetal.js"
@@ -30,7 +30,8 @@
   },
   "keywords": [
     "ai",
-    "gateway",
+    "openai-compatible",
+    "local-api",
     "cli",
     "rust"
   ],

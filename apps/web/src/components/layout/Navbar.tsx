@@ -156,6 +156,9 @@ export function Navbar() {
               >
                 Gunmetal
               </span>
+              <span className="ml-2 rounded-full border border-[rgba(226,226,226,0.10)] px-1.5 py-[1px] font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">
+                alpha
+              </span>
             </div>
           </Link>
 

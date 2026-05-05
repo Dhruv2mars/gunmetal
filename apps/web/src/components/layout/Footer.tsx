@@ -23,6 +23,9 @@ export function Footer() {
               >
                 Gunmetal
               </span>
+              <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">
+                alpha
+              </span>
             </Link>
             <span className="text-[11px] text-[var(--text-muted)] border-l border-[rgba(226,226,226,0.1)] pl-2.5 ml-0.5">
               &copy; 2026

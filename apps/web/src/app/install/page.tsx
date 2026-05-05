@@ -27,7 +27,7 @@ export default function InstallPage() {
       <div className="gunmetal-panel rounded-[22px] p-5">
         <pre className="overflow-x-auto whitespace-pre-wrap rounded-[16px] bg-[rgba(6,7,8,0.32)] p-5 font-mono text-[13px] leading-6 text-[var(--text-secondary)]">{`npm i -g @dhruv2mars/gunmetal
 gunmetal setup
-gunmetal web
+gunmetal start
 
 # app config
 OPENAI_BASE_URL=http://127.0.0.1:4684/v1

@@ -1,8 +1,10 @@
-# gunmetal
+# Gunmetal
 
-Local-first AI access as one Local API.
+Alpha local-first AI access as one OpenAI-compatible local API.
 
-Gunmetal turns your AI subscriptions and upstream provider access into a local API. Connect provider access you already use, create local Gunmetal keys, point your apps at `http://127.0.0.1:4684/v1`, choose provider-qualified model IDs, and inspect request history for debugging.
+Gunmetal lets you connect provider access you already have, create local Gunmetal API keys, and point OpenAI-compatible apps at `http://127.0.0.1:4684/v1`. It is built for local development and personal workflows: provider auth, model sync, key management, playground testing, and request history all stay on your machine.
+
+> Alpha software: Gunmetal is public and usable, but the product is still early. Commands, provider behavior, SDK contracts, and dashboard flows can change while the project stabilizes. Do not treat it as a production security boundary yet.
 
 ## Install
 
@@ -10,60 +12,95 @@ Gunmetal turns your AI subscriptions and upstream provider access into a local A
 npm i -g @dhruv2mars/gunmetal
 ```
 
-Install downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
+The npm package installs the native `gunmetal` binary into `~/.gunmetal/bin/`.
 
 ## Quickstart
 
 ```bash
 gunmetal setup
-gunmetal web
 gunmetal start
 gunmetal status
 ```
 
-`gunmetal setup` is the golden path. It creates one provider connection, checks auth, syncs models, creates one Gunmetal key, and ends with a ready-to-run Local API request.
+`gunmetal setup` walks the first provider connection, checks auth, syncs models, creates one Gunmetal key, and prints a ready-to-run local API request.
 
-`gunmetal web` opens the local Dashboard at `http://127.0.0.1:4684/webui`. `gunmetal start` keeps the local OpenAI-compatible API running at `http://127.0.0.1:4684/v1`.
+`gunmetal start` starts the local daemon, opens the Dashboard at `http://127.0.0.1:4684/`, and serves the OpenAI-compatible API at `http://127.0.0.1:4684/v1`. Use `gunmetal start --no-open` when you want the daemon without opening a browser.
 
-## Start Here
+## Dashboard Workflow
 
-1. Install: `npm i -g @dhruv2mars/gunmetal`
-2. Run `gunmetal setup`
-3. Run `gunmetal web` for the Dashboard, or `gunmetal start` for the API only
-4. Open `http://127.0.0.1:4684/webui` if you want the Dashboard
-5. Call `GET /v1/models`
-6. Call `POST /v1/chat/completions`
+1. Install the CLI.
+2. Run `gunmetal start`.
+3. Open the Dashboard if it did not open automatically.
+4. Enable the providers you want to use.
+5. Authenticate browser-session providers such as Codex and Copilot, or save upstream keys for API-key providers.
+6. Sync models for each ready provider.
+7. Create a Gunmetal API key.
+8. Paste that key into the Playground, choose a synced provider/model ID, and send a test prompt.
+9. Use the same base URL and Gunmetal key in any OpenAI-compatible app.
+
+## Client Config
 
 ```bash
 export OPENAI_BASE_URL=http://127.0.0.1:4684/v1
 export OPENAI_API_KEY=gm_your_local_key
+```
 
-curl $OPENAI_BASE_URL/models \
+```bash
+curl "$OPENAI_BASE_URL/models" \
   -H "Authorization: Bearer $OPENAI_API_KEY"
 
-curl $OPENAI_BASE_URL/chat/completions \
+curl "$OPENAI_BASE_URL/chat/completions" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "codex/gpt-5.4",
+    "model": "provider/model",
     "messages": [{"role":"user","content":"say ok"}]
   }'
 ```
 
-Then configure any OpenAI-compatible app:
+| Setting | Value |
+| --- | --- |
+| Base URL | `http://127.0.0.1:4684/v1` |
+| API key | a local Gunmetal key, usually `gm_...` |
+| Model | a provider-qualified model ID such as `codex/...`, `copilot/...`, `openrouter/...`, `openai/...`, or `zen/...` |
 
-| Setting  | Value                           |
-| -------- | ------------------------------- |
-| Base URL | `http://127.0.0.1:4684/v1`      |
-| API Key  | your Gunmetal key               |
-| Model    | `openai/gpt-5.1`, `codex/gpt-5.4`, etc. |
+Gunmetal works when the app lets you set a custom OpenAI-compatible base URL, pass your own API key, and choose arbitrary provider-qualified model IDs. If an app hardcodes the upstream provider endpoint, Gunmetal cannot route it.
 
 ## Providers
 
-| Connection type          | Upstream providers      |
-| ------------------------ | ----------------------- |
-| Subscription connection  | `codex`, `copilot`      |
-| API-key connection       | `openrouter`, `zen`, `openai` |
+| Connection type | Providers |
+| --- | --- |
+| Browser-session providers | `codex`, `copilot` |
+| API-key providers | `openrouter`, `zen`, `openai` |
+
+Browser-session providers require the local auth flow to finish before models can sync. API-key providers require an upstream key or compatible base URL credentials.
+
+## API
+
+```text
+GET  /v1/models
+POST /v1/chat/completions
+POST /v1/responses
+```
+
+Streaming is supported on both POST endpoints. Gunmetal defaults to normalized behavior across providers, with passthrough available per request through `gunmetal.mode = "passthrough"` and `provider_options` when provider-native behavior is needed.
+
+## CLI
+
+```bash
+gunmetal setup
+gunmetal start
+gunmetal start --no-open
+gunmetal status
+gunmetal doctor
+gunmetal chat
+gunmetal profiles list
+gunmetal auth status <provider>
+gunmetal models sync <provider>
+gunmetal keys list
+gunmetal logs list
+gunmetal logs summary
+```
 
 ## Gunmetal Provider SDK
 
@@ -83,66 +120,34 @@ cargo add gunmetal-providers
 
 It exposes `builtin_registry()`, `builtin_provider_hub()`, and concrete clients for Codex, Copilot, OpenRouter, Zen, and OpenAI.
 
-## API
+## Repository
 
-```
-GET  /v1/models
-POST /v1/chat/completions
-POST /v1/responses
-```
-
-Streaming supported on both POST endpoints.
-
-Gunmetal is a normalized Local API by default, with local request history and token usage built into the debugging path.
-
-- normalized mode keeps one clean contract across providers
-- passthrough mode is opt-in through `gunmetal.mode = "passthrough"` plus `provider_options`
-- benchmarks should use normalized mode unless you explicitly want provider-native behavior
-
-Gunmetal works when the app talks to Gunmetal:
-
-- app must let you set a custom base URL
-- app must let you send a custom Gunmetal key
-- app must accept provider-qualified model ids like `provider/model`
-- if it hardcodes the upstream endpoint, Gunmetal cannot help there
-
-## Commands
-
-```bash
-gunmetal setup
-gunmetal web
-gunmetal start
-gunmetal status
-gunmetal profiles list
-gunmetal auth status <provider>
-gunmetal models sync <provider>
-gunmetal keys list
-gunmetal logs list
-```
-
-## Structure
-
-```
-apps/gunmetal/      # native CLI entrypoint
-apps/web/           # landing page, docs
-packages/sdk/       # Gunmetal Provider SDK
-packages/sdk-core/  # shared SDK-facing types + contracts
-packages/extensions/ # first-party provider integrations
-packages/app-cli/   # CLI command layer
-packages/app-daemon/ # local OpenAI-compatible API server
-packages/app-storage/ # sqlite + local state
-packages/npm/       # npm install wrapper for the native binary
+```text
+apps/gunmetal/        native CLI entrypoint
+apps/web/             hosted landing site and docs
+packages/app-cli/     CLI command layer
+packages/app-daemon/  local Dashboard and OpenAI-compatible API server
+packages/app-storage/ SQLite and local state
+packages/sdk-core/    shared SDK-facing types and contracts
+packages/sdk/         provider SDK
+packages/extensions/  first-party provider adapters
+packages/npm/         npm install wrapper for the native binary
 ```
 
 ## Development
 
 ```bash
 bun install
-bun run dev      # start web dev server
-bun run test     # repo structure + all tests
-bun run check    # lint + fmt + clippy
+bun run dev
+bun run test
+bun run check
+bun run build
 cargo run -p gunmetal -- --help
 ```
+
+## Release
+
+Public releases are tagged as `vX.Y.Z`. The release workflow builds native binaries for GitHub Releases, publishes the npm CLI package, and publishes the public Rust SDK crates in dependency order. While Gunmetal is alpha, GitHub releases are marked as prereleases.
 
 ## License
 

@@ -34,10 +34,10 @@ const docsSections = [
   {
     id: "run",
     step: "03",
-    title: "Run the local API",
-    body: "Use the Web UI when you want the browser operator surface. Use start when you only need the OpenAI-compatible API.",
-    command: `gunmetal web\n# ${localAppUrl}\n# ${localApiUrl}`,
-    points: ["Web UI and API share the same daemon.", "Request history stays local."],
+    title: "Start the local Dashboard and API",
+    body: "Start opens the browser operator surface and keeps the OpenAI-compatible API available. Add --no-open when you only want the daemon.",
+    command: `gunmetal start\n# Dashboard: ${localAppUrl}\n# API: ${localApiUrl}`,
+    points: ["Dashboard and API share the same daemon.", "Request history stays local."],
   },
   {
     id: "client",

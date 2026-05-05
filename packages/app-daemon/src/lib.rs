@@ -26,7 +26,8 @@ use futures_util::{StreamExt, stream};
 use gunmetal_core::{
     ChatCompletionRequest, ChatCompletionResult, ChatMessage, ChatRole, GunmetalKey, KeyScope,
     KeyState, ModelDescriptor, NewGunmetalKey, NewProviderProfile, NewRequestLogEntry,
-    ProviderKind, ProviderProfile, RequestMode, RequestOptions, TokenUsage,
+    ProviderAuthState, ProviderAuthStatus, ProviderKind, ProviderProfile, RequestMode,
+    RequestOptions, TokenUsage,
 };
 use gunmetal_providers::builtin_provider_hub;
 use gunmetal_sdk::{
@@ -168,7 +169,7 @@ async fn browser_app() -> Html<&'static str> {
 }
 
 async fn operator_state(State(state): State<DaemonState>) -> Response {
-    match load_operator_state(&state) {
+    match load_operator_state(&state).await {
         Ok(payload) => Json(payload).into_response(),
         Err(error) => internal_error(error),
     }
@@ -714,15 +715,36 @@ fn streaming_response(model: String, provider_stream: ProviderEventStream) -> Re
         .into_response()
 }
 
-fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
+async fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
     let profiles = state.storage.list_profiles()?;
     let keys = state.storage.list_keys()?;
     let models = state.storage.list_models()?;
     let logs = state.storage.list_request_logs(24)?;
+    let mut browser_auth_status = HashMap::new();
+    for profile in &profiles {
+        if provider_definition(state, &profile.provider)
+            .is_some_and(|definition| definition.supports_browser_login())
+        {
+            let status = match state.providers.auth_status(profile).await {
+                Ok(status) => status,
+                Err(error) => ProviderAuthStatus {
+                    state: ProviderAuthState::SignedOut,
+                    label: format!("auth check failed: {error}"),
+                },
+            };
+            browser_auth_status.insert(profile.id, status);
+        }
+    }
     let profile_count = profiles.len();
     let model_count = models.len();
     let key_count = keys.len();
     let log_count = logs.len();
+    let ready_profile_count = profiles
+        .iter()
+        .filter(|profile| {
+            operator_profile_auth_ready(state, profile, browser_auth_status.get(&profile.id))
+        })
+        .count();
 
     let profile_rows = profiles
         .iter()
@@ -732,7 +754,16 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
             name: profile.name.clone(),
             selector: format!("{}:{}", profile.provider, profile.name),
             base_url: profile.base_url.clone(),
-            auth_label: operator_profile_auth_label(state, profile),
+            auth_label: operator_profile_auth_label(
+                state,
+                profile,
+                browser_auth_status.get(&profile.id),
+            ),
+            auth_ready: operator_profile_auth_ready(
+                state,
+                profile,
+                browser_auth_status.get(&profile.id),
+            ),
             model_count: models
                 .iter()
                 .filter(|model| model.profile_id == Some(profile.id))
@@ -814,12 +845,14 @@ fn load_operator_state(state: &DaemonState) -> Result<OperatorStateResponse> {
     let model_summaries = summarize_logs_by_model(&logs);
 
     let setup = OperatorSetupRow {
-        provider_ready: profile_count > 0,
+        provider_ready: ready_profile_count > 0,
         models_ready: model_count > 0,
         key_ready: key_count > 0,
         traffic_ready: log_count > 0,
         next_step: if profile_count == 0 {
             "Connect one provider."
+        } else if ready_profile_count == 0 {
+            "Authenticate one provider."
         } else if model_count == 0 {
             "Sync models for the provider you just connected."
         } else if key_count == 0 {
@@ -915,12 +948,18 @@ fn require_key(state: &DaemonState, id: Uuid) -> Result<GunmetalKey, ApiError> {
         })
 }
 
-fn operator_profile_auth_label(state: &DaemonState, profile: &ProviderProfile) -> String {
+fn operator_profile_auth_label(
+    state: &DaemonState,
+    profile: &ProviderProfile,
+    browser_status: Option<&ProviderAuthStatus>,
+) -> String {
     if provider_definition(state, &profile.provider)
         .is_some_and(|definition| definition.supports_browser_login())
     {
-        if profile.credentials.is_some() {
-            "session saved".to_owned()
+        if let Some(status) = browser_status {
+            status.label.clone()
+        } else if profile.credentials.is_some() {
+            "auth pending".to_owned()
         } else {
             "signed out".to_owned()
         }
@@ -928,6 +967,20 @@ fn operator_profile_auth_label(state: &DaemonState, profile: &ProviderProfile) -
         "api key saved".to_owned()
     } else {
         "missing api key".to_owned()
+    }
+}
+
+fn operator_profile_auth_ready(
+    state: &DaemonState,
+    profile: &ProviderProfile,
+    browser_status: Option<&ProviderAuthStatus>,
+) -> bool {
+    if provider_definition(state, &profile.provider)
+        .is_some_and(|definition| definition.supports_browser_login())
+    {
+        browser_status.is_some_and(|status| status.state == ProviderAuthState::Connected)
+    } else {
+        profile_has_api_key(profile)
     }
 }
 
@@ -1101,6 +1154,7 @@ struct OperatorProfileRow {
     selector: String,
     base_url: Option<String>,
     auth_label: String,
+    auth_ready: bool,
     model_count: usize,
 }
 
@@ -2172,6 +2226,24 @@ mod tests {
         assert!(body.contains("btn-create-key"));
         assert!(body.contains("btn-copy-url"));
         assert!(body.contains("btn-refresh"));
+        assert!(body.contains("auth_method"));
+        assert!(body.contains("browser-session-provider"));
+        assert!(body.contains("api-key-provider"));
+        assert!(!body.contains("const Q="));
+        assert!(!body.contains("viewBox=\"0 0 120 120\""));
+        assert!(!body.contains("viewBox=\"326 178 1518 1544\""));
+        assert!(!body.contains("logoPulse"));
+        assert!(body.contains("animation-delay:240ms"));
+        assert!(body.contains("window.open(\"about:blank\""));
+        assert!(body.contains("function F(e){M=!0,j=\"auth\",O=`Connect ${e}`,I=\"\",H=e,f()}"));
+        assert!(body.contains("Authenticate a provider before creating a Gunmetal key."));
+        assert!(body.contains("disabled title=\\\"Authenticate a provider first\\\""));
+        assert!(body.contains("Authenticate a provider and sync models first"));
+        assert!(body.contains("https://gunmetalapp.vercel.app/docs"));
+        assert!(body.contains("app-shell"));
+        assert!(body.contains("@media(max-width:768px){.app-shell"));
+        assert!(body.contains("Start Auth"));
+        assert!(body.contains("Save your upstream API key"));
     }
 
     #[tokio::test]
@@ -2235,6 +2307,8 @@ mod tests {
         assert_eq!(body["counts"]["models"], 1);
         assert_eq!(body["counts"]["keys"], 1);
         assert_eq!(body["counts"]["logs"], 2);
+        assert_eq!(body["profiles"][0]["auth_ready"], true);
+        assert_eq!(body["profiles"][0]["auth_label"], "codex");
         assert_eq!(body["setup"]["provider_ready"], true);
         assert_eq!(body["setup"]["models_ready"], true);
         assert_eq!(body["setup"]["key_ready"], true);

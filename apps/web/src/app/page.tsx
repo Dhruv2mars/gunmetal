@@ -21,7 +21,7 @@ export default function HomePage() {
         className="text-[18px] md:text-[22px] text-[var(--text-muted)] opacity-90 max-w-2xl mb-8 relative z-10"
         style={{ fontFamily: "var(--font-matter)", lineHeight: 1.5 }}
       >
-        Use AI subscriptions as upstream providers for inference.
+        Alpha local-first access for provider-backed inference.
       </p>
 
       <PackageManagerCommandBox packageName="@dhruv2mars/gunmetal" />
