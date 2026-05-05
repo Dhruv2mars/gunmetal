@@ -6,6 +6,10 @@ Gunmetal lets you connect provider access you already have, create local Gunmeta
 
 > Alpha software: Gunmetal is public and usable, but the product is still early. Commands, provider behavior, SDK contracts, and dashboard flows can change while the project stabilizes. Do not treat it as a production security boundary yet.
 
+- Website: https://web-nine-sigma-59.vercel.app
+- npm package: https://www.npmjs.com/package/@dhruv2mars/gunmetal
+- Latest alpha release: https://github.com/Dhruv2mars/gunmetal/releases/tag/v0.1.15
+
 ## Install
 
 ```bash
@@ -13,6 +17,8 @@ npm i -g @dhruv2mars/gunmetal
 ```
 
 The npm package installs the native `gunmetal` binary into `~/.gunmetal/bin/`.
+
+Current release: `@dhruv2mars/gunmetal@0.1.15` / `v0.1.15` alpha. Native binaries are published for macOS, Linux, and Windows on x64 and arm64.
 
 ## Quickstart
 
@@ -147,7 +153,14 @@ cargo run -p gunmetal -- --help
 
 ## Release
 
-Public releases are tagged as `vX.Y.Z`. The release workflow builds native binaries for GitHub Releases, publishes the npm CLI package, and publishes the public Rust SDK crates in dependency order. While Gunmetal is alpha, GitHub releases are marked as prereleases.
+Public releases are tagged as `vX.Y.Z`. The release workflow builds native binaries for GitHub Releases, publishes the npm CLI package, and publishes the public Rust SDK crates in dependency order. Gunmetal is alpha, so all current `v0.1.x` GitHub releases are marked as prereleases.
+
+The current release is `v0.1.15` alpha:
+
+- GitHub Release: https://github.com/Dhruv2mars/gunmetal/releases/tag/v0.1.15
+- npm: `npm i -g @dhruv2mars/gunmetal@0.1.15`
+- Binaries: `gunmetal-darwin-arm64`, `gunmetal-darwin-x64`, `gunmetal-linux-arm64`, `gunmetal-linux-x64`, `gunmetal-win32-arm64.exe`, `gunmetal-win32-x64.exe`
+- Checksums: published beside the binaries in the GitHub Release
 
 ## License
 
