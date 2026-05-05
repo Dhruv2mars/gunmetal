@@ -4,7 +4,11 @@ Alpha local-first AI access as one OpenAI-compatible local API.
 
 Gunmetal installs a native CLI that runs a local Dashboard and API at `http://127.0.0.1:4684/` and `http://127.0.0.1:4684/v1`.
 
-> Alpha software: commands, provider behavior, SDK contracts, and dashboard flows can change while Gunmetal stabilizes.
+> Alpha software: Gunmetal is public and usable, but commands, provider behavior, SDK contracts, and dashboard flows can change while the project stabilizes. Do not treat it as a production security boundary yet.
+
+- Repository: https://github.com/Dhruv2mars/gunmetal
+- Website: https://web-nine-sigma-59.vercel.app
+- Latest alpha release: https://github.com/Dhruv2mars/gunmetal/releases/tag/v0.1.15
 
 ## Install
 
@@ -13,6 +17,8 @@ npm i -g @dhruv2mars/gunmetal
 ```
 
 The package downloads the native `gunmetal` binary into `~/.gunmetal/bin/`.
+
+Current release: `@dhruv2mars/gunmetal@0.1.15` / `v0.1.15` alpha. Native binaries are published for macOS, Linux, and Windows on x64 and arm64.
 
 ## Quickstart
 
@@ -63,3 +69,11 @@ gunmetal profiles list
 gunmetal keys list
 gunmetal logs list
 ```
+
+## Release
+
+GitHub releases are alpha prereleases while Gunmetal is in `v0.1.x`.
+
+- GitHub Release: https://github.com/Dhruv2mars/gunmetal/releases/tag/v0.1.15
+- npm: `npm i -g @dhruv2mars/gunmetal@0.1.15`
+- Binaries: macOS, Linux, and Windows on x64 and arm64

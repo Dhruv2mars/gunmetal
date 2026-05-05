@@ -19,7 +19,7 @@
     "check": "node --check bin/gunmetal.js && node --check bin/gunmetal-lib.js && node --check bin/install.js && node --check bin/install-lib.js && node --test test/*.test.js",
     "test": "node --test test/*.test.js"
   },
-  "homepage": "https://github.com/Dhruv2mars/gunmetal#readme",
+  "homepage": "https://web-nine-sigma-59.vercel.app",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Dhruv2mars/gunmetal.git",
@@ -29,11 +29,13 @@
     "url": "https://github.com/Dhruv2mars/gunmetal/issues"
   },
   "keywords": [
+    "alpha",
     "ai",
     "openai-compatible",
     "local-api",
     "cli",
-    "rust"
+    "rust",
+    "local-first"
   ],
   "engines": {
     "node": ">=18"
